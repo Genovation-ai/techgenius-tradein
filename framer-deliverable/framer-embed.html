@@ -1,0 +1,22 @@
+<!--
+  Tech Genius Trade-In — paste into a Framer EMBED element on /sell.
+
+  Framer: open /sell → Insert → Embed → choose "HTML" → paste everything below.
+  Set the element to Width: Fill, Height: 1100 (or Fit if available).
+
+  Replace the two ALL-CAPS placeholders:
+    API_URL_HERE     your deployed backend, e.g. https://api.techgenius.ca
+    ASSET_BASE_HERE  wherever you uploaded tg-trade-in.js / .css
+
+  Nothing else needs changing. The widget reads the backend from data-api at
+  runtime, so you never rebuild the JS to point at a different host.
+-->
+
+<link rel="stylesheet" href="ASSET_BASE_HERE/tg-trade-in.css">
+
+<div id="tg-trade-in-root"
+     data-api="API_URL_HERE"
+     data-org="tech-genius"
+     style="width:100%;min-height:1100px"></div>
+
+<script src="ASSET_BASE_HERE/tg-trade-in.js" defer></script>

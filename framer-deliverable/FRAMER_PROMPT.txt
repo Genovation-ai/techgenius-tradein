@@ -1,0 +1,66 @@
+PROMPT FOR FRAMER AI
+====================
+Paste the block below into Framer AI while the Sell page is open.
+
+Before you paste, replace the two placeholders:
+  API_URL_HERE     -> your deployed backend origin, e.g. https://api.techgenius.ca
+  ASSET_BASE_HERE  -> where tg-trade-in.js and .css are hosted
+
+------------------------------- COPY BELOW --------------------------------
+
+On the Sell page (/sell), keep everything that is already there — the
+"Selling has never been so easy" hero, the three steps (Get an Instant Quote,
+Drop Off Device, Get Paid Fast), the trust badges, and the whole nav.
+
+Directly BELOW the "Get Paid Fast" section, add a full-width Embed element
+containing exactly this HTML:
+
+<link rel="stylesheet" href="ASSET_BASE_HERE/tg-trade-in.css">
+<div id="tg-trade-in-root"
+     data-api="API_URL_HERE"
+     data-org="tech-genius"
+     style="width:100%;min-height:1100px"></div>
+<script src="ASSET_BASE_HERE/tg-trade-in.js" defer></script>
+
+Requirements:
+- Set the Embed element to Width: Fill and Height: 1100.
+- Do not modify the HTML above in any way. In particular the element id must
+  stay exactly "tg-trade-in-root" and the data-api attribute must be preserved —
+  the widget will not mount or will not find its backend otherwise.
+- Give the Embed a section anchor named "quote".
+- Link the existing "Get an Instant Quote" button to that #quote section.
+- Leave the Shop links pointing at shoptechgenius.ca.
+- Do not add any pricing text, price figures, or "starting at" copy of your own.
+  All prices come from the widget at runtime; hard-coded numbers would be wrong.
+- Do not restyle the embed's inner contents. It ships its own stylesheet.
+
+-------------------------------- COPY ABOVE -------------------------------
+
+
+IF YOU PREFER A CODE COMPONENT
+==============================
+Instead of the above, tell Framer AI:
+
+"Create a new Code Component called TechGeniusTradeIn using the file I paste
+next, add it to the Sell page below the 'Get Paid Fast' section at Width Fill
+and min height 1100, then link the 'Get an Instant Quote' button to it."
+
+...then paste the contents of TechGeniusTradeIn.tsx.
+
+After it's placed, fill in the component's panel on the right:
+  API URL     = API_URL_HERE
+  Script URL  = ASSET_BASE_HERE/tg-trade-in.js
+  CSS URL     = ASSET_BASE_HERE/tg-trade-in.css
+  Org slug    = tech-genius
+  Min height  = 1100
+
+
+WHAT NOT TO ASK FRAMER AI TO DO
+===============================
+- Don't ask it to "make the trade-in form" — the wizard is the embed; a
+  Framer-drawn form would not be connected to pricing and would quote nothing.
+- Don't ask it to add device lists or prices to the page. The device catalog is
+  loaded live from the backend (419 models, one tile per model).
+- Don't ask it to change colours inside the widget. Use
+  Admin -> Settings -> Storefront template instead, which changes the live site
+  without republishing Framer.
