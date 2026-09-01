@@ -1,0 +1,45 @@
+I am uploading two files with this chat:
+1) tg-trade-in.css
+2) tg-trade-in.js
+
+Please add the Tech Genius trade-in wizard to the Sell page (/sell) on this Framer project (techgenius.ca).
+
+GOAL
+Mount our existing trade-in feature on the Sell page using Framer file hosting + an Embed. Do not rebuild the site. Do not redesign the page. Do not add Reusely or any third-party buyback plugin.
+
+CONTEXT
+- Brand site is built in Framer: techgenius.ca
+- Sell page path: /sell
+- These two uploaded files are the complete trade-in widget (CSS + JS)
+- Brand colors already in the widget: green #39b54a, CTA orange #f79347, charcoal #323232
+- Keep existing Framer nav / hero / Repair / Shop / Recycle content
+
+STEPS TO DO
+1) Host/use the uploaded files (tg-trade-in.css and tg-trade-in.js) via Framer file hosting and get their public HTTPS URLs.
+2) Open the Sell page (/sell).
+3) Below the main Sell headline / “Get an Instant Quote” section, insert an Embed component.
+4) Make the Embed:
+   - Width: Fill / 100%
+   - Min height: about 1000px (so the wizard is not clipped on mobile/desktop)
+   - Full-width content section (not inside a tiny card)
+5) Put this HTML in the Embed, replacing the two URLs with the real Framer-hosted URLs for the uploaded files:
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 900px; }
+</style>
+<link rel="stylesheet" href="FRAMER_HOSTED_URL_FOR_tg-trade-in.css" />
+<div id="tg-trade-in-root"></div>
+<script src="FRAMER_HOSTED_URL_FOR_tg-trade-in.js" defer></script>
+
+6) Do not change the rest of the Sell page structure more than needed to place this Embed cleanly.
+7) Preview and confirm:
+   - #tg-trade-in-root mounts
+   - trade-in steps appear (Category → Brand → Model → Details → Checklist → Vision → Grade → Offer → Checkout)
+   - existing header/nav still work
+8) Leave the page publish-ready.
+
+CONSTRAINTS
+- No Reusely
+- No competitor widgets
+- No full-page redesign
+- Only add/mount this trade-in embed feature on /sell

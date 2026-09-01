@@ -1,0 +1,172 @@
+.offer-hero {
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.35rem;
+  display: grid;
+  gap: 0.35rem;
+  color: white;
+  background:
+    linear-gradient(165deg, #2a2a2a 0%, #323232 48%, #2f7a45 140%);
+  border: 1px solid rgba(42, 42, 42, 0.35);
+  position: relative;
+  overflow: hidden;
+}
+
+.offer-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -40% 40%;
+  height: 70%;
+  background: radial-gradient(circle, rgba(57, 181, 74, 0.28), transparent 65%);
+  pointer-events: none;
+}
+
+.offer-label {
+  position: relative;
+  z-index: 1;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(167, 224, 176, 0.95);
+}
+
+.offer-amount {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: clamp(2.35rem, 5.5vw, 3.2rem);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-weight: 650;
+}
+
+.offer-note {
+  position: relative;
+  z-index: 1;
+  color: rgba(255, 255, 255, 0.68);
+  font-size: 0.9rem;
+}
+
+.offer-perks {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.offer-perks li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--ink-soft);
+  font-size: 0.94rem;
+}
+
+.offer-perks svg {
+  color: var(--mint-dim);
+  flex-shrink: 0;
+}
+
+.done-panel {
+  display: grid;
+  gap: 0.85rem;
+  justify-items: start;
+  padding: 0.35rem 0 1rem;
+}
+
+.done-icon {
+  color: var(--mint-dim);
+}
+
+.done-panel h1 {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+}
+
+.done-list {
+  list-style: none;
+  margin: 0.2rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.done-list li {
+  display: flex;
+  gap: 0.55rem;
+  align-items: flex-start;
+  color: var(--ink-soft);
+  font-size: 0.94rem;
+}
+
+.done-list svg {
+  color: var(--forest);
+  flex-shrink: 0;
+  margin-top: 0.12rem;
+}
+
+.offer-id-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem 0.85rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--fog);
+  width: 100%;
+}
+
+.offer-id-box span {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.offer-id-box strong {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin-right: auto;
+}
+
+/* Primary action plus "add another device", side by side on desktop and
+   stacked on mobile. Selling several devices in one offer is a real path —
+   the backend and checkout have always supported it. */
+.offer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: stretch;
+}
+.offer-actions .flow-cta {
+  flex: 1 1 260px;
+  margin: 0;
+}
+.offer-actions .btn-ghost {
+  flex: 1 1 220px;
+}
+.offer-actions-hint {
+  margin-top: 0.5rem;
+}
+@media (max-width: 520px) {
+  .offer-actions { flex-direction: column; }
+}
+
+/* Numbered hand-off guidance. Each step carries a menu path, so the row needs
+   to breathe rather than sit on one line like the summary list above it. */
+.done-steps {
+  counter-reset: handoff;
+}
+.done-steps li {
+  align-items: flex-start;
+  gap: 0.6rem;
+  line-height: 1.5;
+  margin-bottom: 0.55rem;
+}
+.done-steps li strong {
+  display: block;
+}

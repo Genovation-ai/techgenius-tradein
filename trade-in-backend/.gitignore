@@ -1,0 +1,9 @@
+dist/
+node_modules/
+*.db
+
+# scraper / sync logs
+data/*.txt
+data/*_report.txt
+*.db-shm
+*.db-wal

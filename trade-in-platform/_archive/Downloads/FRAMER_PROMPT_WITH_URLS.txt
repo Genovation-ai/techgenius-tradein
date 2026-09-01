@@ -1,0 +1,36 @@
+Use these public HTTPS asset URLs (already hosted):
+
+CSS: https://litter.catbox.moe/a28fbh.css
+JS:  https://litter.catbox.moe/56xasx.js
+
+Please update the Tech Genius trade-in wizard on the existing Sell page (/sell).
+
+IMPORTANT — DO NOT MESS UP THE CURRENT SITE
+- Do NOT redesign the Sell page
+- Do NOT change header, nav, logo, hero, footer, or brand styling
+- Only UPDATE the existing trade-in Embed HTML/URLs
+- If needed, auto-adjust ONLY local spacing/height around the Embed
+
+WHAT TO DO
+1) Open Sell page (/sell)
+2) Find the existing trade-in Embed
+3) Embed settings:
+   - Width: Fill / 100%
+   - Height: ~1100px (increase if clipped)
+4) Put this exact HTML in the Embed:
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 1000px; }
+</style>
+<link rel="stylesheet" href="https://litter.catbox.moe/a28fbh.css" />
+<div id="tg-trade-in-root"></div>
+<script src="https://litter.catbox.moe/56xasx.js" defer></script>
+
+5) Preview: after Category, device grid must show REAL product photos (phones/tablets), not green shapes/letters
+6) Keep the rest of the page unchanged
+7) Leave publish-ready
+
+CONSTRAINTS
+- No Reusely
+- No redesign
+- Minimal safe update only

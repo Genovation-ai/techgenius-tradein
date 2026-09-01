@@ -1,0 +1,114 @@
+.tip-bar {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.6rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.tip-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tip-back,
+.tip-back-spacer {
+  min-width: 5.25rem;
+}
+
+.tip-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font-weight: 600;
+  padding: 0.35rem 0;
+  transition: color 0.15s ease;
+}
+
+.tip-back:hover {
+  color: var(--ink);
+}
+
+.tip-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+}
+
+.tip-brand svg {
+  color: var(--mint);
+}
+
+.tip-count {
+  min-width: 5.25rem;
+  text-align: right;
+  font-size: 0.8rem;
+  font-weight: 650;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.tip-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 0.3rem;
+}
+
+.tip-step {
+  display: grid;
+  gap: 0.4rem;
+  justify-items: center;
+  text-align: center;
+}
+
+.tip-dot {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: rgba(42, 42, 42, 0.12);
+  transition: background 0.25s var(--ease);
+}
+
+.tip-step--done .tip-dot {
+  background: var(--mint-dim);
+}
+
+.tip-step--current .tip-dot {
+  background: var(--mint);
+}
+
+.tip-label {
+  font-size: 0.65rem;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  color: rgba(42, 42, 42, 0.38);
+  text-transform: uppercase;
+}
+
+.tip-step--current .tip-label,
+.tip-step--done .tip-label {
+  color: var(--ink-soft);
+}
+
+@media (max-width: 720px) {
+  .tip-label {
+    display: none;
+  }
+
+  .tip-step--current .tip-label {
+    display: block;
+  }
+}

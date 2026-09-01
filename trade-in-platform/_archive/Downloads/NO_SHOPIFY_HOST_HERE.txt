@@ -1,0 +1,47 @@
+You don’t need Shopify or Reusely for this.
+
+You DO need ONE free permanent host for 3 static files
+(litter.catbox dies in 72h — that’s expected).
+
+========================================
+EASIEST PATH (free Netlify — ~5 min)
+========================================
+1) Download: https://litter.catbox.moe/tyix7g.zip
+   Unzip → folder has: index.html, tg-trade-in.js, tg-trade-in.css
+
+2) Go to: https://app.netlify.com/drop
+   - Drag the whole unzipped folder onto the page
+   - Netlify gives a URL like: https://something.netlify.app
+   - Create a FREE Netlify account when prompted so the site stays forever
+
+3) Tell Framer AI exactly this (replace YOUR_NETLIFY_URL):
+
+On /sell, replace the trade-in Embed ONLY. Do not redesign the site.
+Do not use litter.catbox links.
+
+<iframe
+  title="Tech Genius Trade-In"
+  src="YOUR_NETLIFY_URL"
+  style="width:100%;height:1100px;border:0;display:block"
+  allow="camera; microphone; clipboard-write"
+></iframe>
+
+Width Fill, height ~1100px. Publish.
+
+Example if Netlify gave https://tg-trade-in-abc123.netlify.app
+→ use src="https://tg-trade-in-abc123.netlify.app"
+
+========================================
+ALTERNATE (free GitHub + jsDelivr)
+========================================
+1) Create a public GitHub repo
+2) Upload index.html, tg-trade-in.js, tg-trade-in.css
+3) Framer iframe src:
+   https://cdn.jsdelivr.net/gh/YOUR_USER/YOUR_REPO@main/index.html
+
+========================================
+WHAT YOU CAN’T SKIP
+========================================
+Framer Assets can’t host this JS/CSS.
+No host = link dies in 72h.
+Reusely is NOT required for hosting — that’s later for live pricing/catalog backend.

@@ -1,0 +1,40 @@
+{
+  "sources": [
+    {
+      "device_id": "iphone-16-pro-max",
+      "storage": "256GB",
+      "source": "local-market",
+      "url": "https://gorecell.ca/product/apple-iphone-16-pro-max/",
+      "selectors": {
+        "flawless": ".like-new .price::text, .condition-price:nth-child(1)::text",
+        "good": ".good .price::text, .condition-price:nth-child(2)::text",
+        "fair": ".cracked .price::text, .condition-price:nth-child(3)::text",
+        "defective": ".defective .price::text, .condition-price:nth-child(4)::text"
+      }
+    },
+    {
+      "device_id": "iphone-15-pro",
+      "storage": "256GB",
+      "source": "local-market",
+      "url": "https://gorecell.ca/product/apple-iphone-15-pro/",
+      "selectors": {
+        "flawless": ".like-new .price::text, .condition-price:nth-child(1)::text",
+        "good": ".good .price::text, .condition-price:nth-child(2)::text",
+        "fair": ".cracked .price::text, .condition-price:nth-child(3)::text",
+        "defective": ".defective .price::text, .condition-price:nth-child(4)::text"
+      }
+    },
+    {
+      "device_id": "iphone-15",
+      "storage": "128GB",
+      "source": "local-market",
+      "url": "https://gorecell.ca/product/apple-iphone-15/",
+      "selectors": {
+        "flawless": ".like-new .price::text, .condition-price:nth-child(1)::text",
+        "good": ".good .price::text, .condition-price:nth-child(2)::text",
+        "fair": ".cracked .price::text, .condition-price:nth-child(3)::text",
+        "defective": ".defective .price::text, .condition-price:nth-child(4)::text"
+      }
+    }
+  ]
+}

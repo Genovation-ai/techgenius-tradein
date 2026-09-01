@@ -1,0 +1,9 @@
+node_modules/
+dist/
+dist-embed/
+dist-embed-lite/
+.DS_Store
+*.log
+.env
+.env.local
+trade-in-backend/uploads/

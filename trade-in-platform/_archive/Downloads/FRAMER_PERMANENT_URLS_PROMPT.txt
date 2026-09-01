@@ -1,0 +1,20 @@
+On /sell, replace the trade-in Embed ONLY. Do not redesign header/nav/hero/footer.
+
+IMPORTANT: Use ONLY the permanent Shopify CDN URLs I paste below.
+Do NOT use litter.catbox / temporary links (they expire in 72 hours).
+Do NOT ask for Framer Assets CSS/JS hosting.
+
+CSS: PASTE_SHOPIFY_CSS_URL_HERE
+JS:  PASTE_SHOPIFY_JS_URL_HERE
+
+Embed HTML:
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 1000px; }
+</style>
+<link rel="stylesheet" href="PASTE_SHOPIFY_CSS_URL_HERE" />
+<div id="tg-trade-in-root"></div>
+<script src="PASTE_SHOPIFY_JS_URL_HERE" defer></script>
+
+Width Fill / 100%, height ~1100px. Preview then Publish.
+Step 2 must show real device product photos (bundled in JS).

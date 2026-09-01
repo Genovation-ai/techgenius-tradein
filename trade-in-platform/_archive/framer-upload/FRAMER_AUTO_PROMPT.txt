@@ -1,0 +1,21 @@
+Do this automatically. Do not ask me for URLs. Do not redesign the site.
+
+Latest build: REAL product photos for every device (iPhone/Galaxy/Pixel/iPad/Watch/Mac), not green outline shapes.
+
+Use these exact public asset URLs:
+- CSS: https://litter.catbox.moe/i0xxze.css
+- JS:  https://litter.catbox.moe/zpj218.js
+
+On Sell page (/sell), update the existing Embed only:
+- Width Fill / 100%, height ~1100px
+- Exact HTML:
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 1000px; }
+</style>
+<link rel="stylesheet" href="https://litter.catbox.moe/i0xxze.css" />
+<div id="tg-trade-in-root"></div>
+<script src="https://litter.catbox.moe/zpj218.js" defer></script>
+
+Rules: keep header/nav/hero/footer; only replace trade-in Embed; publish-ready.
+Just mount it now.

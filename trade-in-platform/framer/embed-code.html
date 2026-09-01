@@ -1,0 +1,19 @@
+<!--
+  Framer → techgenius.ca/sell
+
+  How to add:
+  1. Host dist-embed/tg-trade-in.js + tg-trade-in.css
+     (Framer Assets, Cloudflare R2, Netlify, or any HTTPS CDN).
+  2. On the Sell page in Framer, insert an Embed component.
+  3. Paste this HTML (replace ASSET_BASE with your hosted URL).
+  4. Set Embed to full width; min height ~900px.
+  5. Keep existing Framer nav (Sell / Repair / Shop / Recycle).
+-->
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 900px; }
+</style>
+
+<link rel="stylesheet" href="ASSET_BASE/tg-trade-in.css" />
+<div id="tg-trade-in-root"></div>
+<script src="ASSET_BASE/tg-trade-in.js" defer></script>

@@ -1,0 +1,25 @@
+{
+  "techapi_base_url": "https://gettechapi.github.io/TechAPI",
+  "resources": [
+    { "resource": "smartphones", "category_id": "smartphone" },
+    { "resource": "tablets", "category_id": "tablet" },
+    { "resource": "laptops", "category_id": "laptop" },
+    { "resource": "watches", "category_id": "smartwatch" }
+  ],
+  "allowed_brand_slugs": ["apple", "samsung", "google"],
+  "max_devices_per_resource_brand": 80,
+  "require_image_url": false,
+  "prefer_verified": true,
+  "name_include_keywords": [
+    "iphone", "galaxy s", "galaxy z", "pixel", "ipad", "macbook", "watch", "tab s", "galaxy book"
+  ],
+  "name_exclude_keywords": [
+    "newton", "messagepad", "emate", "aitoolbuzz", "allphones", "scrapegsma", "ammok", "abhinavflac"
+  ],
+  "estimate_from_score_factor": 40.0,
+  "flawless_quote_fraction": 0.42,
+  "storage_base_adjustment": 0.10,
+  "min_price": 20,
+  "max_price": 20000,
+  "import_source_label": "techapi-import"
+}

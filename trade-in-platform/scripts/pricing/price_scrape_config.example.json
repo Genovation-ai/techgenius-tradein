@@ -1,0 +1,18 @@
+{
+  "sourceVersion": "example-v1",
+  "sources": [
+    {
+      "source": "local-market",
+      "modelId": "iphone-15",
+      "url": "https://example.com/iphone-15",
+      "gradeSelectors": {
+        "flawless": { "selector": ".like-new .price::text" },
+        "good": { "selector": ".good .price::text" },
+        "average": { "selector": ".average .price::text" },
+        "fair": { "selector": ".fair .price::text" },
+        "defective": { "selector": ".defective .price::text" }
+      }
+    }
+  ]
+}
+

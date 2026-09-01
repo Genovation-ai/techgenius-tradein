@@ -1,0 +1,134 @@
+/*
+ * Selectable widget templates.
+ *
+ * Staff pick one in Admin → Settings; the widget applies it as
+ * `data-template` on `.trade-in-embed`. Each block only re-points design
+ * tokens and a few layout knobs, so every template inherits the same markup,
+ * the same accessibility behaviour and the same server-authoritative pricing —
+ * only the presentation changes.
+ *
+ * These are FIRST-PARTY presets. No competitor stylesheet, font, asset or
+ * logo is shipped here; the ids are the ones the original spec used, and the
+ * admin labels describe the layout a store owner is actually picking.
+ *
+ * To add a template: add an id in trade-in-backend/src/services/widgetTemplate.ts
+ * and a matching block below. An id with no block simply renders the default.
+ */
+
+/* ——— Guided steps: one decision per screen, loud progress ——— */
+.trade-in-embed[data-template="gorecell_step"] {
+  --radius: 10px;
+  --radius-lg: 12px;
+  --font-display: var(--font-body);
+  --sand: #ffffff;
+  --fog: #f4f6f8;
+}
+.trade-in-embed[data-template="gorecell_step"] .device-grid {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+.trade-in-embed[data-template="gorecell_step"] .tip-bar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--paper);
+  padding-block: 0.6rem;
+}
+
+/* ——— Dense catalog: more models above the fold ——— */
+.trade-in-embed[data-template="univercell_sell"] {
+  --radius: 8px;
+  --radius-lg: 10px;
+  --shadow: 0 1px 2px rgba(42, 42, 42, 0.08);
+  --font-display: var(--font-body);
+}
+.trade-in-embed[data-template="univercell_sell"] .device-grid {
+  grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
+  gap: 0.6rem;
+}
+.trade-in-embed[data-template="univercell_sell"] .device-card {
+  padding: 0.6rem;
+}
+.trade-in-embed[data-template="univercell_sell"] .device-card-name {
+  font-size: 0.8rem;
+}
+
+/* ——— Carrier blue: cool corporate palette, flat cards ——— */
+.trade-in-embed[data-template="bell_trade"] {
+  --mint: #1a5fb4;
+  --mint-dim: #17539c;
+  --moss: #1a5fb4;
+  --cta: #1a5fb4;
+  --cta-hover: #17539c;
+  --lime: #1a5fb4;
+  --ok: #1a5fb4;
+  --sand: #f2f5fa;
+  --fog: #f7f9fc;
+  --line: rgba(26, 95, 180, 0.18);
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 8px;
+  --shadow: none;
+  --font-display: var(--font-body);
+}
+.trade-in-embed[data-template="bell_trade"] .device-card,
+.trade-in-embed[data-template="bell_trade"] .sticky-device {
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+/* ——— Rounded friendly: soft shapes, big tap targets ——— */
+.trade-in-embed[data-template="telus_trade"] {
+  --mint: #4b286d;
+  --mint-dim: #3d2059;
+  --moss: #4b286d;
+  --cta: #66cc00;
+  --cta-hover: #57ad00;
+  --radius: 20px;
+  --radius-sm: 14px;
+  --radius-lg: 26px;
+  --sand: #faf9fb;
+  --fog: #f5f3f7;
+}
+.trade-in-embed[data-template="telus_trade"] .device-card {
+  padding: 1.05rem;
+}
+.trade-in-embed[data-template="telus_trade"] .btn {
+  padding-block: 0.9rem;
+}
+
+/* ——— Ops console: neutral and data-forward, matches staff admin ——— */
+.trade-in-embed[data-template="reusely_ops"] {
+  --ink: #111827;
+  --ink-soft: #6b7280;
+  --mint: #2563eb;
+  --mint-dim: #1d4ed8;
+  --moss: #374151;
+  --cta: #2563eb;
+  --cta-hover: #1d4ed8;
+  --sand: #f9fafb;
+  --fog: #f3f4f6;
+  --line: #e5e7eb;
+  --radius: 6px;
+  --radius-sm: 4px;
+  --radius-lg: 8px;
+  --shadow: 0 1px 2px rgba(17, 24, 39, 0.06);
+  --font-display: var(--font-body);
+}
+
+/* ——— Minimal: inherit the host page's type and colour ——— */
+.trade-in-embed[data-template="minimal"] {
+  --font-display: inherit;
+  --font-body: inherit;
+  --ink: currentColor;
+  --sand: transparent;
+  --fog: transparent;
+  --paper: transparent;
+  --shadow: none;
+  --radius: 4px;
+  --radius-sm: 3px;
+  --radius-lg: 6px;
+}
+.trade-in-embed[data-template="minimal"] .device-card,
+.trade-in-embed[data-template="minimal"] .sticky-device {
+  box-shadow: none;
+}

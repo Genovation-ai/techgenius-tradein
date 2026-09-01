@@ -1,0 +1,14 @@
+{{/*
+  Tech Genius Trade-In embed
+  1. Upload dist-embed/tg-trade-in.js + tg-trade-in.css to Theme → Assets
+     (or host on your CDN / Files).
+  2. Add this snippet to the Sell My Device page template, OR paste the
+     HTML block from shopify/page-sell-my-device.html into the page body.
+  3. Keep existing theme header, nav, footer — this only fills the page content.
+*/}}
+
+{{ 'tg-trade-in.css' | asset_url | stylesheet_tag }}
+
+<div id="tg-trade-in-root" class="tg-trade-in-root"></div>
+
+<script src="{{ 'tg-trade-in.js' | asset_url }}" defer></script>

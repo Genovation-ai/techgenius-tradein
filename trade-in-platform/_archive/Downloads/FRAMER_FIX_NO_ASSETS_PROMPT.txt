@@ -1,0 +1,49 @@
+Framer AI refused Assets hosting for CSS/JS — use this instead. Do NOT ask for Framer Assets URLs.
+
+========================================
+SOLUTION (pick ONE — A is best)
+========================================
+
+OPTION A — Code Component with iframe (recommended, self-contained in Framer)
+1) Create or REPLACE the existing Sell trade-in Code Component with the attached file:
+   TechGeniusTradeIn.tsx
+2) Place that component on /sell under “Get an Instant Quote”
+3) Set Width = Fill / 100%, Mode = iframe, Min height = 1100
+4) Do NOT redesign header/nav/hero/footer
+5) Preview: device grid must show REAL product photos (bundled), not green shapes
+6) Publish
+
+The component iframes this public host page (already live, includes real photos):
+https://litter.catbox.moe/a3lyug.html
+
+OPTION B — Embed HTML (no Assets upload needed)
+Replace the Sell Embed HTML with EXACTLY:
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 1000px; }
+</style>
+<iframe
+  title="Tech Genius Trade-In"
+  src="https://litter.catbox.moe/a3lyug.html"
+  style="width:100%;height:1100px;border:0;display:block;background:transparent"
+  allow="camera; microphone; clipboard-write"
+></iframe>
+
+OR (same result, script mode):
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 1000px; }
+</style>
+<link rel="stylesheet" href="https://litter.catbox.moe/a28fbh.css" />
+<div id="tg-trade-in-root"></div>
+<script src="https://litter.catbox.moe/56xasx.js" defer></script>
+
+========================================
+RULES
+========================================
+- Do NOT say you need Framer Assets to host CSS/JS — public HTTPS URLs above already work
+- Do NOT rebuild a fake green-placeholder wizard inside Framer
+- Do NOT redesign the Sell page
+- ONLY swap the trade-in widget to Option A or B
+- Real product photos are already inside the JS bundle
+- Publish when preview shows real device photos on Step 2

@@ -1,0 +1,44 @@
+I am uploading two files with this message:
+1) tg-trade-in.css
+2) tg-trade-in.js
+
+Please add our Tech Genius trade-in wizard to the existing Sell page (/sell) on this Framer project (techgenius.ca).
+
+IMPORTANT — DO NOT MESS UP THE CURRENT SITE
+- Do NOT redesign the Sell page
+- Do NOT change the existing header, nav, logo, hero, footer, or brand styling
+- Do NOT remove or replace current Sell page content (headlines, CTAs, Repair/Shop/Recycle links, etc.)
+- Do NOT restyle the whole page
+- Only ADD the trade-in embed into the content area
+- If spacing/layout needs a small tweak so the embed fits cleanly, auto-adjust ONLY the local area around the embed (padding/height/width). Leave everything else untouched.
+
+WHAT TO DO
+1) Host/use the uploaded files via Framer file hosting and get their public HTTPS URLs.
+2) Open the Sell page (/sell).
+3) Below the main Sell / “Get an Instant Quote” section, insert one Embed component.
+4) Configure the Embed:
+   - Width: Fill / 100%
+   - Height: about 1000px (auto-increase if clipped on mobile)
+   - Place it in a full-width content section (not inside a tiny card)
+5) Put this HTML in the Embed, replacing the two URLs with the real Framer-hosted URLs of the uploaded files:
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 900px; }
+</style>
+<link rel="stylesheet" href="FRAMER_HOSTED_URL_FOR_tg-trade-in.css" />
+<div id="tg-trade-in-root"></div>
+<script src="FRAMER_HOSTED_URL_FOR_tg-trade-in.js" defer></script>
+
+6) Keep Tech Genius branding and current Framer layout intact.
+7) Preview and confirm:
+   - Existing Sell page still looks the same
+   - Trade-in wizard mounts inside #tg-trade-in-root
+   - Flow starts (Category → Brand → Model → Details → Checklist → Vision → Grade → Offer → Checkout)
+   - Header/nav still work
+8) Leave the page publish-ready.
+
+CONSTRAINTS
+- No Reusely / no third-party buyback plugins
+- No competitor widgets
+- No full-page redesign
+- Minimal, safe insert only — preserve the current Framer site

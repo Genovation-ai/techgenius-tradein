@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tech Genius embed preview</title>
+<!--
+  Local stand-in for the Framer /sell page.
+
+  Opens the built embed exactly the way Framer will: a plain host page that owns
+  none of the widget's styling, loading tg-trade-in.js from a different origin
+  than the API and configuring the backend through data-api. Use it to check a
+  build before uploading anything.
+
+      npm run build:embed:lite
+      npm run preview:embed          # serves this page + dist-embed-lite
+
+  Override the API without editing the file:  ?api=https://api.techgenius.ca
+  Preview a storefront template:              ?tg_template=minimal
+-->
+<link rel="stylesheet" href="./tg-trade-in.css" />
+<style>
+  body { font: 15px/1.5 system-ui, sans-serif; margin: 0; background: #fff; color: #111; }
+  header { padding: 14px 20px; border-bottom: 1px solid #e5e7eb; display: flex; gap: 16px; align-items: baseline; flex-wrap: wrap; }
+  header strong { font-size: 15px; }
+  header span { color: #6b7280; font-size: 13px; }
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  main { padding: 20px; }
+</style>
+</head>
+<body>
+  <header>
+    <strong>Framer preview</strong>
+    <span>host page owns no widget styling · API on a different origin</span>
+    <span id="tg-api-note"></span>
+  </header>
+  <main>
+    <div id="tg-trade-in-root" data-org="tech-genius"></div>
+  </main>
+
+  <script>
+    // Let ?api=… override the default so one preview file works against local,
+    // staging or production without being edited.
+    (function () {
+      var params = new URLSearchParams(location.search);
+      var api = (params.get("api") || "http://127.0.0.1:4110").replace(/\/$/, "");
+      var root = document.getElementById("tg-trade-in-root");
+      root.setAttribute("data-api", api);
+      document.getElementById("tg-api-note").textContent = "API: " + api;
+    })();
+  </script>
+  <script src="./tg-trade-in.js" defer></script>
+</body>
+</html>

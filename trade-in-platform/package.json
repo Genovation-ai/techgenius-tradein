@@ -1,0 +1,36 @@
+{
+  "name": "trade-in-platform",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "bundle:images": "node scripts/bundle-device-images.mjs",
+    "build:embed": "node scripts/bundle-device-images.mjs && tsc -b && vite build --config vite.embed.config.ts",
+    "build:embed:lite": "tsc -b && vite build --config vite.embed.lite.config.ts",
+    "test": "vitest run",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "preview:embed": "cp embed-preview.html dist-embed-lite/index.html && npx http-server dist-embed-lite -p 4210 -s"
+  },
+  "dependencies": {
+    "framer-motion": "^12.43.0",
+    "lucide-react": "^1.27.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-router-dom": "^7.18.2"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.3",
+    "happy-dom": "^20.11.1",
+    "oxlint": "^1.71.0",
+    "playwright": "^1.49.1",
+    "typescript": "~6.0.2",
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  }
+}

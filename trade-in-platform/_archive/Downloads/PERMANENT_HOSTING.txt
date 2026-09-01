@@ -1,0 +1,59 @@
+You’re right: litter.catbox links die in ~72 hours. That’s only for testing.
+Permanent setup does NOT need Reusely. Reusely is a buyback backend (catalog/pricing).
+For Framer, you only need permanent HTTPS hosting of 3 static files.
+
+========================================
+DO THIS ONCE (Shopify = permanent CDN)
+========================================
+Use shoptechgenius.ca Shopify admin (you already own this):
+
+1) Shopify Admin → Content → Files → Upload files
+   Upload these 3 from permanent-host.zip:
+   - tg-trade-in.js
+   - tg-trade-in.css
+   - index.html   (optional if you only use JS+CSS in Embed)
+
+2) After upload, click each file and COPY its permanent URL
+   (looks like https://cdn.shopify.com/s/files/1/.../tg-trade-in.js)
+
+3) Tell Framer AI this (paste your real Shopify URLs):
+
+---
+On /sell, replace the trade-in Embed ONLY. Do not redesign the site.
+Do not use temporary litter/catbox URLs.
+
+Use this exact Embed HTML with my permanent Shopify CDN URLs:
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 1000px; }
+</style>
+<link rel="stylesheet" href="PASTE_SHOPIFY_CSS_URL_HERE" />
+<div id="tg-trade-in-root"></div>
+<script src="PASTE_SHOPIFY_JS_URL_HERE" defer></script>
+
+Width Fill, height ~1100px. Publish.
+---
+
+OR iframe a hosted index.html:
+
+<iframe
+  title="Tech Genius Trade-In"
+  src="PASTE_SHOPIFY_INDEX_HTML_URL_HERE"
+  style="width:100%;height:1100px;border:0;display:block"
+  allow="camera; microphone; clipboard-write"
+></iframe>
+
+========================================
+WHAT REUSELY IS / ISN’T
+========================================
+- Reusely = paid buyback platform (devices + live offers + backend)
+- We are NOT using Reusely
+- Static wizard can stay live forever on Shopify CDN
+- Later Phase 2 = our own backend for full catalog + live prices
+  (that’s separate from “keep Framer working”)
+
+========================================
+FILES TO DOWNLOAD
+========================================
+permanent-host.zip  → only folder you need for permanent hosting
+Contains: tg-trade-in.js + tg-trade-in.css + index.html

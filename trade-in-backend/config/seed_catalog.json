@@ -1,0 +1,877 @@
+{
+  "categories": [
+    {
+      "id": "smartphone",
+      "name": "Smartphone"
+    },
+    {
+      "id": "tablet",
+      "name": "Tablet"
+    },
+    {
+      "id": "smartwatch",
+      "name": "Smartwatch"
+    },
+    {
+      "id": "laptop",
+      "name": "Laptop"
+    }
+  ],
+  "brands": [
+    {
+      "id": "apple-smartphone",
+      "name": "Apple",
+      "category_id": "smartphone"
+    },
+    {
+      "id": "samsung-smartphone",
+      "name": "Samsung",
+      "category_id": "smartphone"
+    },
+    {
+      "id": "google-smartphone",
+      "name": "Google",
+      "category_id": "smartphone"
+    },
+    {
+      "id": "apple-tablet",
+      "name": "Apple",
+      "category_id": "tablet"
+    },
+    {
+      "id": "samsung-tablet",
+      "name": "Samsung",
+      "category_id": "tablet"
+    },
+    {
+      "id": "google-tablet",
+      "name": "Google",
+      "category_id": "tablet"
+    },
+    {
+      "id": "apple-smartwatch",
+      "name": "Apple",
+      "category_id": "smartwatch"
+    },
+    {
+      "id": "samsung-smartwatch",
+      "name": "Samsung",
+      "category_id": "smartwatch"
+    },
+    {
+      "id": "google-smartwatch",
+      "name": "Google",
+      "category_id": "smartwatch"
+    },
+    {
+      "id": "apple-laptop",
+      "name": "Apple",
+      "category_id": "laptop"
+    },
+    {
+      "id": "samsung-laptop",
+      "name": "Samsung",
+      "category_id": "laptop"
+    }
+  ],
+  "devices": [
+    {
+      "id": "iphone-16-pro-max",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 16 Pro Max",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 1180,
+      "has_image": true
+    },
+    {
+      "id": "iphone-16-pro",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 16 Pro",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 1020,
+      "has_image": true
+    },
+    {
+      "id": "iphone-16",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 16",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 780,
+      "has_image": true
+    },
+    {
+      "id": "iphone-16-plus",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 16 Plus",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 820,
+      "has_image": true
+    },
+    {
+      "id": "iphone-15-pro-max",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 15 Pro Max",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 980,
+      "has_image": true
+    },
+    {
+      "id": "iphone-15-pro",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 15 Pro",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 820,
+      "has_image": true
+    },
+    {
+      "id": "iphone-15",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 15",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 620,
+      "has_image": true
+    },
+    {
+      "id": "iphone-15-plus",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 15 Plus",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 660,
+      "has_image": true
+    },
+    {
+      "id": "iphone-14-pro-max",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 14 Pro Max",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 720,
+      "has_image": true
+    },
+    {
+      "id": "iphone-14-pro",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 14 Pro",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 580,
+      "has_image": true
+    },
+    {
+      "id": "iphone-14",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 14",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 430,
+      "has_image": true
+    },
+    {
+      "id": "iphone-14-plus",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 14 Plus",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 460,
+      "has_image": true
+    },
+    {
+      "id": "iphone-13-pro-max",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 13 Pro Max",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 520,
+      "has_image": true
+    },
+    {
+      "id": "iphone-13-pro",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 13 Pro",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 420,
+      "has_image": true
+    },
+    {
+      "id": "iphone-13",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 13",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 340,
+      "has_image": true
+    },
+    {
+      "id": "iphone-13-mini",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 13 mini",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 280,
+      "has_image": true
+    },
+    {
+      "id": "iphone-12-pro-max",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 12 Pro Max",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 380,
+      "has_image": true
+    },
+    {
+      "id": "iphone-12-pro",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 12 Pro",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 300,
+      "has_image": true
+    },
+    {
+      "id": "iphone-12",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 12",
+      "storages": [
+        "64GB",
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 250,
+      "has_image": true
+    },
+    {
+      "id": "iphone-11-pro-max",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 11 Pro Max",
+      "storages": [
+        "64GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 260,
+      "has_image": true
+    },
+    {
+      "id": "iphone-11",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone 11",
+      "storages": [
+        "64GB",
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 180,
+      "has_image": true
+    },
+    {
+      "id": "iphone-se-3",
+      "category_id": "smartphone",
+      "brand_id": "apple-smartphone",
+      "name": "iPhone SE (3rd gen)",
+      "storages": [
+        "64GB",
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 140,
+      "has_image": true
+    },
+    {
+      "id": "s25-ultra",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S25 Ultra",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 980,
+      "has_image": true
+    },
+    {
+      "id": "s25",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S25",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 620,
+      "has_image": true
+    },
+    {
+      "id": "s24-ultra",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S24 Ultra",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 780,
+      "has_image": true
+    },
+    {
+      "id": "s24-plus",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S24+",
+      "storages": [
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 560,
+      "has_image": true
+    },
+    {
+      "id": "s24",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S24",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 480,
+      "has_image": true
+    },
+    {
+      "id": "s23-ultra",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S23 Ultra",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 560,
+      "has_image": true
+    },
+    {
+      "id": "s23",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S23",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 340,
+      "has_image": true
+    },
+    {
+      "id": "s22-ultra",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S22 Ultra",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 360,
+      "has_image": true
+    },
+    {
+      "id": "s22",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy S22",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 280,
+      "has_image": true
+    },
+    {
+      "id": "z-fold6",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy Z Fold6",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 980,
+      "has_image": true
+    },
+    {
+      "id": "z-flip6",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy Z Flip6",
+      "storages": [
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 520,
+      "has_image": true
+    },
+    {
+      "id": "a55",
+      "category_id": "smartphone",
+      "brand_id": "samsung-smartphone",
+      "name": "Galaxy A55",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 180,
+      "has_image": true
+    },
+    {
+      "id": "pixel-9-pro-xl",
+      "category_id": "smartphone",
+      "brand_id": "google-smartphone",
+      "name": "Pixel 9 Pro XL",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 720,
+      "has_image": true
+    },
+    {
+      "id": "pixel-9-pro",
+      "category_id": "smartphone",
+      "brand_id": "google-smartphone",
+      "name": "Pixel 9 Pro",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 620,
+      "has_image": true
+    },
+    {
+      "id": "pixel-9",
+      "category_id": "smartphone",
+      "brand_id": "google-smartphone",
+      "name": "Pixel 9",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 480,
+      "has_image": true
+    },
+    {
+      "id": "pixel-8-pro",
+      "category_id": "smartphone",
+      "brand_id": "google-smartphone",
+      "name": "Pixel 8 Pro",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 420,
+      "has_image": true
+    },
+    {
+      "id": "pixel-8",
+      "category_id": "smartphone",
+      "brand_id": "google-smartphone",
+      "name": "Pixel 8",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 300,
+      "has_image": true
+    },
+    {
+      "id": "pixel-7-pro",
+      "category_id": "smartphone",
+      "brand_id": "google-smartphone",
+      "name": "Pixel 7 Pro",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 260,
+      "has_image": true
+    },
+    {
+      "id": "pixel-7",
+      "category_id": "smartphone",
+      "brand_id": "google-smartphone",
+      "name": "Pixel 7",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 180,
+      "has_image": true
+    },
+    {
+      "id": "ipad-pro-13-m4",
+      "category_id": "tablet",
+      "brand_id": "apple-tablet",
+      "name": "iPad Pro 13 (M4)",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 980,
+      "has_image": true
+    },
+    {
+      "id": "ipad-pro-11",
+      "category_id": "tablet",
+      "brand_id": "apple-tablet",
+      "name": "iPad Pro 11",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 680,
+      "has_image": true
+    },
+    {
+      "id": "ipad-air-m2",
+      "category_id": "tablet",
+      "brand_id": "apple-tablet",
+      "name": "iPad Air M2",
+      "storages": [
+        "128GB",
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 520,
+      "has_image": true
+    },
+    {
+      "id": "ipad-10",
+      "category_id": "tablet",
+      "brand_id": "apple-tablet",
+      "name": "iPad (10th gen)",
+      "storages": [
+        "64GB",
+        "256GB"
+      ],
+      "base_price": 280,
+      "has_image": true
+    },
+    {
+      "id": "ipad-mini-6",
+      "category_id": "tablet",
+      "brand_id": "apple-tablet",
+      "name": "iPad mini 6",
+      "storages": [
+        "64GB",
+        "256GB"
+      ],
+      "base_price": 320,
+      "has_image": true
+    },
+    {
+      "id": "tab-s9-ultra",
+      "category_id": "tablet",
+      "brand_id": "samsung-tablet",
+      "name": "Galaxy Tab S9 Ultra",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 720,
+      "has_image": true
+    },
+    {
+      "id": "tab-s9",
+      "category_id": "tablet",
+      "brand_id": "samsung-tablet",
+      "name": "Galaxy Tab S9",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 410,
+      "has_image": true
+    },
+    {
+      "id": "tab-s8",
+      "category_id": "tablet",
+      "brand_id": "samsung-tablet",
+      "name": "Galaxy Tab S8",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 280,
+      "has_image": true
+    },
+    {
+      "id": "pixel-tablet",
+      "category_id": "tablet",
+      "brand_id": "google-tablet",
+      "name": "Pixel Tablet",
+      "storages": [
+        "128GB",
+        "256GB"
+      ],
+      "base_price": 220,
+      "has_image": true
+    },
+    {
+      "id": "watch-ultra-2",
+      "category_id": "smartwatch",
+      "brand_id": "apple-smartwatch",
+      "name": "Apple Watch Ultra 2",
+      "storages": [
+        "49mm"
+      ],
+      "base_price": 420,
+      "has_image": true
+    },
+    {
+      "id": "watch-series-10",
+      "category_id": "smartwatch",
+      "brand_id": "apple-smartwatch",
+      "name": "Apple Watch Series 10",
+      "storages": [
+        "42mm",
+        "46mm"
+      ],
+      "base_price": 280,
+      "has_image": true
+    },
+    {
+      "id": "watch-series-9",
+      "category_id": "smartwatch",
+      "brand_id": "apple-smartwatch",
+      "name": "Apple Watch Series 9",
+      "storages": [
+        "41mm",
+        "45mm"
+      ],
+      "base_price": 220,
+      "has_image": true
+    },
+    {
+      "id": "watch-se-2",
+      "category_id": "smartwatch",
+      "brand_id": "apple-smartwatch",
+      "name": "Apple Watch SE (2nd gen)",
+      "storages": [
+        "40mm",
+        "44mm"
+      ],
+      "base_price": 120,
+      "has_image": true
+    },
+    {
+      "id": "watch6-classic",
+      "category_id": "smartwatch",
+      "brand_id": "samsung-smartwatch",
+      "name": "Galaxy Watch6 Classic",
+      "storages": [
+        "43mm",
+        "47mm"
+      ],
+      "base_price": 160,
+      "has_image": true
+    },
+    {
+      "id": "watch7",
+      "category_id": "smartwatch",
+      "brand_id": "samsung-smartwatch",
+      "name": "Galaxy Watch7",
+      "storages": [
+        "40mm",
+        "44mm"
+      ],
+      "base_price": 180,
+      "has_image": true
+    },
+    {
+      "id": "pixel-watch-2",
+      "category_id": "smartwatch",
+      "brand_id": "google-smartwatch",
+      "name": "Pixel Watch 2",
+      "storages": [
+        "41mm"
+      ],
+      "base_price": 140,
+      "has_image": true
+    },
+    {
+      "id": "macbook-pro-16",
+      "category_id": "laptop",
+      "brand_id": "apple-laptop",
+      "name": "MacBook Pro 16",
+      "storages": [
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 1280,
+      "has_image": true
+    },
+    {
+      "id": "macbook-pro-14",
+      "category_id": "laptop",
+      "brand_id": "apple-laptop",
+      "name": "MacBook Pro 14",
+      "storages": [
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 980,
+      "has_image": true
+    },
+    {
+      "id": "macbook-air-m3",
+      "category_id": "laptop",
+      "brand_id": "apple-laptop",
+      "name": "MacBook Air M3",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 820,
+      "has_image": true
+    },
+    {
+      "id": "macbook-air-m2",
+      "category_id": "laptop",
+      "brand_id": "apple-laptop",
+      "name": "MacBook Air M2",
+      "storages": [
+        "256GB",
+        "512GB",
+        "1TB"
+      ],
+      "base_price": 720,
+      "has_image": true
+    },
+    {
+      "id": "galaxy-book4",
+      "category_id": "laptop",
+      "brand_id": "samsung-laptop",
+      "name": "Galaxy Book4",
+      "storages": [
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 480,
+      "has_image": true
+    },
+    {
+      "id": "galaxy-book3",
+      "category_id": "laptop",
+      "brand_id": "samsung-laptop",
+      "name": "Galaxy Book3",
+      "storages": [
+        "256GB",
+        "512GB"
+      ],
+      "base_price": 360,
+      "has_image": true
+    }
+  ]
+}

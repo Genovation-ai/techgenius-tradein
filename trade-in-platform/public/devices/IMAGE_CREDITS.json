@@ -1,0 +1,42 @@
+{
+  "apple-ipad-air.png": {
+    "artist": "Zach Vega",
+    "device": "Apple iPad Air",
+    "file": "File:IPad Air.png",
+    "licence": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:IPad_Air.png",
+    "source": "Wikimedia Commons"
+  },
+  "galaxy-s2.png": {
+    "artist": "GalaxyOptimus",
+    "device": "Galaxy S II",
+    "file": "File:Samsung Galaxy S II.png",
+    "licence": "CC BY-SA 3.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_S_II.png",
+    "source": "Wikimedia Commons"
+  },
+  "google-pixel-c-3gb-3gb.png": {
+    "artist": "AnVuong1222004",
+    "device": "Google Pixel C",
+    "file": "File:Pixel C.png",
+    "licence": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Pixel_C.png",
+    "source": "Wikimedia Commons"
+  },
+  "samsung-galaxy-tab-s2-8-0.png": {
+    "artist": "AnVuong1222004 (7)",
+    "device": "Samsung Galaxy Tab S2 8.0",
+    "file": "File:Samsung Galaxy Tab S2 8.0.png",
+    "licence": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_Tab_S2_8.0.png",
+    "source": "Wikimedia Commons"
+  },
+  "samsung-galaxy-tab-s2-9-7.png": {
+    "artist": "AnVuong1222004 (7)",
+    "device": "Samsung Galaxy Tab S2 9.7",
+    "file": "File:Samsung Galaxy Tab S2 9.7.png",
+    "licence": "CC BY-SA 4.0",
+    "page": "https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_Tab_S2_9.7.png",
+    "source": "Wikimedia Commons"
+  }
+}

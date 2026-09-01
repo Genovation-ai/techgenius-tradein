@@ -1,0 +1,122 @@
+{
+  "scrapedAt": "2026-08-06T19:17:12.699Z",
+  "sources": {
+    "univercell_tradein": {
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-15",
+      "title": "Sell Your iPhone 15 for up to $515 | UniverCell Canada | UniverCell Canada",
+      "hero": "Get up to $515for your iPhone 15",
+      "capacities": []
+    },
+    "univercell_repair": {
+      "url": "https://univercell.ai/repair/mobile/apple/iphone-15",
+      "repairOptions": []
+    },
+    "gorecell": {
+      "prices": {},
+      "finalPriceHtml": "",
+      "apiCalls": [
+        {
+          "url": "https://gorecell.ca/wp-content/plugins/woocommerce/assets/js/frontend/add-to-cart-variation.min.js?ver=9.9.3",
+          "status": 200,
+          "body": "!function(t,a,i,e){var r=function(t){var a=this;a.$form=t,a.$attributeFields=t.find(\".variations select\"),a.$singleVariation=t.find(\".single_variation\"),a.$singleVariationWrap=t.find(\".single_variation_wrap\"),a.$resetVariations=t.find(\".reset_variations\"),a.$resetAlert=t.find(\".reset_variations_alert\"),a.$product=t.closest(\".product\"),a.variationData=t.data(\"product_variations\"),a.useAjax=!1===a.variationData,a.xhr=!1,a.loading=!0,a.$singleVariationWrap.show(),a.$form.off(\".wc-variation-form\"),a"
+        },
+        {
+          "url": "https://gorecell.ca/?wc-ajax=get_refreshed_fragments",
+          "status": 200,
+          "body": "{\"fragments\":{\"div.widget_shopping_cart_content\":\"<div class=\\\"widget_shopping_cart_content\\\">\\n\\n\\t<p class=\\\"woocommerce-mini-cart__empty-message\\\">No products in the cart.<\\/p>\\n\\n\\n<\\/div>\",\".head_cart .count\":\"<div class=\\\"count\\\">0<\\/div>\",\".hc_cart .hcf_box\":\"<div class=\\\"hcf_box\\\"><div class=\\\"widget_shopping_cart_content\\\">\\n\\n\\t<p class=\\\"woocommerce-mini-cart__empty-message\\\">No products in the cart.<\\/p>\\n\\n\\n<\\/div><\\/div>\"},\"cart_hash\":\"\"}"
+        }
+      ]
+    },
+    "bell": {
+      "typed": true,
+      "estimateText": null,
+      "dollarMatches": [
+        "$1,0009",
+        "$25,",
+        "$0.00",
+        "$15.00"
+      ],
+      "apiCalls": [
+        {
+          "url": "https://www.bell.ca/styles/assets/css/tradein.typeahead.css",
+          "status": 200,
+          "body": ".tt-input,.tt-hint {\r\n    /*width: 396px;*/\r\n    height: 30px;\r\n    padding: 8px 12px;\r\n    line-height: 30px;\r\n    border: 2px solid #ccc;\r\n    border-radius: 8px;\r\n    outline: none;\r\n}\r\n\r\n.tt-input {\r\n    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);\r\n}\r\n\r\n.tt-hint {\r\n    color: #999\r\n}\r\n\r\n.tt-dropdown-menu {\r\n    /*width: 422px;*/\r\n    margin-top: 12px;\r\n    padding: 8px 0;\r\n    background"
+        },
+        {
+          "url": "https://www.bell.ca/ajax/toolbox/CorsProxyAuthenticate?key=TradeIn_SBE&baseAddress=https%3A%2F%2Fws1-bell.sbeglobalcare.com%2Fgc-ws-connect-1.9%2Frest%2FgcWsConnect%2F&uri=login%3Forg_code%3D%7B0%7D%26entity_code%3D%7B1%7D%26username%3D%7B2%7D%26password%3D%7B3%7D",
+          "status": 200,
+          "body": "\"{\\\"session_id\\\":\\\"a8edef1c-4deb-4282-938e-6451e4c14802\\\"}\""
+        },
+        {
+          "url": "https://www.bell.ca/ajax/Mobility/getTradeInProfile",
+          "status": 200,
+          "body": ""
+        },
+        {
+          "url": "https://apigate.bell.ca/api/ccaip/auth/token",
+          "status": 200,
+          "body": "{\"token\":\"eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.ew0KDQogICAgICJuYmYiOiAxNzg2MDQzODY5LA0KCSJpYXQiOiAxNzg2MDQzODY5LA0KCSJleHAiOiAxNzg2MDQ3NDY5LAkNCgkiaXNzIjogIkJlbGwgQ2FuYWRhIiwNCiJjdXN0b21fZGF0YSI6IHsNCiAgInJlc2VydmVkX3ZlcmlmaWVkX2N1c3RvbWVyIjogew0KICAgICJsYWJlbCI6ICJWZXJpZmllZCBDdXN0b21lciIsDQogICAgInR5cGUiOiAiYm9vbGVhbiIsDQogICAgInZhbHVlIjogZmFsc2UNCiAgfQ0KfQ0KfQ.XS5HxKfWLr40f3trUzh11b6-JXesmGvjRW"
+        }
+      ]
+    },
+    "telus": {
+      "url": "https://www.telus.com/en/mobility/trade-in-bring-it-back-returns",
+      "status": 200,
+      "title": "Trade-In or return your existing device online | TELUS",
+      "h1": "Trade-In and Bring-It-Back device returns.",
+      "blocked": false,
+      "apiCalls": [
+        {
+          "url": "https://www.telus.com/en/mobility/trade-in-bring-it-back-returns",
+          "status": 200,
+          "body": "<!doctype html><style data-styled=\"hiBdDX fVDeeW jKwVwy iInHWz dPPJgr idtkix hvcxSw ialCUK SRRTn ifMXtP fZROfU LKvBy iHhshr duPwKj esPMwy eKehwz eeEztf gxCXqW ejUlyl bvgYjb kOvVGV dBqVkr kAZxK elIskt dEtzGB kAFPMq eMqmtn cgkJWW kdnEt dRZAcv kAsBlf fRMWef bHiDDl fFKAyL koHbJl gnMfRf lghlhI czNUFX kHP"
+        },
+        {
+          "url": "https://www.telus.com/chat/api/featureFlag/all",
+          "status": 200,
+          "body": "{\"isTracking\":true,\"isAepSegment\":true,\"proactiveArray\":true,\"adminPrechatMap\":true,\"hideSmartHome\":true,\"privacyDisclaimer\":true,\"enablePhase1TEM\":false,\"enablePhase2TEM\":false,\"enableBcxDialogflow\":true,\"enableBcxMobDialogflow\":true,\"enableBcxFfhDialogflow\":true,\"messageCenterPooling\":false,\"messa"
+        },
+        {
+          "url": "https://ingest.quantummetric.com/horizon/telus?T=B&u=https%3A%2F%2Fwww.telus.com%2Fen%2Fmobility%2Ftrade-in-bring-it-back-returns&t=1786043875143&v=1786043875369&P=0&N=0&S=0&b=3050&z=1",
+          "status": 200,
+          "body": "07d52274435a49349729982ed9ae3a9f/766b564f06853ddb5aa8cbc21a213bc8/e3dd746a0de6e9b7cef85f95"
+        },
+        {
+          "url": "https://www.telus.com/chat/api/featureFlag/all/config",
+          "status": 200,
+          "body": "{\"messageCenterPooling\":{},\"messageCenterAllowList\":{},\"genesysCloudDeploymentId\":{},\"genesysCloudConfiguration\":{},\"temServiceProvider\":{},\"tem\":{\"enableMessageCenterHistory\":false,\"enableMessageCenterPolling\":true,\"enableMessageCenterRemoveConversation\":false,\"genesysDeploymentId\":\"12503f72-dab3-4"
+        },
+        {
+          "url": "https://www.google-analytics.com/g/collect?v=2&tid=G-CSM86JWX9C&gtm=45je6850h1v9118306067za200zd9118306067&_p=1786043874457&gcs=G101&gcd=13p3t3p3p5l1&npa=1&dma_cps=-&dma=0&gdid=dYWJhMj&_eu=AAAAAGA&are=1&cid=1738242205.1786043876&frm=0&pscdl=denied&rcb=10&sr=1280x720&uaa=x86&uab=64&uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34&uam=&uamb=0&uap=Windows&uapv=10.0&uaw=0&ul=en-ca&gaf=2&_s=1&tag_exp=115938466~115938469~118897920~118897930~119527019~119896802&uid=&sid=1786043875&sct=1&seg=0&dl=https%3A%2F%2Fwww.telus.com%2Fen%2Fmobility%2Ftrade-in-bring-it-back-returns&dt=Trade-In%20or%20return%20your%20existing%20device%20online%20%7C%20TELUS&_tu=wA&en=page_view&_fv=1&_nsi=1&_ss=1&_ee=1&ep.optimize_id=&ep.anonymize_ip=false&ep.catalogue_type=&ep.custom_site_section=personal&ep.lob=%25adobeXDM%20-%20lob%25&ep.order_type=new_customer&ep.page_brand=consumer&ep.page_language=en&ep.page_name=telus%3Epersonal%3Emobility%3Etrade-in-bring-it-back-returns&ep.page_type=research&ep.previous_page_type=&ep.primary_site_section=mobility&ep.secondary_site_section=trade-in-bring-it-back-returns&ep.site=telus.com&tfd=2220",
+          "status": 204,
+          "body": ""
+        },
+        {
+          "url": "https://ingest.quantummetric.com/horizon/telus?T=B&u=https%3A%2F%2Fwww.telus.com%2Fen%2Fmobility%2Ftrade-in-bring-it-back-returns&t=1786043875143&v=1786043875432&H=e3dd746a0de6e9b7cef85f95&s=07d52274435a49349729982ed9ae3a9f&U=766b564f06853ddb5aa8cbc21a213bc8&N=0&Q=2&S=0&b=3198&z=1",
+          "status": 200,
+          "body": ""
+        },
+        {
+          "url": "https://ingest.quantummetric.com/horizon/telus?T=B&u=https%3A%2F%2Fwww.telus.com%2Fen%2Fmobility%2Ftrade-in-bring-it-back-returns&t=1786043875143&v=1786043875433&H=e3dd746a0de6e9b7cef85f95&s=07d52274435a49349729982ed9ae3a9f&P=1&N=1&S=0&b=1619&z=1",
+          "status": 200,
+          "body": ""
+        },
+        {
+          "url": "https://ingest.quantummetric.com/horizon/telus?T=B&u=https%3A%2F%2Fwww.telus.com%2Fen%2Fmobility%2Ftrade-in-bring-it-back-returns&t=1786043875143&v=1786043875426&H=e3dd746a0de6e9b7cef85f95&s=07d52274435a49349729982ed9ae3a9f&U=766b564f06853ddb5aa8cbc21a213bc8&Q=1&Y=1&X=b0a7ce1abbd64474860862d97d89d34e&S=0&b=314230&z=1",
+          "status": 200,
+          "body": ""
+        },
+        {
+          "url": "https://www.telus.com/chat/api/bootstrap?route=mobility%2Ftrade-in-bring-it-back-returns&language=en&province=bc&device=desktop&segmentID=aam%3D25928045,aam%3D22240091,aam%3D19490966&aepSegmentID=false&cookieConsentAPI=true",
+          "status": 200,
+          "body": "{\"route\":{\"id\":3,\"sortOrder\":57,\"config\":{\"isOn\":true,\"route\":\"/^mobility/(phones|plans|configure)?/\",\"devices\":[\"mobile\",\"desktop\"],\"prechat\":\"Normal\",\"language\":[\"en\",\"fr\"],\"province\":[\"on\",\"nl\",\"pe\",\"ns\",\"nb\",\"qc\",\"mb\",\"sk\",\"ab\",\"bc\",\"yt\",\"nt\",\"nu\"],\"isEnabled\":true,\"isAwaitInit\":false,\"isDirectB"
+        },
+        {
+          "url": "https://6587013.fls.doubleclick.net/activityi;src=6587013;type=telus0;cat=telus01m;rcb=10;ord=2441951891148;npa=0;auiddc=1118014438.1786043878;gdid=dYWJhMj;uaa=x86;uab=64;uafvl=Not%253DA%253FBrand%3B99.0.0.0%7CHeadlessChrome%3B151.0.7922.34%7CChromium%3B151.0.7922.34;uamb=0;uam=;uap=Windows;uapv=10.0;uaw=0;pscdl=noapi;frm=0;_tu=IFA;gtm=45fe6850h1v9137423853za200zb9118306067zd9118306067xec;gcs=G111;gcd=13r3v3r3r5l1;dma=0;dc_fmt=2;tag_exp=115616985~115938466~115938468~118897920~118897930~119527020~119896803;epver=2;dc_random=1786043877_scR6Kb1S-dgdZfRyzxcWI_l5Qh97d9kifA;_dc_test=1;~oref=https%3A%2F%2Fwww.telus.com%2Fen%2Fmobility%2Ftrade-in-bring-it-back-returns?",
+          "status": 302,
+          "body": ""
+        }
+      ]
+    }
+  }
+}

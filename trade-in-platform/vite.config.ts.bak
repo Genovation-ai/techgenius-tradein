@@ -1,0 +1,23 @@
+/// <reference types="vitest/config" />
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    proxy: {
+      "/api": {
+        target: "http://localhost:4100",
+        changeOrigin: true,
+      },
+      "/devices": {
+        target: "http://localhost:4100",
+        changeOrigin: true,
+      },
+    },
+  },
+  test: {
+    environment: "happy-dom",
+    include: ["src/**/*.test.ts"],
+  },
+});

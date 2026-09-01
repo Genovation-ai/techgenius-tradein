@@ -1,0 +1,118 @@
+{
+  "dualMode": false,
+  "preferredEngine": "scrapling",
+  "providers": ["univercell", "bell", "telus", "gorecell"],
+  "competitors": [
+    { "id": "gorecell", "label": "GoRecell", "notes": "Product-page query_data (wc-query-flow) — storage fixed $ + condition %" },
+    { "id": "univercell", "label": "UniverCell", "notes": "Sell flow RSC JSON — condition-tiered prices" },
+    { "id": "bell", "label": "Bell", "notes": "Carrier trade-in max estimate via SBE API" },
+    { "id": "telus", "label": "Telus", "notes": "Carrier trade-in marketValueAmt via trade-in SPA backend" }
+  ],
+  "productSchema": {
+    "entity": "device",
+    "idField": "productId",
+    "variantField": "variant",
+    "variantMeaning": "storage (e.g. 128GB)",
+    "conditions": ["excellent", "good", "fair", "broken"],
+    "storeConditionMap": {
+      "flawless": "excellent",
+      "good": "good",
+      "average": "fair",
+      "fair": "fair",
+      "defective": "broken"
+    }
+  },
+  "targets": [
+    {
+      "productId": "iphone-15",
+      "make": "Apple",
+      "model": "iPhone 15",
+      "variant": "128GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-15"
+    },
+    {
+      "productId": "iphone-15",
+      "make": "Apple",
+      "model": "iPhone 15",
+      "variant": "256GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-15"
+    },
+    {
+      "productId": "iphone-15-pro",
+      "make": "Apple",
+      "model": "iPhone 15 Pro",
+      "variant": "128GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-15-pro"
+    },
+    {
+      "productId": "iphone-15-pro-max",
+      "make": "Apple",
+      "model": "iPhone 15 Pro Max",
+      "variant": "256GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-15-pro-max"
+    },
+    {
+      "productId": "iphone-16",
+      "make": "Apple",
+      "model": "iPhone 16",
+      "variant": "128GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-16"
+    },
+    {
+      "productId": "iphone-16-pro",
+      "make": "Apple",
+      "model": "iPhone 16 Pro",
+      "variant": "128GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-16-pro"
+    },
+    {
+      "productId": "iphone-16-pro-max",
+      "make": "Apple",
+      "model": "iPhone 16 Pro Max",
+      "variant": "256GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-16-pro-max"
+    },
+    {
+      "productId": "iphone-14",
+      "make": "Apple",
+      "model": "iPhone 14",
+      "variant": "128GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-14"
+    },
+    {
+      "productId": "iphone-13",
+      "make": "Apple",
+      "model": "iPhone 13",
+      "variant": "128GB",
+      "url": "https://univercell.ai/sell/mobile/apple/iphone-13"
+    },
+    {
+      "productId": "s24-ultra",
+      "make": "Samsung",
+      "model": "Galaxy S24 Ultra",
+      "variant": "256GB",
+      "url": "https://univercell.ai/sell/mobile/samsung/galaxy-s24-ultra"
+    },
+    {
+      "productId": "s25-ultra",
+      "make": "Samsung",
+      "model": "Galaxy S25 Ultra",
+      "variant": "256GB",
+      "url": "https://univercell.ai/sell/mobile/samsung/galaxy-s25-ultra"
+    },
+    {
+      "productId": "pixel-9",
+      "make": "Google",
+      "model": "Pixel 9",
+      "variant": "128GB",
+      "url": "https://univercell.ai/sell/mobile/google/pixel-9"
+    },
+    {
+      "productId": "pixel-9-pro",
+      "make": "Google",
+      "model": "Pixel 9 Pro",
+      "variant": "128GB",
+      "url": "https://univercell.ai/sell/mobile/google/pixel-9-pro"
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+I am uploading two files with this message:
+1) tg-trade-in.css
+2) tg-trade-in.js
+
+Please update the Tech Genius trade-in wizard on the existing Sell page (/sell) on this Framer project (techgenius.ca).
+
+========================================
+CRITICAL — DO NOT MESS UP THE CURRENT SITE
+========================================
+- Do NOT redesign the Sell page
+- Do NOT change header, nav, logo, hero, footer, or brand styling
+- Do NOT remove existing Sell content (headlines, CTAs, Repair/Shop/Recycle, etc.)
+- Do NOT restyle the whole page
+- ONLY update/replace the existing trade-in Embed (or insert one Embed if missing)
+- If spacing needs a tweak so the embed fits, adjust ONLY local padding/height/width around that Embed
+
+========================================
+WHAT THESE FILES ARE
+========================================
+This is our custom Tech Genius sell/trade-in wizard (NOT Reusely, NOT GoRecell, NOT UniverCell).
+
+It includes:
+- Category → search/select device with REAL product photos (phones/tablets/watches/laptops)
+- Device details → checklist → on-device photo/video check → grade → offer → checkout
+- Brand colors: green #39b54a, CTA orange #f79347, charcoal #323232
+- Real device photos are BUNDLED inside tg-trade-in.js (like GoRecell/UniverCell sell grids)
+- Do NOT invent green outline/shape placeholders — the JS already has real product images
+
+========================================
+WHAT TO DO
+========================================
+1) Host the two uploaded files in Framer Assets / file hosting and get their public HTTPS URLs.
+2) Open Sell page (/sell).
+3) Find the existing trade-in Embed under “Get an Instant Quote” (or insert one Embed there if none exists).
+4) Embed settings:
+   - Width: Fill / 100%
+   - Height: about 1100px (increase if clipped on mobile)
+   - Full-width content section (not inside a tiny card)
+5) Put this EXACT HTML in the Embed, replacing the two placeholder URLs with the real Framer-hosted URLs of the uploaded files:
+
+<style>
+  #tg-trade-in-root { width: 100%; min-height: 1000px; }
+</style>
+<link rel="stylesheet" href="FRAMER_HOSTED_URL_FOR_tg-trade-in.css" />
+<div id="tg-trade-in-root"></div>
+<script src="FRAMER_HOSTED_URL_FOR_tg-trade-in.js" defer></script>
+
+6) Keep Tech Genius branding and current Framer layout intact.
+7) Preview and confirm ALL of this:
+   - Existing Sell page still looks the same (header/nav/hero/footer untouched)
+   - Wizard mounts inside #tg-trade-in-root
+   - Step 1 shows categories with product photos
+   - Step 2 shows a searchable image grid of REAL devices (iPhone/Galaxy/Pixel etc.) — NOT green shapes or letter placeholders
+   - Flow continues: Details → Checklist → Vision → Grade → Offer → Checkout
+8) Leave the page publish-ready and Publish when confirmed.
+
+========================================
+CONSTRAINTS
+========================================
+- No Reusely / no third-party buyback plugins
+- No competitor widgets
+- No full-page redesign
+- Minimal, safe Embed update only — preserve the current Framer site
+- Prefer Framer-hosted asset URLs from the files I uploaded (not external CDNs)

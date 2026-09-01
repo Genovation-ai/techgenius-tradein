@@ -1,0 +1,103 @@
+.tg-top {
+  padding: 0.9rem 0;
+  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.tg-top-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.tg-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--font-display);
+  font-weight: 650;
+  font-size: 1.2rem;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.tg-logo svg {
+  color: var(--mint);
+  flex-shrink: 0;
+}
+
+.tg-top-note {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.trade-page {
+  padding: 2.25rem 0 3.5rem;
+  display: grid;
+  gap: 1.75rem;
+}
+
+.trade-intro {
+  display: grid;
+  gap: 0.65rem;
+  max-width: 36rem;
+  animation: tg-fade 0.5s var(--ease) both;
+}
+
+.trade-intro .brand-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--mint-dim);
+}
+
+.trade-intro h1 {
+  font-size: clamp(2.1rem, 4.5vw, 3.1rem);
+  line-height: 1.05;
+  color: var(--ink);
+}
+
+.trade-intro > p {
+  color: var(--ink-soft);
+  line-height: 1.55;
+  font-size: 1.05rem;
+}
+
+.embed-banner {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  font-size: 0.88rem;
+}
+
+.embed-banner a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+}
+
+.tg-foot {
+  padding: 1.5rem 0 2rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.tg-foot a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}

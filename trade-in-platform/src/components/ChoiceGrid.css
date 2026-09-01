@@ -1,0 +1,153 @@
+.choice-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.choice-grid--dense {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.choice-card {
+  text-align: left;
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: 1.05rem 1.1rem;
+  display: grid;
+  gap: 0.3rem;
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+}
+
+.choice-card:hover {
+  border-color: var(--mint-dim);
+  background: var(--fog);
+}
+
+.choice-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.12rem;
+}
+
+.choice-sub {
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
+  gap: 0.75rem;
+}
+
+.device-grid--cats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (min-width: 640px) {
+  .device-grid--cats {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.device-card {
+  border: 1.5px solid var(--line);
+  background: var(--paper);
+  border-radius: var(--radius);
+  padding: 0.7rem 0.65rem 0.85rem;
+  display: grid;
+  gap: 0.35rem;
+  justify-items: center;
+  text-align: center;
+  transition: border-color 0.18s var(--ease), background 0.18s var(--ease);
+}
+
+.device-card:hover {
+  border-color: var(--mint);
+  background: #fbfcfb;
+}
+
+.device-card:focus-visible {
+  outline: 2px solid rgba(57, 181, 74, 0.45);
+  outline-offset: 2px;
+}
+
+.device-card-media {
+  width: 100%;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #f7f8f6 0%, #fff 100%);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid rgba(42, 42, 42, 0.06);
+  padding: 0.7rem;
+}
+
+.device-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  transition: transform 0.35s var(--ease);
+}
+
+.device-card:hover .device-card-media img {
+  transform: scale(1.04);
+}
+
+.device-card-fallback {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 650;
+  color: var(--mint-dim);
+}
+
+.device-card-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.device-card-price {
+  font-size: 0.78rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.brand-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.chip-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding-inline: 0.7rem;
+}
+
+.chip-brand img {
+  width: 18px;
+  height: 22px;
+  object-fit: contain;
+}
+
+@media (max-width: 560px) {
+  .choice-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .device-grid--cats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .device-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
