@@ -1,9 +1,13 @@
 dist/
 node_modules/
 *.db
+!data/catalog-backup.json
 
 # scraper / sync logs
 data/*.txt
 data/*_report.txt
 *.db-shm
 *.db-wal
+
+# local DB snapshots (binary, contain customer records) — use catalog-backup.json
+*.db.bak-*
