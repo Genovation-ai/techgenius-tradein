@@ -252,8 +252,20 @@ TG_EMAIL_WEBHOOK_TOKEN=…
 TG_CRM_WEBHOOK_URL=https://… # optional Twenty/CRM
 TG_CRM_WEBHOOK_TOKEN=…
 TG_TRUST_PROXY=1             # if behind reverse proxy
+TG_DB_PATH=/data/tradein.db  # REQUIRED on hosted deploys — see below
 VITE_TRADE_IN_API_URL=https://YOUR_API_HOST
 ```
+
+**`TG_DB_PATH` is the one that silently loses data if you skip it.** It defaults
+to `data/tradein.db` inside the repo, which on a hosted platform lives in the
+container image rather than on the mounted volume. The app runs, takes offers,
+and looks healthy — then the next deploy replaces the container and every offer,
+customer, and price row is gone with it. Point it at the volume mount, then
+redeploy once and confirm an existing offer is still there.
+
+`GET /api/health` reports `checks.database` and answers **503** when the
+database is unreachable, so point your uptime monitor at it: a plain 200 check
+against a static endpoint would stay green through exactly that failure.
 
 Without email/CRM webhooks, outbox events stay **blocked** (honest — not fake-success).
 

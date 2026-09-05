@@ -69,13 +69,36 @@ const quoteLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
 import path from "node:path";
 app.use("/devices", express.static(path.resolve(import.meta.dirname, "../../trade-in-platform/public/devices")));
 
+// Health has to actually check something. A static 200 means an uptime monitor
+// and the host's own health probe both stay green while the mounted volume is
+// missing and every real request fails — the container is never restarted and
+// nobody is paged. So touch the database, and answer 503 when it is unreachable
+// so schedulers and monitors react. Kept cheap: this runs every few minutes.
 app.get("/api/health", (_req, res) => {
-  res.json({
-    status: "ok",
+  let database = "ok";
+  let devices = -1;
+  try {
+    const db = getDb();
+    try {
+      devices = (db.prepare("SELECT COUNT(*) AS c FROM devices WHERE enabled = 1").get() as { c: number }).c;
+      if (devices === 0) database = "empty";
+    } finally {
+      db.close();
+    }
+  } catch (err) {
+    database = err instanceof Error ? `unreachable: ${err.message}` : "unreachable";
+  }
+
+  const healthy = database === "ok";
+  // Shape is additive: `status` stays "ok" when healthy, so existing callers
+  // and the smoke suite keep working unchanged.
+  res.status(healthy ? 200 : 503).json({
+    status: healthy ? "ok" : "degraded",
     version: "1.2.0",
     engine: "Tech Genius Trade-In Backend",
     pricingEngine: true,
     saas: true,
+    checks: { database, quotableDevices: devices },
   });
 });
 
@@ -148,7 +171,47 @@ function warnOnInsecureDefaults() {
 }
 
 const PORT = parseInt(process.env.PORT || "4100", 10);
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Tech Genius Trade-In Backend running on http://localhost:${PORT}`);
   startWeeklyScrapeScheduler();
 });
+
+// A rejected promise nobody awaited terminates the process on modern Node. One
+// unlucky background path — a scraper fetch, a CRM webhook — would take the
+// quote server down with it and every shopper mid-flow would see a dead widget.
+// Log it and keep serving instead: a degraded background job is survivable, an
+// offline storefront is not.
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled promise rejection (server kept alive):", reason);
+});
+
+// An uncaught exception leaves the process in an undefined state, so here we do
+// stop — but through the same graceful path, so in-flight requests still finish.
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception — shutting down:", err);
+  shutdown("uncaughtException", 1);
+});
+
+let shuttingDown = false;
+function shutdown(signal: string, code = 0) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  console.log(`${signal} received — finishing in-flight requests…`);
+
+  // Hosts send SIGTERM before replacing a container. Without this the socket is
+  // cut mid-request and a shopper's submit is lost even though it may already
+  // have been written. Stop accepting new connections, let current ones drain.
+  server.close(() => {
+    console.log("Closed cleanly.");
+    process.exit(code);
+  });
+
+  // Never hang a deploy waiting on a stuck socket.
+  setTimeout(() => {
+    console.error("Drain timed out after 10s — exiting anyway.");
+    process.exit(code || 1);
+  }, 10_000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

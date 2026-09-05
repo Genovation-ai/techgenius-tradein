@@ -26,7 +26,8 @@ export type WidgetEventName =
   | "techgenius:offer_accepted"
   | "techgenius:device_added"
   | "techgenius:offer_submitted"
-  | "techgenius:quote_failed";
+  | "techgenius:quote_failed"
+  | "techgenius:widget_error";
 
 export interface WidgetEventDetail {
   step?: string;
@@ -38,6 +39,8 @@ export interface WidgetEventDetail {
   currency?: string;
   itemCount?: number;
   offerId?: string;
+  /** Error class/message for techgenius:widget_error. Never carries shopper input. */
+  error?: string;
 }
 
 export function emitWidgetEvent(name: WidgetEventName, detail: WidgetEventDetail = {}): void {

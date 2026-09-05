@@ -22,9 +22,26 @@ import { TeamPage } from "./admin/pages/TeamPage.tsx";
 import { InvoicesPage } from "./admin/pages/InvoicesPage.tsx";
 import { PayoutsPage } from "./admin/pages/PayoutsPage.tsx";
 import { BulkHandoffPage } from "./admin/pages/BulkHandoffPage.tsx";
+import { WidgetErrorBoundary } from "./components/WidgetErrorBoundary.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    <WidgetErrorBoundary
+      label="Admin"
+      fallback={(retry, message) => (
+        <div className="admin-crash" role="alert">
+          <h1>This page stopped working</h1>
+          <p>
+            The error was <code>{message}</code>. Nothing you entered has been lost —
+            offers and inventory are stored on the server, not in this page.
+          </p>
+          <div className="admin-crash__actions">
+            <button type="button" onClick={retry}>Try again</button>
+            <a href="/admin">Back to dashboard</a>
+          </div>
+        </div>
+      )}
+    >
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<App />} />
@@ -50,5 +67,6 @@ createRoot(document.getElementById("root")!).render(
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+    </WidgetErrorBoundary>
   </StrictMode>,
 );

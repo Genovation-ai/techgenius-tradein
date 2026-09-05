@@ -4,7 +4,21 @@ import path from "node:path";
 import { SCHEMA } from "./schema.js";
 import { applySchemaPatches } from "./patches.js";
 
-const DB_PATH = path.resolve(import.meta.dirname, "../../data/tradein.db");
+/**
+ * Where the database lives. Defaults to the repo's data/ folder for local work.
+ *
+ * TG_DB_PATH exists for deployment: hosts hand you a mounted volume at a path
+ * like /data, and the database has to sit on it. Anywhere else and the file is
+ * inside the container image, so every redeploy silently starts from an empty
+ * database and takes the shop's offer history with it.
+ */
+const DB_PATH = process.env.TG_DB_PATH
+  ? path.resolve(process.env.TG_DB_PATH)
+  : path.resolve(import.meta.dirname, "../../data/tradein.db");
+
+export function databasePath(): string {
+  return DB_PATH;
+}
 
 export function getDb(): DatabaseType {
   const db = new Database(DB_PATH);

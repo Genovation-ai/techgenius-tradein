@@ -282,16 +282,6 @@ widgetRouter.post("/submit", (req, res) => {
   }
 
   const customerId = nanoid(12);
-  db.prepare(
-    "INSERT INTO customers (id, first_name, last_name, email, phone) VALUES (?, ?, ?, ?, ?)",
-  ).run(
-    customerId,
-    contact.first_name,
-    contact.last_name,
-    contact.email || null,
-    contact.phone || null,
-  );
-
   const id = `TG-${Date.now().toString(36).toUpperCase()}-${nanoid(4).toUpperCase()}`;
   const totalValue = pricedItems.reduce((s, i) => s + i.quoted_price, 0);
 
@@ -314,58 +304,75 @@ widgetRouter.post("/submit", (req, res) => {
   }
   const storeId = (req.body as { store_id?: string })?.store_id || defaultStoreId(db, orgId);
 
-  db.prepare(
-    `INSERT INTO offers (id, customer_id, status, offer_type, total_value, payout_method, promo_code, store_id, source, ai_scan_json, org_id)
-     VALUES (?, ?, 'active_lead', ?, ?, ?, ?, ?, 'widget', ?, ?)`,
-  ).run(
-    id,
-    customerId,
-    offer_type || "mail-in",
-    totalValue,
-    payout_method || null,
-    promo_code || null,
-    storeId,
-    ai_scan ? JSON.stringify(ai_scan).slice(0, 50_000) : null,
-    orgId,
-  );
-
-  db.prepare("UPDATE customers SET org_id = ? WHERE id = ?").run(orgId, customerId);
-
-  // This shopper came back and finished, so their lead is no longer abandoned.
-  // Marked rather than deleted, so "leads recovered" stays measurable.
-  if (contact.email) {
+  // One offer is one transaction. These six writes describe a single customer
+  // action, and a partial application of them is worse than none: an offer with
+  // no items cannot be paid out, a lead marked "converted" against an offer that
+  // was never written is unrecoverable, and a promo use counted without an offer
+  // silently burns a redemption. SQLite rolls the whole set back on any throw.
+  const commitOffer = db.transaction(() => {
     db.prepare(
-      `UPDATE abandoned_leads SET status = 'converted', converted_offer_id = ?, updated_at = datetime('now')
-        WHERE email = ? AND status = 'open'`,
-    ).run(id, contact.email);
-  }
-
-  const insertItem = db.prepare(
-    `INSERT INTO offer_items (offer_id, device_id, device_name, storage, memory, carrier, condition_grade, quoted_price, battery_health, imei)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-  for (const item of pricedItems) {
-    insertItem.run(
-      id,
-      item.device_id,
-      item.device_name,
-      item.storage,
-      item.memory,
-      item.carrier,
-      item.condition_grade,
-      item.quoted_price,
-      item.battery_health,
-      item.imei,
+      "INSERT INTO customers (id, first_name, last_name, email, phone, org_id) VALUES (?, ?, ?, ?, ?, ?)",
+    ).run(
+      customerId,
+      contact.first_name,
+      contact.last_name,
+      contact.email || null,
+      contact.phone || null,
+      orgId,
     );
-  }
 
-  if (promo_code) {
     db.prepare(
-      `UPDATE promo_codes SET uses = uses + 1
-       WHERE code = ? AND active = 1
-         AND (max_uses IS NULL OR uses < max_uses)`,
-    ).run(String(promo_code).toUpperCase());
-  }
+      `INSERT INTO offers (id, customer_id, status, offer_type, total_value, payout_method, promo_code, store_id, source, ai_scan_json, org_id)
+       VALUES (?, ?, 'active_lead', ?, ?, ?, ?, ?, 'widget', ?, ?)`,
+    ).run(
+      id,
+      customerId,
+      offer_type || "mail-in",
+      totalValue,
+      payout_method || null,
+      promo_code || null,
+      storeId,
+      ai_scan ? JSON.stringify(ai_scan).slice(0, 50_000) : null,
+      orgId,
+    );
+
+    // This shopper came back and finished, so their lead is no longer abandoned.
+    // Marked rather than deleted, so "leads recovered" stays measurable.
+    if (contact.email) {
+      db.prepare(
+        `UPDATE abandoned_leads SET status = 'converted', converted_offer_id = ?, updated_at = datetime('now')
+          WHERE email = ? AND status = 'open'`,
+      ).run(id, contact.email);
+    }
+
+    const insertItem = db.prepare(
+      `INSERT INTO offer_items (offer_id, device_id, device_name, storage, memory, carrier, condition_grade, quoted_price, battery_health, imei)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    );
+    for (const item of pricedItems) {
+      insertItem.run(
+        id,
+        item.device_id,
+        item.device_name,
+        item.storage,
+        item.memory,
+        item.carrier,
+        item.condition_grade,
+        item.quoted_price,
+        item.battery_health,
+        item.imei,
+      );
+    }
+
+    if (promo_code) {
+      db.prepare(
+        `UPDATE promo_codes SET uses = uses + 1
+         WHERE code = ? AND active = 1
+           AND (max_uses IS NULL OR uses < max_uses)`,
+      ).run(String(promo_code).toUpperCase());
+    }
+  });
+  commitOffer();
 
   recordOfferNotification(db, {
     offerId: id,

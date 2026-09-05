@@ -172,6 +172,23 @@ export function applySchemaPatches(db: Database): void {
     ]),
   );
 
+  // Indexes for the paths the admin portal hits on every page load. Without
+  // these SQLite full-scans: offer_items on each offer detail view, offers on
+  // every status filter, and the offers list sorts the whole table through a
+  // temp B-tree just to show the newest 50. Invisible at ten offers, and
+  // steadily worse as a real shop accumulates them, so they go in now while the
+  // tables are small enough for the index build to be instant.
+  db.exec(`
+    CREATE INDEX IF NOT EXISTS idx_offer_items_offer   ON offer_items(offer_id);
+    CREATE INDEX IF NOT EXISTS idx_offers_created      ON offers(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_offers_status       ON offers(status, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_offers_customer     ON offers(customer_id);
+    CREATE INDEX IF NOT EXISTS idx_inventory_status    ON inventory(status);
+    CREATE INDEX IF NOT EXISTS idx_email_outbox_status ON email_outbox(status);
+    CREATE INDEX IF NOT EXISTS idx_notifications_offer ON notifications(offer_id);
+    CREATE INDEX IF NOT EXISTS idx_customers_email     ON customers(email);
+  `);
+
   // SaaS multi-tenant foundation (orgs, stores, settings, API keys)
   ensureSaasSchema(db);
 }

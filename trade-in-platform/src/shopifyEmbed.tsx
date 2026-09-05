@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { TradeInFlow } from "./components/TradeInFlow";
 import { TrackOffer } from "./components/TrackOffer";
+import { WidgetErrorBoundary } from "./components/WidgetErrorBoundary";
 import { resetApiBase } from "./lib/tradeInApi";
 import "./tokens.css";
 import "./embedHost.css";
@@ -41,8 +42,10 @@ function mount() {
   root.render(
     <StrictMode>
       <div className="tg-trade-in-host" data-platform="techgenius">
-        <TradeInFlow />
-        <TrackOffer />
+        <WidgetErrorBoundary>
+          <TradeInFlow />
+          <TrackOffer />
+        </WidgetErrorBoundary>
       </div>
     </StrictMode>,
   );
