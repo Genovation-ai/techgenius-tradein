@@ -1,5 +1,6 @@
 import { IconBack, TgMark } from "./BrandIcons";
 import { stepLabels, stepOrder, type TradeInStep } from "../lib/tradeInTypes";
+import { useOrgBranding } from "../hooks/useOrgBranding";
 import "./TradeInProgress.css";
 
 interface Props {
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export function TradeInProgress({ step, onBack }: Props) {
+  const branding = useOrgBranding();
   const visible = stepOrder.filter((s) => s !== "done");
   const idx = visible.indexOf(step === "done" ? "checkout" : step);
 
@@ -23,8 +25,12 @@ export function TradeInProgress({ step, onBack }: Props) {
           <span className="tip-back-spacer" />
         )}
         <div className="tip-brand">
-          <TgMark size={20} />
-          <span>Tech Genius</span>
+          {branding.logoUrl ? (
+            <img src={branding.logoUrl} alt="" className="tip-brand-logo" height={20} />
+          ) : (
+            <TgMark size={20} />
+          )}
+          <span>{branding.companyName}</span>
         </div>
         <span className="tip-count">
           {Math.min(idx + 1, visible.length)} / {visible.length}

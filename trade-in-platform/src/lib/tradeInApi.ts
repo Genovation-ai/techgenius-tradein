@@ -313,6 +313,55 @@ export function embedOrgSlug(): string | null {
  * template is cosmetic, so a failed lookup falls back to the default rather
  * than blocking the sell flow.
  */
+/**
+ * Who the shopper thinks they are dealing with.
+ *
+ * The widget is embedded on the merchant's own site, so it has to wear the
+ * merchant's name. A shopper on redbull.example selling a phone is selling it
+ * to Red Bull; showing the platform's name there would be as odd as a shop till
+ * displaying the name of the company that made the till.
+ *
+ * Falls back to Tech Genius, which is both the original tenant and a safe
+ * default if the lookup fails — better a name than an empty header.
+ */
+export interface OrgBranding {
+  companyName: string;
+  brandColor: string | null;
+  ctaColor: string | null;
+  logoUrl: string | null;
+  plan: string | null;
+}
+
+const DEFAULT_BRANDING: OrgBranding = {
+  companyName: "Tech Genius",
+  brandColor: null,
+  ctaColor: null,
+  logoUrl: null,
+  plan: null,
+};
+
+export async function fetchOrgBranding(orgSlug?: string | null): Promise<OrgBranding> {
+  if (!orgSlug) return DEFAULT_BRANDING;
+  try {
+    const data = await fetchJson<{
+      company_name?: string;
+      brand_color?: string | null;
+      cta_color?: string | null;
+      logo_url?: string | null;
+      plan?: string | null;
+    }>(`/api/saas/widget-config?org=${encodeURIComponent(orgSlug)}`);
+    return {
+      companyName: data.company_name?.trim() || DEFAULT_BRANDING.companyName,
+      brandColor: data.brand_color || null,
+      ctaColor: data.cta_color || null,
+      logoUrl: data.logo_url || null,
+      plan: data.plan || null,
+    };
+  } catch {
+    return DEFAULT_BRANDING;
+  }
+}
+
 export async function fetchWidgetTemplate(orgSlug?: string | null): Promise<string> {
   try {
     const qs = orgSlug ? `?org=${encodeURIComponent(orgSlug)}` : "";

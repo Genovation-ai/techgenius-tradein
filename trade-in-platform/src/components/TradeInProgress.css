@@ -112,3 +112,13 @@
     display: block;
   }
 }
+
+/* A tenant's own logo, when they have uploaded one. Height-constrained so a
+   wide wordmark and a square icon both sit correctly beside the step counter. */
+.tip-brand-logo {
+  height: 20px;
+  width: auto;
+  max-width: 120px;
+  object-fit: contain;
+  display: block;
+}
