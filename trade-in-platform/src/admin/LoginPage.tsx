@@ -32,7 +32,7 @@ export function LoginPage() {
       <section className="admin-login-left">
         <div className="admin-login-brand-row">
           <TgMark size={22} />
-          Trade-In SaaS
+          Reclaim
         </div>
         <h1>Sign in</h1>
         <form onSubmit={(e) => void login(e)}>

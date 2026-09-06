@@ -44,7 +44,7 @@ export class WidgetErrorBoundary extends Component<Props, State> {
     // Still surface it in the console — swallowing it entirely would make this
     // harder to debug than the crash it replaces.
     console.error(
-      `[Tech Genius ${this.props.label ?? "Trade-In"}] crashed:`,
+      `[Reclaim${this.props.label ? ` ${this.props.label}` : ""}] crashed:`,
       error,
       info.componentStack,
     );

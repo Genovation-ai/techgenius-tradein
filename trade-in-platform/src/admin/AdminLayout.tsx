@@ -87,7 +87,7 @@ export function AdminLayout() {
   const [channel, setChannel] = useState(() => localStorage.getItem(CHANNEL_KEY) || "mail-in");
   const [store, setStore] = useState(() => localStorage.getItem(STORE_KEY) || "tg-burlington");
   const [stores, setStores] = useState<Array<{ id: string; name: string }>>([]);
-  const [orgName, setOrgName] = useState(cachedOrg?.name || "Trade-In");
+  const [orgName, setOrgName] = useState(cachedOrg?.name || "Reclaim");
   const [orgPlan, setOrgPlan] = useState(cachedOrg?.plan || "starter");
   const [searchQ, setSearchQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);

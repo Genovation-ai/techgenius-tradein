@@ -23,7 +23,7 @@ let root: Root | null = null;
 function mount() {
   const el = document.getElementById(MOUNT_ID);
   if (!el) {
-    console.warn(`[Tech Genius Trade-In] #${MOUNT_ID} not found on page.`);
+    console.warn(`[Reclaim] #${MOUNT_ID} not found on page.`);
     return;
   }
 
