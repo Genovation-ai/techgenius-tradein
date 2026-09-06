@@ -73,9 +73,59 @@ const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: "Too
 const publicWriteLimiter = rateLimit({ windowMs: 60 * 1000, max: 20 });
 const quoteLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
 
-// Serve device images statically
 import path from "node:path";
-app.use("/devices", express.static(path.resolve(import.meta.dirname, "../../trade-in-platform/public/devices")));
+import { existsSync } from "node:fs";
+
+/**
+ * Static assets.
+ *
+ * Everything ships from this one service: the admin portal, the embeddable
+ * widget bundle, and the device photos. Splitting them across a second host
+ * would buy a CDN we do not need at this volume and cost us a CORS surface and
+ * another thing to forget to redeploy.
+ *
+ * Each path is checked in two places — a self-contained `public/` folder built
+ * into the deploy, and the sibling source tree used in local development — so
+ * the same code works whether the backend was deployed alone or from the repo.
+ */
+const HERE = import.meta.dirname;
+function firstExisting(...candidates: string[]): string | null {
+  for (const c of candidates) if (existsSync(c)) return c;
+  return null;
+}
+
+const devicesDir = firstExisting(
+  path.resolve(HERE, "../public/devices"),
+  path.resolve(HERE, "../../public/devices"),
+  path.resolve(HERE, "../../trade-in-platform/public/devices"),
+);
+if (devicesDir) {
+  app.use("/devices", express.static(devicesDir, { maxAge: "7d" }));
+} else {
+  console.warn("[static] device images not found — the widget will render broken images");
+}
+
+// The built widget bundle the Framer page loads.
+const embedDir = firstExisting(
+  path.resolve(HERE, "../public/embed"),
+  path.resolve(HERE, "../../public/embed"),
+  path.resolve(HERE, "../../framer-deliverable"),
+  path.resolve(HERE, "../../trade-in-platform/dist-embed-lite"),
+);
+if (embedDir) {
+  app.use("/embed", express.static(embedDir, { maxAge: "1h" }));
+} else {
+  console.warn("[static] embed bundle not found — /embed will 404");
+}
+
+// The admin portal. Mounted last, after the API routes, with a catch-all so
+// client-side routes like /admin/offers/TG-123 survive a page refresh instead
+// of 404ing on a path the server has never heard of.
+const adminDir = firstExisting(
+  path.resolve(HERE, "../public/admin"),
+  path.resolve(HERE, "../../public/admin"),
+  path.resolve(HERE, "../../trade-in-platform/dist"),
+);
 
 // Health has to actually check something. A static 200 means an uptime monitor
 // and the host's own health probe both stay green while the mounted volume is
@@ -140,6 +190,19 @@ app.use("/api/payouts", apiKeyAuth, payoutsRouter);
 app.use("/api/bulk", apiKeyAuth, bulkRouter);
 app.use("/api/uploads", apiKeyAuth, uploadsRouter);
 app.use("/api/integrations", apiKeyAuth, integrationsRouter);
+
+// Admin portal, served after the API so nothing here can shadow /api/*.
+if (adminDir) {
+  app.use(express.static(adminDir, { index: false, maxAge: "1h" }));
+  app.get(/^(?!\/api\/).*/, (req, res, next) => {
+    // Never hand index.html to an asset request — a missing image should 404,
+    // not silently return HTML that the browser then fails to decode.
+    if (path.extname(req.path)) return next();
+    res.sendFile(path.join(adminDir, "index.html"));
+  });
+} else {
+  console.warn("[static] admin build not found — only the API is being served");
+}
 
 // Malformed JSON bodies -> 400 instead of a stack-trace 500.
 app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
