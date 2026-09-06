@@ -400,3 +400,83 @@
     transition: none !important;
   }
 }
+
+/* ---------- how a price is built (the scroll moment) ---------- */
+.rc-build { padding-top: 96px; padding-bottom: 96px; }
+.rc-build-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 72px;
+  align-items: start;
+}
+.rc-build-sticky {
+  position: sticky;
+  top: 118px;
+  background: var(--rc-surface);
+  border: 1px solid var(--rc-rule);
+  border-radius: 14px;
+  padding: 24px 26px;
+  box-shadow: 0 1px 2px rgba(13, 20, 23, 0.04), 0 18px 40px rgba(13, 20, 23, 0.06);
+}
+.rc-build-label {
+  font-size: 13px;
+  color: var(--rc-muted);
+  margin-bottom: 16px !important;
+}
+.rc-build-rows { display: flex; flex-direction: column; }
+.rc-build-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--rc-rule);
+  color: var(--rc-muted);
+  transition: color 0.35s ease, opacity 0.35s ease;
+}
+.rc-build-row:last-child { border-bottom: 0; }
+.rc-build-row span { font-size: 15px; }
+.rc-build-row b {
+  font-family: var(--rc-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 30px;
+  letter-spacing: -0.03em;
+  display: inline-block;
+  transform-origin: right center;
+}
+/* Rows ahead of the reader stay quiet; the live one takes full ink. Colour is
+   never used to mark it — weight and opacity carry the state, so the page keeps
+   its rule that only size distinguishes a number. */
+.rc-build-row[data-state="next"] { opacity: 0.32; }
+.rc-build-row[data-state="past"] { opacity: 0.6; }
+.rc-build-row[data-state="now"] { opacity: 1; color: var(--rc-ink); }
+.rc-build-row[data-state="now"] b { color: var(--rc-ink); }
+
+.rc-build-steps { display: flex; flex-direction: column; gap: 88px; padding: 40px 0 120px; }
+.rc-build-step { max-width: 54ch; transition: opacity 0.4s ease; opacity: 0.42; }
+.rc-build-step[data-active="true"] { opacity: 1; }
+.rc-build-step h3 { font-size: clamp(22px, 2.6vw, 30px); margin-bottom: 12px; }
+.rc-build-step p { color: var(--rc-ink-2); font-size: 16.5px; }
+
+@media (max-width: 900px) {
+  /* Sticky needs vertical room to read as pinned; on a phone it just steals the
+     screen, so the panel goes back to normal flow above the copy. */
+  .rc-build-grid { grid-template-columns: 1fr; gap: 32px; }
+  .rc-build-sticky { position: static; }
+  .rc-build-steps { gap: 40px; padding: 0 0 8px; }
+  .rc-build-step { opacity: 1; }
+  /* No scroll sequence at this width, so nothing lights the rows up — without
+     this the second and third figures sit permanently greyed out and the
+     calculation reads as broken rather than staged. */
+  .rc-build-row,
+  .rc-build-row[data-state="next"],
+  .rc-build-row[data-state="past"] {
+    opacity: 1;
+    color: var(--rc-ink);
+  }
+  .rc-build { padding-top: 62px; padding-bottom: 62px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-build-step, .rc-build-row { opacity: 1 !important; transition: none !important; }
+}

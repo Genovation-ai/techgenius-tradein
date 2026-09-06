@@ -14,6 +14,12 @@ import "./LandingPage.css";
  * product doing its only job, in public, before any claim is made about it.
  */
 
+/** Hero entrance: a short rise, reused by each line so the sequence reads as one move. */
+const rise = {
+  hidden: { opacity: 0, y: 12 },
+  shown: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.22, 1, 0.36, 1] as const } },
+};
+
 function useCountUp(target: number | null, enabled: boolean): number | null {
   const [shown, setShown] = useState<number | null>(null);
   useEffect(() => {
@@ -40,6 +46,78 @@ function useCountUp(target: number | null, enabled: boolean): number | null {
     return () => cancelAnimationFrame(raf);
   }, [target, enabled]);
   return shown;
+}
+
+
+/**
+ * How a price is built, revealed by scrolling.
+ *
+ * The single scroll-driven moment on the page, and it earns the scroll because
+ * it is the product's actual mechanism rather than decoration: a competitor's
+ * published price, the shop's margin, the resulting offer. The figures on the
+ * left stay pinned and light up as the matching explanation passes, so the
+ * arithmetic assembles itself while you read the reason for each line.
+ */
+function PriceBuild() {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start 65%", "end 75%"] });
+  const [active, setActive] = useState(0);
+  useMotionValueEvent(scrollYProgress, "change", (v) => {
+    setActive(v < 0.36 ? 0 : v < 0.7 ? 1 : 2);
+  });
+
+  const rows = [
+    { k: "What another buyer pays", v: "$348" },
+    { k: "Your margin", v: "−2%" },
+    { k: "What you offer", v: "$341" },
+  ];
+  const steps = [
+    {
+      h: "Start from a real number",
+      p: "Reclaim reads the prices other buyers publish for the exact model, storage and condition in front of you. Not an estimate, not last quarter's book value — what someone is paying for it this week.",
+    },
+    {
+      h: "Take your margin off the top",
+      p: "You set one percentage. Every model in the catalogue follows it, so the spread you agreed to is the spread you get, whether it's an iPhone 15 or a five-year-old Pixel nobody has priced in months.",
+    },
+    {
+      h: "That is the offer, and it holds",
+      p: "The figure is calculated on the server and handed to the customer whole. Nothing in the browser can move it, so what they accept on your website is exactly what you expected to pay at the counter.",
+    },
+  ];
+
+  return (
+    <section className="rc-section rc-build" ref={ref}>
+      <div className="rc-wrap rc-build-grid">
+        <div className="rc-build-sticky">
+          <p className="rc-build-label">One quote, three decisions</p>
+          <div className="rc-build-rows">
+            {rows.map((r, i) => (
+              <div key={r.k} className="rc-build-row" data-state={i < active ? "past" : i === active ? "now" : "next"}>
+                <span>{r.k}</span>
+                <motion.b
+                  animate={reduce ? {} : { scale: i === active ? 1.06 : 1 }}
+                  transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  {r.v}
+                </motion.b>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="rc-build-steps">
+          {steps.map((s, i) => (
+            <div key={s.h} className="rc-build-step" data-active={i === active}>
+              <h3>{s.h}</h3>
+              <p>{s.p}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 }
 
 export default function LandingPage() {
@@ -72,8 +150,16 @@ export default function LandingPage() {
     // Only models we can actually price — an empty result in the hero would
     // undercut the exact claim the hero is making.
     const pool = devices.filter((d) => (d.storages?.length ?? 0) > 0);
-    if (!q) return pool.slice(0, 5);
-    return pool.filter((d) => d.name.toLowerCase().includes(q)).slice(0, 5);
+    if (q) return pool.filter((d) => d.name.toLowerCase().includes(q)).slice(0, 5);
+
+    // The catalogue sorts alphabetically, which opened the hero on "Edge (2022)"
+    // — a phone almost nobody is holding. Lead with the ones a shop actually
+    // sees across the counter, and only fall back to raw order if none are in.
+    const wanted = ["iPhone 15", "iPhone 14", "Galaxy S24", "Pixel 9", "iPhone 13"];
+    const picked = wanted
+      .map((w) => pool.find((d) => d.name.toLowerCase().startsWith(w.toLowerCase())))
+      .filter((d): d is ApiDevice => Boolean(d));
+    return picked.length >= 3 ? picked.slice(0, 5) : pool.slice(0, 5);
   }, [devices, query]);
 
   async function quote(device: ApiDevice) {
@@ -131,26 +217,35 @@ export default function LandingPage() {
       <main>
         <section className="rc-hero" ref={heroRef}>
           <div className="rc-wrap rc-hero-grid">
-            <div>
-              <h1>Know what a used phone is worth before you buy it.</h1>
-              <p className="rc-hero-sub">
+            <motion.div
+              initial={reduce ? false : "hidden"}
+              animate="shown"
+              variants={{ shown: { transition: { staggerChildren: 0.085, delayChildren: 0.04 } } }}
+            >
+              <motion.h1 variants={rise}>Know what a used phone is worth before you buy it.</motion.h1>
+              <motion.p className="rc-hero-sub" variants={rise}>
                 Reclaim prices trade-ins from what buyers are paying this week, puts the
                 quote on your website, and tracks the device through to payout.
-              </p>
-              <div className="rc-hero-actions">
+              </motion.p>
+              <motion.div className="rc-hero-actions" variants={rise}>
                 <Link className="rc-btn" to="/admin/signup">
                   Start free
                 </Link>
                 <a className="rc-btn rc-btn--quiet" href="#install">
                   See how it installs
                 </a>
-              </div>
-              <p className="rc-hero-note">
+              </motion.div>
+              <motion.p className="rc-hero-note" variants={rise}>
                 No card to start. Your first quote works before you finish reading this page.
-              </p>
-            </div>
+              </motion.p>
+            </motion.div>
 
-            <div className="rc-quote">
+            <motion.div
+              className="rc-quote"
+              initial={reduce ? false : { opacity: 0, y: 18 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            >
               <p className="rc-quote-label">Try it — this is the live pricing engine.</p>
               <input
                 className="rc-quote-input"
@@ -194,9 +289,11 @@ export default function LandingPage() {
                   <span className="rc-quote-empty">Pick a model to see a real offer.</span>
                 )}
               </div>
-            </div>
+            </motion.div>
           </div>
         </section>
+
+        <PriceBuild />
 
         <section className="rc-section">
           <div className="rc-wrap">
@@ -207,31 +304,24 @@ export default function LandingPage() {
             </p>
             <div className="rc-points">
               <div className="rc-point">
-                <h3>Priced against the market</h3>
-                <p>
-                  Reclaim reads what buyers publish, and quotes a set percentage under it.
-                  You choose the margin once; every model follows it.
-                </p>
-              </div>
-              <div className="rc-point">
-                <h3>The offer is the server's</h3>
-                <p>
-                  Prices are never calculated in the browser, so nobody can edit one before
-                  submitting. What the customer accepts is what you agreed to pay.
-                </p>
-              </div>
-              <div className="rc-point">
                 <h3>Nothing quietly goes stale</h3>
                 <p>
-                  Sources refresh weekly. If a feed stops answering, the dashboard says so
-                  instead of serving last month's numbers.
+                  Sources refresh weekly. If one stops answering, the dashboard says so
+                  instead of serving last month's numbers as if they were current.
                 </p>
               </div>
               <div className="rc-point">
                 <h3>The ones who left</h3>
                 <p>
-                  Customers who got a quote and didn't finish land on a follow-up list with
-                  their device and price. That list is usually the cheapest revenue you have.
+                  Customers who got a price and didn't finish land on a follow-up list with
+                  their device and the number they saw. Usually the cheapest revenue you have.
+                </p>
+              </div>
+              <div className="rc-point">
+                <h3>Your name on it</h3>
+                <p>
+                  The widget wears your shop's name, colours and logo. Customers are selling
+                  to you — they never see us.
                 </p>
               </div>
             </div>
@@ -247,9 +337,9 @@ export default function LandingPage() {
             </p>
             <div className="rc-install">
               <pre>{`<div id="tg-trade-in-root"
-     data-api="https://api.reclaim.app"
+     data-api="https://reclaim-hq.up.railway.app"
      `}<span className="tok">data-org="your-shop"</span>{`></div>
-<script src="https://api.reclaim.app/embed/tg-trade-in.js" defer></script>`}</pre>
+<script src="https://reclaim-hq.up.railway.app/embed/tg-trade-in.js" defer></script>`}</pre>
             </div>
           </div>
         </section>
