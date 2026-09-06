@@ -21,32 +21,32 @@ export interface WidgetTemplate {
 
 export const WIDGET_TEMPLATES: WidgetTemplate[] = [
   {
-    id: "techgenius",
-    label: "Tech Genius (default)",
+    id: "classic",
+    label: "Classic (default)",
     description: "Warm local-shop styling: display headings, roomy cards, image-first device picker.",
   },
   {
-    id: "gorecell_step",
+    id: "guided",
     label: "Guided steps",
     description: "One question per screen with a prominent progress bar. Highest completion on mobile.",
   },
   {
-    id: "univercell_sell",
+    id: "dense",
     label: "Dense catalog",
     description: "Tighter grid and smaller tiles so more models fit above the fold.",
   },
   {
-    id: "bell_trade",
+    id: "carrier",
     label: "Carrier blue",
     description: "Cool, corporate palette with flat cards and a fixed price bar.",
   },
   {
-    id: "telus_trade",
+    id: "rounded",
     label: "Rounded friendly",
     description: "Soft radii, generous white space and large tap targets.",
   },
   {
-    id: "reusely_ops",
+    id: "console",
     label: "Ops console",
     description: "Neutral, data-forward styling that matches the staff admin console.",
   },
@@ -57,7 +57,28 @@ export const WIDGET_TEMPLATES: WidgetTemplate[] = [
   },
 ];
 
-export const DEFAULT_TEMPLATE = "techgenius";
+/**
+ * Old ids named after the competitors whose layouts inspired them. They shipped
+ * into the DOM as data-template="reusely_ops", which is not something to hand a
+ * shop evaluating this product. Renamed to describe the look; these aliases keep
+ * any tenant who already chose one on the same template.
+ */
+export const TEMPLATE_ALIASES: Record<string, string> = {
+  techgenius: "classic",
+  gorecell_step: "guided",
+  univercell_sell: "dense",
+  bell_trade: "carrier",
+  telus_trade: "rounded",
+  reusely_ops: "console",
+};
+
+export function canonicalTemplate(id: string | null | undefined): string {
+  const raw = String(id || "").trim();
+  if (!raw) return DEFAULT_TEMPLATE;
+  return TEMPLATE_ALIASES[raw] ?? raw;
+}
+
+export const DEFAULT_TEMPLATE = "classic";
 
 const SETTING_KEY = "frontend_template";
 
@@ -72,7 +93,8 @@ export function getWidgetTemplate(): string {
     const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(SETTING_KEY) as
       | { value: string }
       | undefined;
-    return isWidgetTemplate(row?.value) ? row!.value : DEFAULT_TEMPLATE;
+    const resolved = canonicalTemplate(row?.value);
+    return isWidgetTemplate(resolved) ? resolved : DEFAULT_TEMPLATE;
   } finally {
     db.close();
   }
@@ -107,5 +129,6 @@ export function orgWidgetTemplate(db: Database, orgId: string): string {
   const global = db.prepare("SELECT value FROM settings WHERE key = ?").get(SETTING_KEY) as
     | { value: string }
     | undefined;
-  return isWidgetTemplate(global?.value) ? global!.value : DEFAULT_TEMPLATE;
+  const resolvedGlobal = canonicalTemplate(global?.value);
+  return isWidgetTemplate(resolvedGlobal) ? resolvedGlobal : DEFAULT_TEMPLATE;
 }

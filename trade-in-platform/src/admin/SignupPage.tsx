@@ -43,7 +43,7 @@ export function SignupPage() {
         <section className="admin-login-left">
           <div className="admin-login-brand-row">
             <TgMark size={22} />
-            Trade-In SaaS
+            Reclaim
           </div>
           <h1>Your shop is live</h1>
           <p className="admin-section-lead">
@@ -73,7 +73,7 @@ export function SignupPage() {
         </div>
         <h1>Create your shop</h1>
         <p className="admin-section-lead">
-          Spin up a Reusely-style trade-in desk for your business in under a minute.
+          Take trade-ins on your own site in under a minute. No card needed to start.
         </p>
         <form onSubmit={(e) => void submit(e)}>
           <label>

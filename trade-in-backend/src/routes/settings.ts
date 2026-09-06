@@ -6,6 +6,7 @@ import {
   isWidgetTemplate,
   setWidgetTemplate,
   WIDGET_TEMPLATES,
+  canonicalTemplate,
 } from "../services/widgetTemplate.js";
 
 export const settingsRouter = Router();
@@ -77,7 +78,9 @@ settingsRouter.get("/widget-template", requireCapability("settings:read"), (_req
 });
 
 settingsRouter.put("/widget-template", requireCapability("settings:write"), (req, res) => {
-  const template = String(req.body?.template || "");
+  // Accept the retired competitor-named ids too, so an integration saved
+  // against the old name keeps working after the rename.
+  const template = canonicalTemplate(req.body?.template);
   if (!isWidgetTemplate(template)) {
     return res.status(400).json({
       error: `template must be one of: ${WIDGET_TEMPLATES.map((t) => t.id).join(", ")}`,

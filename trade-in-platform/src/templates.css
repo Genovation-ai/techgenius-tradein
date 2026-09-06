@@ -16,17 +16,17 @@
  */
 
 /* ——— Guided steps: one decision per screen, loud progress ——— */
-.trade-in-embed[data-template="gorecell_step"] {
+.trade-in-embed[data-template="guided"] {
   --radius: 10px;
   --radius-lg: 12px;
   --font-display: var(--font-body);
   --sand: #ffffff;
   --fog: #f4f6f8;
 }
-.trade-in-embed[data-template="gorecell_step"] .device-grid {
+.trade-in-embed[data-template="guided"] .device-grid {
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
 }
-.trade-in-embed[data-template="gorecell_step"] .tip-bar {
+.trade-in-embed[data-template="guided"] .tip-bar {
   position: sticky;
   top: 0;
   z-index: 5;
@@ -35,25 +35,25 @@
 }
 
 /* ——— Dense catalog: more models above the fold ——— */
-.trade-in-embed[data-template="univercell_sell"] {
+.trade-in-embed[data-template="dense"] {
   --radius: 8px;
   --radius-lg: 10px;
   --shadow: 0 1px 2px rgba(42, 42, 42, 0.08);
   --font-display: var(--font-body);
 }
-.trade-in-embed[data-template="univercell_sell"] .device-grid {
+.trade-in-embed[data-template="dense"] .device-grid {
   grid-template-columns: repeat(auto-fill, minmax(122px, 1fr));
   gap: 0.6rem;
 }
-.trade-in-embed[data-template="univercell_sell"] .device-card {
+.trade-in-embed[data-template="dense"] .device-card {
   padding: 0.6rem;
 }
-.trade-in-embed[data-template="univercell_sell"] .device-card-name {
+.trade-in-embed[data-template="dense"] .device-card-name {
   font-size: 0.8rem;
 }
 
 /* ——— Carrier blue: cool corporate palette, flat cards ——— */
-.trade-in-embed[data-template="bell_trade"] {
+.trade-in-embed[data-template="carrier"] {
   --mint: #1a5fb4;
   --mint-dim: #17539c;
   --moss: #1a5fb4;
@@ -70,14 +70,14 @@
   --shadow: none;
   --font-display: var(--font-body);
 }
-.trade-in-embed[data-template="bell_trade"] .device-card,
-.trade-in-embed[data-template="bell_trade"] .sticky-device {
+.trade-in-embed[data-template="carrier"] .device-card,
+.trade-in-embed[data-template="carrier"] .sticky-device {
   border: 1px solid var(--line);
   box-shadow: none;
 }
 
 /* ——— Rounded friendly: soft shapes, big tap targets ——— */
-.trade-in-embed[data-template="telus_trade"] {
+.trade-in-embed[data-template="rounded"] {
   --mint: #4b286d;
   --mint-dim: #3d2059;
   --moss: #4b286d;
@@ -89,15 +89,15 @@
   --sand: #faf9fb;
   --fog: #f5f3f7;
 }
-.trade-in-embed[data-template="telus_trade"] .device-card {
+.trade-in-embed[data-template="rounded"] .device-card {
   padding: 1.05rem;
 }
-.trade-in-embed[data-template="telus_trade"] .btn {
+.trade-in-embed[data-template="rounded"] .btn {
   padding-block: 0.9rem;
 }
 
 /* ——— Ops console: neutral and data-forward, matches staff admin ——— */
-.trade-in-embed[data-template="reusely_ops"] {
+.trade-in-embed[data-template="console"] {
   --ink: #111827;
   --ink-soft: #6b7280;
   --mint: #2563eb;

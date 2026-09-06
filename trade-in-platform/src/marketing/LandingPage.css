@@ -1,0 +1,402 @@
+/* Reclaim — platform marketing page.
+ *
+ * Deliberately not the storefront's palette. Tech Genius sells to shoppers in
+ * warm orange; Reclaim sells software to shop owners, and borrows its colours
+ * from the bench they work at: anti-static mat teal, cool paper, dark steel.
+ *
+ * One rule holds the page together: the price is never coloured. It is the
+ * loudest thing on the page through size alone, so every accent around it can
+ * stay quiet. */
+
+.rc {
+  --rc-ink: #0d1417;
+  --rc-ink-2: #33454a;
+  --rc-muted: #66787d;
+  --rc-paper: #f2f5f4;
+  --rc-surface: #ffffff;
+  --rc-mat: #1d4e4a;
+  --rc-mat-soft: #e4edea;
+  --rc-rule: #d8e0dd;
+  --rc-rule-2: #b9c6c2;
+
+  --rc-display: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  --rc-body: "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  background: var(--rc-paper);
+  color: var(--rc-ink);
+  font-family: var(--rc-body);
+  font-size: 16px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+.rc *,
+.rc *::before,
+.rc *::after {
+  box-sizing: border-box;
+}
+
+.rc h1,
+.rc h2,
+.rc h3 {
+  font-family: var(--rc-display);
+  font-weight: 600;
+  letter-spacing: -0.022em;
+  text-wrap: balance;
+  margin: 0;
+  line-height: 1.08;
+}
+
+.rc p {
+  margin: 0;
+  max-width: 62ch;
+}
+
+.rc-wrap {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+/* ---------- sticky bar ---------- */
+.rc-nav {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: rgba(242, 245, 244, 0.86);
+  backdrop-filter: saturate(1.4) blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.25s ease, background 0.25s ease;
+}
+.rc-nav[data-stuck="true"] {
+  border-bottom-color: var(--rc-rule);
+}
+.rc-nav-in {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  height: 62px;
+}
+.rc-mark {
+  font-family: var(--rc-display);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: -0.03em;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.rc-mark-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  background: var(--rc-mat);
+  display: block;
+}
+/* The hero price migrates up here on scroll — the page's single carried idea. */
+.rc-nav-price {
+  font-family: var(--rc-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  color: var(--rc-mat);
+  margin-left: auto;
+  white-space: nowrap;
+}
+.rc-nav-cta {
+  margin-left: auto;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.rc-nav-price + .rc-nav-cta {
+  margin-left: 18px;
+}
+
+.rc-btn {
+  font: inherit;
+  /* 40px floor so the nav actions stay tappable on a phone. */
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 1px solid var(--rc-ink);
+  background: var(--rc-ink);
+  color: #fff;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.16s ease, background 0.16s ease;
+}
+.rc-btn:hover {
+  background: #000;
+  transform: translateY(-1px);
+}
+.rc-btn--quiet {
+  background: transparent;
+  color: var(--rc-ink);
+  border-color: var(--rc-rule-2);
+}
+.rc-btn--quiet:hover {
+  background: var(--rc-surface);
+}
+.rc a:focus-visible,
+.rc button:focus-visible,
+.rc input:focus-visible {
+  outline: 2px solid var(--rc-mat);
+  outline-offset: 2px;
+}
+
+/* ---------- hero ---------- */
+.rc-hero {
+  padding: 74px 0 88px;
+}
+.rc-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
+  gap: 60px;
+  align-items: start;
+}
+.rc-hero h1 {
+  font-size: clamp(40px, 5.6vw, 68px);
+}
+.rc-hero-sub {
+  margin-top: 20px;
+  font-size: 18.5px;
+  color: var(--rc-ink-2);
+  max-width: 46ch;
+}
+.rc-hero-actions {
+  margin-top: 30px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.rc-hero-note {
+  margin-top: 18px;
+  font-size: 14px;
+  color: var(--rc-muted);
+}
+
+/* ---------- the live quote ---------- */
+.rc-quote {
+  background: var(--rc-surface);
+  border: 1px solid var(--rc-rule);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 1px 2px rgba(13, 20, 23, 0.04), 0 18px 40px rgba(13, 20, 23, 0.07);
+}
+.rc-quote-label {
+  font-size: 13.5px;
+  color: var(--rc-muted);
+  margin-bottom: 12px;
+}
+.rc-quote-input {
+  width: 100%;
+  font: inherit;
+  font-size: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--rc-rule-2);
+  border-radius: 9px;
+  background: var(--rc-paper);
+  color: var(--rc-ink);
+}
+.rc-quote-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 168px;
+  overflow-y: auto;
+}
+.rc-quote-list button {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  font-size: 15px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--rc-ink);
+  cursor: pointer;
+}
+.rc-quote-list button:hover,
+.rc-quote-list button[data-active="true"] {
+  background: var(--rc-mat-soft);
+}
+
+.rc-quote-out {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--rc-rule);
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 92px;
+}
+.rc-price {
+  font-family: var(--rc-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(46px, 7vw, 64px);
+  line-height: 0.92;
+  letter-spacing: -0.04em;
+  color: var(--rc-ink);
+}
+.rc-price-sub {
+  font-size: 13.5px;
+  color: var(--rc-muted);
+  text-align: right;
+  max-width: 19ch;
+}
+.rc-quote-empty {
+  color: var(--rc-muted);
+  font-size: 15px;
+}
+
+/* ---------- sections ---------- */
+.rc-section {
+  padding: 84px 0;
+  border-top: 1px solid var(--rc-rule);
+}
+.rc-section h2 {
+  font-size: clamp(28px, 3.6vw, 40px);
+}
+.rc-section-lead {
+  margin-top: 16px;
+  font-size: 17.5px;
+  color: var(--rc-ink-2);
+}
+
+.rc-points {
+  margin-top: 46px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
+  gap: 34px 40px;
+}
+.rc-point h3 {
+  font-size: 20px;
+  margin-bottom: 8px;
+}
+.rc-point p {
+  color: var(--rc-ink-2);
+  font-size: 15.5px;
+}
+
+/* The install block is the proof that it is one line, so it gets the dark
+   surface — the only inverted panel on the page. */
+.rc-install {
+  background: var(--rc-ink);
+  color: #dfe8e6;
+  border-radius: 14px;
+  padding: 26px;
+  margin-top: 36px;
+  overflow-x: auto;
+}
+.rc-install pre {
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 13.5px;
+  line-height: 1.75;
+  white-space: pre;
+}
+.rc-install .tok {
+  color: #7fb8ac;
+}
+
+.rc-plans {
+  margin-top: 44px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 18px;
+}
+.rc-plan {
+  background: var(--rc-surface);
+  border: 1px solid var(--rc-rule);
+  border-radius: 13px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rc-plan[data-featured="true"] {
+  border-color: var(--rc-mat);
+  box-shadow: 0 0 0 1px var(--rc-mat);
+}
+.rc-plan h3 {
+  font-size: 19px;
+}
+.rc-plan-price {
+  font-family: var(--rc-display);
+  font-weight: 700;
+  font-size: 34px;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.rc-plan-price span {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--rc-muted);
+  letter-spacing: 0;
+}
+.rc-plan ul {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 15px;
+  color: var(--rc-ink-2);
+  flex: 1;
+}
+.rc-plan li::before {
+  content: "—";
+  color: var(--rc-rule-2);
+  margin-right: 9px;
+}
+
+.rc-foot {
+  border-top: 1px solid var(--rc-rule);
+  padding: 34px 0 60px;
+  font-size: 14px;
+  color: var(--rc-muted);
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.rc-foot a {
+  color: var(--rc-ink-2);
+}
+
+@media (max-width: 900px) {
+  .rc-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+  .rc-hero {
+    padding: 48px 0 62px;
+  }
+  .rc-section {
+    padding: 62px 0;
+  }
+  .rc-nav-price {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rc * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

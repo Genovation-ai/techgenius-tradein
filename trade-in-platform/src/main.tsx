@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import "./tokens.css";
 import "./appGlobal.css";
 import App from "./App.tsx";
+import LandingPage from "./marketing/LandingPage.tsx";
 import { AdminLayout } from "./admin/AdminLayout.tsx";
 import { LoginPage } from "./admin/LoginPage.tsx";
 import { SignupPage } from "./admin/SignupPage.tsx";
@@ -44,7 +45,8 @@ createRoot(document.getElementById("root")!).render(
     >
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<App />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/preview" element={<App />} />
         <Route path="/admin/login" element={<LoginPage />} />
         <Route path="/admin/signup" element={<SignupPage />} />
         <Route path="/admin" element={<AdminLayout />}>

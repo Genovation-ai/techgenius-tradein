@@ -86,28 +86,11 @@ export function LoginPage() {
       </section>
 
       <section className="admin-login-right">
-        <h2>Trade-in ops for every shop</h2>
-        <div className="admin-login-preview" aria-hidden>
-          <div className="admin-login-preview-top">
-            <i /><i /><i />
-          </div>
-          <div className="admin-login-mini-grid">
-            {[
-              "Active Leads",
-              "In Transit",
-              "Delivered",
-              "Inspected",
-              "Hold",
-              "Payout",
-              "Completed",
-              "Revised",
-              "Returned",
-            ].map((t) => (
-              <div key={t}>{t}</div>
-            ))}
-          </div>
-        </div>
-        <p>Offers, intake, and payouts in one place — multi-tenant and ready to white-label.</p>
+        <h2>Trade-ins, priced by the market</h2>
+        <p>
+          Reclaim watches what buyers actually pay and quotes from that, so an
+          offer is current the day a customer asks for it.
+        </p>
       </section>
     </div>
   );
