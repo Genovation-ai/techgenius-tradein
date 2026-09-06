@@ -210,12 +210,22 @@ export const stepOrder: TradeInStep[] = [
   "done",
 ];
 
+/**
+ * Progress labels the customer reads.
+ *
+ * Named for what the person is doing at that moment, not for the component
+ * behind it. "Vision" and "Checklist" described our implementation — a shopper
+ * has no idea whether that means a camera, a form, or something to read.
+ *
+ * The keys are unchanged: they are what gets written to `furthest_step` on a
+ * lead, so renaming a label never breaks stored data or the Follow-ups page.
+ */
 export const stepLabels: Record<TradeInStep, string> = {
   category: "Category",
-  device: "Device",
-  details: "Details",
-  valuation: "Checklist",
-  "media-ai": "Vision",
+  device: "Model",
+  details: "Specs",
+  valuation: "Condition",
+  "media-ai": "Photos",
   grade: "Grade",
   offer: "Offer",
   checkout: "Payout",
