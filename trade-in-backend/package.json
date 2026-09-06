@@ -35,7 +35,8 @@
     "fix:prices:apply": "cd scripts && python3 fix_price_integrity.py --apply",
     "health:scrapers": "tsx scripts/scraper_health.ts",
     "smoke:api": "bash scripts/smoke_all_endpoints.sh",
-    "catalog:export": "tsx scripts/export_catalog_backup.ts"
+    "catalog:export": "tsx scripts/export_catalog_backup.ts",
+    "catalog:import": "tsx scripts/import_catalog_backup.ts"
   },
   "dependencies": {
     "better-sqlite3": "^11.0.0",
