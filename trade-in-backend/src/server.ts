@@ -79,11 +79,19 @@ const corsOrigins = (process.env.TG_CORS_ORIGINS || "")
 // usually won the race against the health check. On a slow connection, or when
 // the shopper paused before choosing a category, the check landed first and the
 // widget sat empty with no error.
+// Listed individually rather than by prefix. "/api/saas" as a prefix would also
+// open /api/saas/org/api-keys, which hands out a tenant's integration keys —
+// exactly the route that must stay closed. Only these three are safe:
+// widget-config is what an embedded widget reads to wear the merchant's name,
+// and signup / slug-available are the public sign-up form.
 const PUBLIC_CORS_PATHS = [
   "/api/health",
   "/api/catalog",
   "/api/quote",
   "/api/widget",
+  "/api/saas/widget-config",
+  "/api/saas/signup",
+  "/api/saas/slug-available",
   "/devices",
   "/embed",
 ];
