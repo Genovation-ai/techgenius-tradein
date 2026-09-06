@@ -517,13 +517,28 @@ offersRouter.post("/:id/shipping-label", requireCapability("shipping:write"), (r
   res.json({ ok: true, shipping_label_url: labelUrl, tracking_number: tracking, courier });
 });
 
+/**
+ * The label is HTML built from customer-supplied values (name, email, phone,
+ * device name). Interpolating those raw let anything typed into the widget run
+ * as markup in a staff member's browser when they printed the label.
+ */
+function escapeHtml(value: string): string {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 offersRouter.get("/:id/shipping-label", requireCapability("shipping:write"), (req, res) => {
   const db = getDb();
   const offer = db
     .prepare(
       `SELECT o.*, c.first_name, c.last_name, c.email, c.phone,
               (SELECT value FROM settings WHERE key = 'company_name') AS company_name,
-              (SELECT value FROM settings WHERE key = 'company_phone') AS company_phone
+              (SELECT value FROM settings WHERE key = 'company_phone') AS company_phone,
+              (SELECT value FROM settings WHERE key = 'company_address') AS company_address
        FROM offers o LEFT JOIN customers c ON c.id = o.customer_id WHERE o.id = ?`,
     )
     .get(req.params.id) as Record<string, unknown> | undefined;
@@ -533,23 +548,42 @@ offersRouter.get("/:id/shipping-label", requireCapability("shipping:write"), (re
   db.close();
   if (!offer) return res.status(404).send("Not found");
 
-  const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Label ${offer.id}</title>
+  // The shipping address comes from settings. It used to be hardcoded as
+  // "Burlington, ON" with no street or postal code, which is not an address a
+  // parcel can be sent to — the label printed fine and was simply unusable.
+  const address = String(offer.company_address || "").trim();
+  const addressBlock = address
+    ? address
+        .split("\n")
+        .map((l) => escapeHtml(l.trim()))
+        .filter(Boolean)
+        .join("<br/>")
+    : `<span class="missing">No shipping address set — add “company_address” in Settings before sending this to a customer.</span>`;
+
+  const html = `<!doctype html><html><head><meta charset="utf-8"/><title>Label ${escapeHtml(String(offer.id))}</title>
   <style>
     body{font-family:Arial,sans-serif;margin:1.5rem;color:#111}
     .box{border:2px solid #111;padding:1rem;max-width:420px}
     h1{font-size:1.1rem;margin:0 0 .5rem}
     .code{font-size:1.4rem;font-weight:700;letter-spacing:.04em}
+    .note{font-size:.78rem;color:#555;margin-top:.75rem;line-height:1.45}
+    .missing{color:#b3453c;font-weight:700}
     @media print{button{display:none}}
   </style></head><body>
   <button onclick="print()">Print label</button>
   <div class="box">
-    <h1>${offer.company_name || "Tech Genius Burlington"}</h1>
-    <p>MAIL-IN TRADE-IN<br/>${offer.company_phone || ""}</p>
-    <p class="code">${offer.tracking_number || offer.id}</p>
-    <p>Offer: ${offer.id}<br/>From: ${offer.first_name || ""} ${offer.last_name || ""}<br/>${offer.email || ""} · ${offer.phone || ""}</p>
-    <p>Courier: ${offer.courier || "Canada Post"}</p>
-    <ul>${items.map((i) => `<li>${i.device_name} ${i.storage || ""} ${i.condition_grade || ""}</li>`).join("")}</ul>
-    <p><strong>Ship to:</strong><br/>Tech Genius Burlington<br/>Trade-In Desk<br/>Burlington, ON</p>
+    <h1>${escapeHtml(String(offer.company_name || "Tech Genius Burlington"))}</h1>
+    <p>MAIL-IN TRADE-IN<br/>${escapeHtml(String(offer.company_phone || ""))}</p>
+    <p class="code">${escapeHtml(String(offer.tracking_number || offer.id))}</p>
+    <p>Offer: ${escapeHtml(String(offer.id))}<br/>From: ${escapeHtml(String(offer.first_name || ""))} ${escapeHtml(String(offer.last_name || ""))}<br/>${escapeHtml(String(offer.email || ""))} · ${escapeHtml(String(offer.phone || ""))}</p>
+    <ul>${items.map((i) => `<li>${escapeHtml(i.device_name)} ${escapeHtml(i.storage || "")} ${escapeHtml(i.condition_grade || "")}</li>`).join("")}</ul>
+    <p><strong>Ship to:</strong><br/>${addressBlock}</p>
+    <p class="note">
+      The code above is this shop's own reference, not a courier tracking
+      number, and this sheet is not prepaid postage — postage is paid at the
+      counter. Print it and put it in the box so the parcel can be matched to
+      the right offer on arrival.
+    </p>
   </div></body></html>`;
   res.type("html").send(html);
 });

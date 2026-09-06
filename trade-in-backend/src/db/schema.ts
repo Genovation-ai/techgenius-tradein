@@ -318,6 +318,12 @@ INSERT OR IGNORE INTO settings (key, value) VALUES
   ('company_name', 'Tech Genius Burlington'),
   ('company_phone', '+1 (289) 455-5556'),
   ('company_email', 'info@techgenius.ca'),
+  -- Where customers post mail-in trade-ins. Printed on the shipping label, so
+  -- it needs the full street and postal code, not just the city.
+  ('company_address', 'Tech Genius Burlington
+796 Brant Street
+Burlington, ON  L7R 2J2
+Canada'),
   ('widget_brand_color', '#39b54a'),
   ('widget_cta_color', '#f79347'),
   ('payout_methods', '["etransfer","store-credit","paypal","cash"]'),
