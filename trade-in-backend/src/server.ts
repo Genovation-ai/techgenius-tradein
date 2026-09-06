@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { getDb, migrate } from "./db/migrate.js";
 import { seedCatalog } from "./db/seed.js";
+import { hydrateCatalogIfFresh } from "./db/hydrate.js";
 import { apiKeyAuth } from "./middleware/auth.js";
 import { catalogRouter } from "./routes/catalog.js";
 import { offersRouter } from "./routes/offers.js";
@@ -32,6 +33,13 @@ import { startWeeklyScrapeScheduler } from "./jobs/weeklyScrape.js";
 
 migrate();
 seedCatalog();
+{
+  // A brand-new volume seeds ~63 devices; the real catalog is ~416. Fill it in
+  // before serving, so a fresh deploy is a working shop rather than a quiet
+  // fraction of one. No-ops once any offer exists.
+  const boot = getDb();
+  try { hydrateCatalogIfFresh(boot); } finally { boot.close(); }
+}
 seedAdminUser();
 seedStaffRoles();
 ensureCompetitorSourcesSeeded();
