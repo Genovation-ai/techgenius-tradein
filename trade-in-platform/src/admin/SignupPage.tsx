@@ -71,6 +71,7 @@ export function SignupPage() {
           <TgMark size={22} />
           Trade-In SaaS
         </div>
+        <Link to="/" className="admin-login-back">Back to Reclaim</Link>
         <h1>Create your shop</h1>
         <p className="admin-section-lead">
           Take trade-ins on your own site in under a minute. No card needed to start.

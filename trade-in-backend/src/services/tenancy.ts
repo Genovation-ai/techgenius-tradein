@@ -198,6 +198,54 @@ function bootstrapDefaultOrg(db: Database): void {
     insert.run("tg-shop", DEFAULT_ORG_ID, "Shop Tech Genius", "Ontario", null);
   }
 
+  // Purge throwaway tenants.
+  //
+  // test:isolation provisions a fresh pair of orgs on every run, and a demo org
+  // was created by hand while proving the white-label worked. Left alone they
+  // accumulate in the tenant list and the seed data of a product being sold.
+  // Only the two shapes that are unambiguously disposable are removed: the
+  // "iso-" prefix the isolation tests own, and the named demo. Nothing pattern-
+  // matched loosely enough to catch a real shop.
+  const throwaway = db
+    .prepare("SELECT id FROM orgs WHERE slug LIKE 'iso-%' OR slug = 'red-bull'")
+    .all() as Array<{ id: string }>;
+  if (throwaway.length) {
+    const ids = throwaway.map((o) => o.id);
+    const holes = ids.map(() => "?").join(", ");
+    const purge = db.transaction(() => {
+      for (const table of [
+        "offer_items",
+        "abandoned_leads",
+        "notifications",
+        "uploads",
+        "invoices",
+        "sales",
+        "inventory",
+        "offers",
+        "customers",
+        "org_api_keys",
+        "org_stores",
+        "org_settings",
+        "admin_users",
+      ]) {
+        try {
+          if (table === "offer_items") {
+            db.prepare(
+              `DELETE FROM offer_items WHERE offer_id IN (SELECT id FROM offers WHERE org_id IN (${holes}))`,
+            ).run(...ids);
+          } else {
+            db.prepare(`DELETE FROM ${table} WHERE org_id IN (${holes})`).run(...ids);
+          }
+        } catch {
+          /* table may not carry org_id in older databases */
+        }
+      }
+      db.prepare(`DELETE FROM orgs WHERE id IN (${holes})`).run(...ids);
+    });
+    purge();
+    console.log(`[tenancy] removed ${ids.length} throwaway tenant(s)`);
+  }
+
   // Attach legacy rows to the default org.
   //
   // This runs on every boot, and it is what lets the read queries filter on

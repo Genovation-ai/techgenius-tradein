@@ -149,3 +149,16 @@ body {
 }
 .admin-callout .admin-code { margin: 10px 0; }
 .admin-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+/* Escape hatch from sign-in / sign-up back to the marketing page. Sits above
+   the heading so it reads as a way out, not another action. */
+.admin-login-back {
+  display: inline-block;
+  margin-bottom: 14px;
+  font-size: 0.88rem;
+  color: var(--ink-soft, #5c5c5c);
+  text-decoration: none;
+}
+.admin-login-back::before { content: "\2190"; margin-right: 7px; }
+.admin-login-back:hover { color: var(--ink, #2a2a2a); text-decoration: underline; }
+.admin-login-back:focus-visible { outline: 2px solid var(--cta, #f79347); outline-offset: 2px; border-radius: 4px; }

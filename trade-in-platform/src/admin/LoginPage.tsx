@@ -34,6 +34,7 @@ export function LoginPage() {
           <TgMark size={22} />
           Reclaim
         </div>
+        <Link to="/" className="admin-login-back">Back to Reclaim</Link>
         <h1>Sign in</h1>
         <form onSubmit={(e) => void login(e)}>
           <label>
