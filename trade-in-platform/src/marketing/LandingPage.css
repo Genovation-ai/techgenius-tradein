@@ -1,34 +1,45 @@
 /* Reclaim — platform marketing page.
  *
- * Deliberately not the storefront's palette. Tech Genius sells to shoppers in
- * warm orange; Reclaim sells software to shop owners, and borrows its colours
- * from the bench they work at: anti-static mat teal, cool paper, dark steel.
+ * Cinematic scroll: one black room with a single light in it. The particle
+ * field is the only colour source on the page, so every surface here is either
+ * transparent or a thin sheet of glass with a hairline edge — nothing opaque,
+ * nothing with a drop shadow, no card kit. Type carries the page: one enormous
+ * display line per idea, half of it solid and half of it ghosted back into the
+ * dark, so the sentence reads as coming out of the field rather than sitting on
+ * top of it.
  *
- * One rule holds the page together: the price is never coloured. It is the
- * loudest thing on the page through size alone, so every accent around it can
- * stay quiet. */
+ * One rule holds it together: the price is never coloured. It is the loudest
+ * thing on the page through size alone, so the single emerald accent can stay
+ * reserved for the scene and the live state.
+ *
+ * Scoped to .rc, so sign-in and the admin keep the light values they take from
+ * reclaim.css :root. */
 
 .rc {
-  --rc-ink: #0d1417;
-  --rc-ink-2: #33454a;
-  --rc-muted: #66787d;
-  --rc-paper: #f2f5f4;
-  --rc-surface: #ffffff;
-  --rc-mat: #1d4e4a;
-  --rc-mat-soft: #e4edea;
-  --rc-rule: #d8e0dd;
-  --rc-rule-2: #b9c6c2;
+  --rc-void: #000000;
+  --rc-ink: #f2f8f5;
+  --rc-ink-2: #93aaa0;
+  --rc-muted: #6d857b;
+  --rc-mat: #34e89a;
+  --rc-glass: rgba(255, 255, 255, 0.035);
+  --rc-edge: rgba(255, 255, 255, 0.09);
+  --rc-edge-2: rgba(255, 255, 255, 0.17);
+  --rc-ghost: rgba(242, 248, 245, 0.3);
 
   --rc-display: "Bricolage Grotesque", "Segoe UI", sans-serif;
   --rc-body: "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
 
-  background: var(--rc-paper);
+  position: relative;
+  z-index: 1;
+  isolation: isolate;
+  background: transparent;
   color: var(--rc-ink);
   font-family: var(--rc-body);
   font-size: 16px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 .rc *,
@@ -42,156 +53,325 @@
 .rc h3 {
   font-family: var(--rc-display);
   font-weight: 600;
-  letter-spacing: -0.022em;
+  letter-spacing: -0.03em;
   text-wrap: balance;
   margin: 0;
-  line-height: 1.08;
+  line-height: 1.02;
 }
 
-.rc p {
+/* :where() so this costs no specificity — as a plain `.rc p` rule it outranked
+   every single-class margin below it and collapsed the hero's spacing. */
+.rc :where(p) {
   margin: 0;
   max-width: 62ch;
 }
 
-.rc-wrap {
-  max-width: 1120px;
-  margin: 0 auto;
-  padding: 0 28px;
+.rc a:focus-visible,
+.rc button:focus-visible,
+.rc input:focus-visible {
+  outline: 2px solid var(--rc-mat);
+  outline-offset: 3px;
 }
 
-/* ---------- sticky bar ---------- */
-.rc-nav {
-  position: sticky;
-  top: 0;
-  z-index: 40;
-  background: rgba(242, 245, 244, 0.86);
-  backdrop-filter: saturate(1.4) blur(12px);
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.25s ease, background 0.25s ease;
+.rc-wrap {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 26px;
 }
-.rc-nav[data-stuck="true"] {
-  border-bottom-color: var(--rc-rule);
+
+/* ---------- the scene ----------
+   Behind everything, including .rc's own content: a negative index inside the
+   .rc stacking context. It sat at 0 before, which paints a positioned element
+   above every static one — the headline was rendering at full opacity under the
+   canvas. */
+.rc-scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: -1;
+  display: block;
+  pointer-events: none;
+}
+/* Without a ground the browser paints white for the instant before WebGL's
+   first frame, which flashes on load. Scoped to a class the landing page puts
+   on <html> and takes off again: the stylesheet is bundled for the whole app,
+   so an unscoped rule painted the widget preview and the admin black too. */
+html.rc-dark,
+html.rc-dark body {
+  background: #000000;
+}
+
+/* ---------- floating nav ----------
+   A pill that hangs over the scene rather than a bar that cuts it in half. */
+.rc-nav {
+  position: fixed;
+  top: 16px;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  padding: 0 16px;
 }
 .rc-nav-in {
+  pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 18px;
-  height: 62px;
+  gap: 14px;
+  height: 52px;
+  padding: 0 10px 0 20px;
+  border-radius: 999px;
+  border: 1px solid var(--rc-edge);
+  background: rgba(8, 12, 10, 0.5);
+  backdrop-filter: saturate(1.5) blur(18px);
+  -webkit-backdrop-filter: saturate(1.5) blur(18px);
+  transition: background 0.3s ease, border-color 0.3s ease;
+  max-width: 100%;
+}
+.rc-nav[data-stuck="true"] .rc-nav-in {
+  background: rgba(8, 12, 10, 0.78);
+  border-color: var(--rc-edge-2);
 }
 .rc-mark {
   font-family: var(--rc-display);
   font-weight: 700;
-  font-size: 19px;
-  letter-spacing: -0.03em;
+  font-size: 18px;
+  letter-spacing: -0.035em;
   display: flex;
   align-items: center;
   gap: 9px;
+  white-space: nowrap;
 }
 .rc-mark-dot {
-  width: 11px;
-  height: 11px;
-  border-radius: 3px;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
   background: var(--rc-mat);
   display: block;
+  box-shadow: 0 0 12px rgba(52, 232, 154, 0.8);
 }
 /* The hero price migrates up here on scroll — the page's single carried idea. */
 .rc-nav-price {
   font-family: var(--rc-display);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  font-size: 17px;
+  font-size: 15px;
   color: var(--rc-mat);
-  margin-left: auto;
   white-space: nowrap;
+  padding-left: 14px;
+  border-left: 1px solid var(--rc-edge);
 }
 .rc-nav-cta {
-  margin-left: auto;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-}
-.rc-nav-price + .rc-nav-cta {
-  margin-left: 18px;
+  margin-left: 8px;
 }
 
+/* ---------- buttons ---------- */
 .rc-btn {
   font: inherit;
-  /* 40px floor so the nav actions stay tappable on a phone. */
   min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-weight: 600;
   font-size: 15px;
-  padding: 10px 18px;
-  border-radius: 8px;
-  border: 1px solid var(--rc-ink);
+  padding: 10px 20px;
+  border-radius: 999px;
+  border: 1px solid transparent;
   background: var(--rc-ink);
-  color: #fff;
+  color: #05100c;
   cursor: pointer;
   text-decoration: none;
-  transition: transform 0.16s ease, background 0.16s ease;
+  white-space: nowrap;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
 }
 .rc-btn:hover {
-  background: #000;
+  background: #ffffff;
   transform: translateY(-1px);
 }
 .rc-btn--quiet {
   background: transparent;
   color: var(--rc-ink);
-  border-color: var(--rc-rule-2);
+  border-color: var(--rc-edge-2);
 }
 .rc-btn--quiet:hover {
-  background: var(--rc-surface);
-}
-.rc a:focus-visible,
-.rc button:focus-visible,
-.rc input:focus-visible {
-  outline: 2px solid var(--rc-mat);
-  outline-offset: 2px;
+  background: rgba(255, 255, 255, 0.07);
 }
 
-/* ---------- hero ---------- */
+/* ---------- hero ----------
+   Full-height stage. The type is the composition: one solid line, one ghosted,
+   set large enough that it reads as part of the room. */
 .rc-hero {
-  padding: 74px 0 88px;
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 130px 0 90px;
 }
-.rc-hero-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 460px);
-  gap: 60px;
-  align-items: start;
+/* The field is dense enough to read straight through body copy. A scrim keyed
+   to the reading side gives the type a ground without flattening the scene —
+   at z-index -1 it lands above the canvas and below the text, inside .rc's
+   stacking context. */
+.rc-hero::before {
+  content: "";
+  position: absolute;
+  inset: -120px 0 -80px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    100deg,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.8) 38%,
+    rgba(0, 0, 0, 0.46) 66%,
+    rgba(0, 0, 0, 0) 88%
+  );
+  /* Without the fade its lower edge draws a visible horizontal seam across the
+     field where the scrim stops. */
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+}
+
+/* ---------- the veil ----------
+   The hero is the only place the field gets the whole frame. Everything after it
+   reads as a room with the light source dimmed behind it: one continuous sheet
+   rather than a scrim per section, which would seam wherever two sections met. */
+.rc-below {
+  position: relative;
+}
+.rc-below::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0.62) 260px,
+    rgba(0, 0, 0, 0.86) 620px,
+    rgba(0, 0, 0, 0.9) 100%
+  );
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
 }
 .rc-hero h1 {
-  font-size: clamp(40px, 5.6vw, 68px);
+  font-size: clamp(46px, 9.6vw, 132px);
+  line-height: 0.94;
+  letter-spacing: -0.045em;
+  font-weight: 600;
+  max-width: 15ch;
+}
+.rc-hero h1 span {
+  display: block;
+}
+.rc-hero h1 .rc-line-ghost {
+  color: var(--rc-ghost);
 }
 .rc-hero-sub {
-  margin-top: 20px;
-  font-size: 18.5px;
+  margin-top: 34px;
+  font-size: clamp(16px, 1.4vw, 19px);
   color: var(--rc-ink-2);
-  max-width: 46ch;
+  max-width: 48ch;
 }
 .rc-hero-actions {
-  margin-top: 30px;
+  margin-top: 34px;
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
 }
 .rc-hero-note {
-  margin-top: 18px;
-  font-size: 14px;
+  margin-top: 20px;
+  font-size: 13.5px;
   color: var(--rc-muted);
 }
+.rc-scroll-cue {
+  margin-top: 76px;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  color: var(--rc-muted);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.rc-scroll-cue::before {
+  content: "";
+  width: 34px;
+  height: 1px;
+  background: var(--rc-edge-2);
+  display: block;
+}
 
-/* ---------- the live quote ---------- */
+/* ---------- the price band ----------
+   Real models and the prices this engine pays for them, at display scale,
+   sliding as you scroll. It is the product's own output used as the page's
+   one piece of motion typography. */
+.rc-band {
+  padding: 64px 0 76px;
+  overflow: hidden;
+  user-select: none;
+}
+.rc-band-row {
+  display: flex;
+  gap: 56px;
+  white-space: nowrap;
+  width: max-content;
+  will-change: transform;
+}
+.rc-band-item {
+  font-family: var(--rc-display);
+  font-weight: 700;
+  font-size: clamp(38px, 6.4vw, 86px);
+  letter-spacing: -0.04em;
+  color: var(--rc-ghost);
+  display: flex;
+  align-items: baseline;
+  gap: 18px;
+}
+.rc-band-item b {
+  font-variant-numeric: tabular-nums;
+  color: rgba(242, 248, 245, 0.42);
+  font-weight: 700;
+}
+
+/* ---------- the live quote ----------
+   Centred on black, no card around the section — only the panel itself. */
+.rc-try {
+  padding: 30px 0 110px;
+}
+.rc-try > .rc-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.rc-try h2 {
+  font-size: clamp(26px, 3.4vw, 40px);
+  max-width: 18ch;
+}
+.rc-try-lead {
+  margin-top: 14px;
+  font-size: 16.5px;
+  color: var(--rc-ink-2);
+  max-width: 46ch;
+}
 .rc-quote {
-  background: var(--rc-surface);
-  border: 1px solid var(--rc-rule);
-  border-radius: 14px;
+  margin-top: 40px;
+  width: min(560px, 100%);
+  text-align: left;
+  border: 1px solid var(--rc-edge);
+  border-radius: 18px;
   padding: 22px;
-  box-shadow: 0 1px 2px rgba(13, 20, 23, 0.04), 0 18px 40px rgba(13, 20, 23, 0.07);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(22px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
 }
 .rc-quote-label {
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--rc-muted);
   margin-bottom: 12px;
 }
@@ -199,11 +379,14 @@
   width: 100%;
   font: inherit;
   font-size: 16px;
-  padding: 12px 14px;
-  border: 1px solid var(--rc-rule-2);
-  border-radius: 9px;
-  background: var(--rc-paper);
+  padding: 13px 15px;
+  border: 1px solid var(--rc-edge-2);
+  border-radius: 11px;
+  background: rgba(0, 0, 0, 0.4);
   color: var(--rc-ink);
+}
+.rc-quote-input::placeholder {
+  color: var(--rc-muted);
 }
 .rc-quote-list {
   list-style: none;
@@ -212,7 +395,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
-  max-height: 168px;
+  max-height: 172px;
   overflow-y: auto;
 }
 .rc-quote-list button {
@@ -220,22 +403,22 @@
   text-align: left;
   font: inherit;
   font-size: 15px;
-  padding: 9px 12px;
+  padding: 10px 12px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 9px;
   background: transparent;
   color: var(--rc-ink);
   cursor: pointer;
+  transition: background 0.16s ease;
 }
 .rc-quote-list button:hover,
 .rc-quote-list button[data-active="true"] {
-  background: var(--rc-mat-soft);
+  background: rgba(52, 232, 154, 0.13);
 }
-
 .rc-quote-out {
   margin-top: 18px;
   padding-top: 18px;
-  border-top: 1px solid var(--rc-rule);
+  border-top: 1px solid var(--rc-edge);
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
@@ -248,7 +431,7 @@
   font-variant-numeric: tabular-nums;
   font-size: clamp(46px, 7vw, 64px);
   line-height: 0.92;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.045em;
   color: var(--rc-ink);
 }
 .rc-price-sub {
@@ -264,41 +447,47 @@
 
 /* ---------- sections ---------- */
 .rc-section {
-  padding: 84px 0;
-  border-top: 1px solid var(--rc-rule);
+  padding: 104px 0;
+  border-top: 1px solid var(--rc-edge);
 }
 .rc-section h2 {
-  font-size: clamp(28px, 3.6vw, 40px);
+  font-size: clamp(30px, 4.6vw, 58px);
+  max-width: 18ch;
 }
 .rc-section-lead {
-  margin-top: 16px;
+  margin-top: 20px;
   font-size: 17.5px;
   color: var(--rc-ink-2);
 }
 
 .rc-points {
-  margin-top: 46px;
+  margin-top: 60px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(248px, 1fr));
-  gap: 34px 40px;
+  gap: 40px 44px;
+}
+.rc-point {
+  border-top: 1px solid var(--rc-edge);
+  padding-top: 20px;
 }
 .rc-point h3 {
   font-size: 20px;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 .rc-point p {
   color: var(--rc-ink-2);
   font-size: 15.5px;
 }
 
-/* The install block is the proof that it is one line, so it gets the dark
-   surface — the only inverted panel on the page. */
 .rc-install {
-  background: var(--rc-ink);
-  color: #dfe8e6;
-  border-radius: 14px;
+  border: 1px solid var(--rc-edge);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: #cfded8;
+  border-radius: 16px;
   padding: 26px;
-  margin-top: 36px;
+  margin-top: 40px;
   overflow-x: auto;
 }
 .rc-install pre {
@@ -309,27 +498,28 @@
   white-space: pre;
 }
 .rc-install .tok {
-  color: #7fb8ac;
+  color: var(--rc-mat);
 }
 
 .rc-plans {
-  margin-top: 44px;
+  margin-top: 52px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 18px;
+  gap: 16px;
 }
 .rc-plan {
-  background: var(--rc-surface);
-  border: 1px solid var(--rc-rule);
-  border-radius: 13px;
-  padding: 24px;
+  border: 1px solid var(--rc-edge);
+  background: var(--rc-glass);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-radius: 16px;
+  padding: 26px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 .rc-plan[data-featured="true"] {
-  border-color: var(--rc-mat);
-  box-shadow: 0 0 0 1px var(--rc-mat);
+  border-color: rgba(52, 232, 154, 0.55);
 }
 .rc-plan h3 {
   font-size: 19px;
@@ -337,8 +527,8 @@
 .rc-plan-price {
   font-family: var(--rc-display);
   font-weight: 700;
-  font-size: 34px;
-  letter-spacing: -0.03em;
+  font-size: 36px;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
 }
 .rc-plan-price span {
@@ -353,20 +543,20 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 9px;
   font-size: 15px;
   color: var(--rc-ink-2);
   flex: 1;
 }
 .rc-plan li::before {
   content: "—";
-  color: var(--rc-rule-2);
+  color: var(--rc-edge-2);
   margin-right: 9px;
 }
 
 .rc-foot {
-  border-top: 1px solid var(--rc-rule);
-  padding: 34px 0 60px;
+  border-top: 1px solid var(--rc-edge);
+  padding: 34px 26px 64px;
   font-size: 14px;
   color: var(--rc-muted);
   display: flex;
@@ -378,31 +568,11 @@
   color: var(--rc-ink-2);
 }
 
-@media (max-width: 900px) {
-  .rc-hero-grid {
-    grid-template-columns: 1fr;
-    gap: 40px;
-  }
-  .rc-hero {
-    padding: 48px 0 62px;
-  }
-  .rc-section {
-    padding: 62px 0;
-  }
-  .rc-nav-price {
-    display: none;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .rc * {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
 /* ---------- how a price is built (the scroll moment) ---------- */
-.rc-build { padding-top: 96px; padding-bottom: 96px; }
+.rc-build {
+  padding-top: 110px;
+  padding-bottom: 110px;
+}
 .rc-build-grid {
   display: grid;
   grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
@@ -411,61 +581,128 @@
 }
 .rc-build-sticky {
   position: sticky;
-  top: 118px;
-  background: var(--rc-surface);
-  border: 1px solid var(--rc-rule);
-  border-radius: 14px;
+  top: 120px;
+  border: 1px solid var(--rc-edge);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px) saturate(1.2);
+  -webkit-backdrop-filter: blur(20px) saturate(1.2);
+  border-radius: 18px;
   padding: 24px 26px;
-  box-shadow: 0 1px 2px rgba(13, 20, 23, 0.04), 0 18px 40px rgba(13, 20, 23, 0.06);
 }
 .rc-build-label {
   font-size: 13px;
   color: var(--rc-muted);
   margin-bottom: 16px !important;
 }
-.rc-build-rows { display: flex; flex-direction: column; }
+.rc-build-rows {
+  display: flex;
+  flex-direction: column;
+}
 .rc-build-row {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 20px;
   padding: 16px 0;
-  border-bottom: 1px solid var(--rc-rule);
+  border-bottom: 1px solid var(--rc-edge);
   color: var(--rc-muted);
   transition: color 0.35s ease, opacity 0.35s ease;
 }
-.rc-build-row:last-child { border-bottom: 0; }
-.rc-build-row span { font-size: 15px; }
+.rc-build-row:last-child {
+  border-bottom: 0;
+}
+.rc-build-row span {
+  font-size: 15px;
+}
 .rc-build-row b {
   font-family: var(--rc-display);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  font-size: 30px;
-  letter-spacing: -0.03em;
+  font-size: 32px;
+  letter-spacing: -0.04em;
   display: inline-block;
   transform-origin: right center;
 }
 /* Rows ahead of the reader stay quiet; the live one takes full ink. Colour is
    never used to mark it — weight and opacity carry the state, so the page keeps
    its rule that only size distinguishes a number. */
-.rc-build-row[data-state="next"] { opacity: 0.32; }
-.rc-build-row[data-state="past"] { opacity: 0.6; }
-.rc-build-row[data-state="now"] { opacity: 1; color: var(--rc-ink); }
-.rc-build-row[data-state="now"] b { color: var(--rc-ink); }
+.rc-build-row[data-state="next"] {
+  opacity: 0.3;
+}
+.rc-build-row[data-state="past"] {
+  opacity: 0.58;
+}
+.rc-build-row[data-state="now"] {
+  opacity: 1;
+  color: var(--rc-ink);
+}
+.rc-build-row[data-state="now"] b {
+  color: var(--rc-ink);
+}
 
-.rc-build-steps { display: flex; flex-direction: column; gap: 88px; padding: 40px 0 120px; }
-.rc-build-step { max-width: 54ch; transition: opacity 0.4s ease; opacity: 0.42; }
-.rc-build-step[data-active="true"] { opacity: 1; }
-.rc-build-step h3 { font-size: clamp(22px, 2.6vw, 30px); margin-bottom: 12px; }
-.rc-build-step p { color: var(--rc-ink-2); font-size: 16.5px; }
+.rc-build-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 92px;
+  padding: 40px 0 120px;
+}
+.rc-build-step {
+  max-width: 54ch;
+  transition: opacity 0.4s ease;
+  opacity: 0.38;
+}
+.rc-build-step[data-active="true"] {
+  opacity: 1;
+}
+.rc-build-step h3 {
+  font-size: clamp(22px, 2.8vw, 32px);
+  margin-bottom: 12px;
+}
+.rc-build-step p {
+  color: var(--rc-ink-2);
+  font-size: 16.5px;
+}
 
+/* ---------- narrow ---------- */
 @media (max-width: 900px) {
+  .rc-hero {
+    padding: 118px 0 70px;
+  }
+  .rc-hero h1 {
+    font-size: clamp(40px, 12vw, 74px);
+    max-width: 100%;
+  }
+  .rc-scroll-cue {
+    margin-top: 48px;
+  }
+  .rc-band {
+    padding: 24px 0 48px;
+  }
+  .rc-try {
+    padding-bottom: 78px;
+  }
+  .rc-section {
+    padding: 72px 0;
+  }
+  .rc-nav-price {
+    display: none;
+  }
+  .rc-build-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
   /* Sticky needs vertical room to read as pinned; on a phone it just steals the
      screen, so the panel goes back to normal flow above the copy. */
-  .rc-build-grid { grid-template-columns: 1fr; gap: 32px; }
-  .rc-build-sticky { position: static; }
-  .rc-build-steps { gap: 40px; padding: 0 0 8px; }
-  .rc-build-step { opacity: 1; }
+  .rc-build-sticky {
+    position: static;
+  }
+  .rc-build-steps {
+    gap: 40px;
+    padding: 0 0 8px;
+  }
+  .rc-build-step {
+    opacity: 1;
+  }
   /* No scroll sequence at this width, so nothing lights the rows up — without
      this the second and third figures sit permanently greyed out and the
      calculation reads as broken rather than staged. */
@@ -475,8 +712,39 @@
     opacity: 1;
     color: var(--rc-ink);
   }
-  .rc-build { padding-top: 62px; padding-bottom: 62px; }
+  .rc-build {
+    padding-top: 70px;
+    padding-bottom: 70px;
+  }
 }
+
+@media (max-width: 560px) {
+  .rc-nav-in {
+    height: 48px;
+    padding: 0 8px 0 16px;
+    gap: 10px;
+  }
+  .rc-nav-cta .rc-btn--quiet {
+    display: none;
+  }
+  .rc-btn {
+    font-size: 14px;
+    padding: 9px 16px;
+  }
+  .rc-hero-actions .rc-btn {
+    flex: 1 1 auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .rc-build-step, .rc-build-row { opacity: 1 !important; transition: none !important; }
+  .rc *,
+  .rc *::before,
+  .rc *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+  .rc-build-step,
+  .rc-build-row {
+    opacity: 1 !important;
+  }
 }

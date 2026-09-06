@@ -19,12 +19,14 @@
     "lucide-react": "^1.27.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
-    "react-router-dom": "^7.18.2"
+    "react-router-dom": "^7.18.2",
+    "three": "0.143.0"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
+    "@types/three": "0.143.0",
     "@vitejs/plugin-react": "^6.0.3",
     "happy-dom": "^20.11.1",
     "oxlint": "^1.71.0",

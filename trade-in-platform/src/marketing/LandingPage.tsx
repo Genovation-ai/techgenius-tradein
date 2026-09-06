@@ -1,8 +1,22 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, useMotionValueEvent, useScroll, useReducedMotion } from "framer-motion";
+import {
+  motion,
+  useMotionValueEvent,
+  useScroll,
+  useTransform,
+  useReducedMotion,
+} from "framer-motion";
 import { fetchDevices, fetchQuote, type ApiDevice } from "../lib/tradeInApi";
 import "./LandingPage.css";
+
+/**
+ * Three and its postprocessing addons are ~600 KB. Loading them from the main
+ * bundle would put them in front of every staff member opening the admin, who
+ * will never see this scene. Split out so only the landing page pays for it,
+ * and so the page's text and the live quote render before the canvas arrives.
+ */
+const FlowWave = lazy(() => import("./FlowWave").then((m) => ({ default: m.FlowWave })));
 
 /**
  * Reclaim — the platform's own page, for shop owners rather than shoppers.
@@ -48,6 +62,50 @@ function useCountUp(target: number | null, enabled: boolean): number | null {
   return shown;
 }
 
+
+/**
+ * The price band.
+ *
+ * Display-scale type that slides sideways as the page moves — the one piece of
+ * motion typography here, and it is made of the product's own output rather
+ * than a slogan: real models from the live catalogue and the money this engine
+ * pays for them, ordered by value. Decorative repetition, so it is hidden from
+ * assistive tech; the same figures are readable in the quote panel below it.
+ */
+function PriceBand({ devices }: { devices: ApiDevice[] }) {
+  const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement | null>(null);
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
+  const x = useTransform(scrollYProgress, [0, 1], ["1%", "-36%"]);
+
+  const items = useMemo(
+    () =>
+      devices
+        .filter((d) => (d.max_price_flawless ?? 0) > 90)
+        .sort((a, b) => (b.max_price_flawless ?? 0) - (a.max_price_flawless ?? 0))
+        .slice(0, 12)
+        .map((d) => ({ name: d.name, price: Math.round(d.max_price_flawless ?? 0) })),
+    [devices],
+  );
+
+  // Nothing to say until the catalogue answers — an empty band would leave a
+  // gap where the page's one moving line is supposed to be.
+  if (!items.length) return null;
+
+  return (
+    <div className="rc-band" ref={ref} aria-hidden>
+      <motion.div className="rc-band-row" style={reduce ? undefined : { x }}>
+        {/* Doubled so the row still spans the viewport at the end of its travel. */}
+        {[...items, ...items].map((it, i) => (
+          <span className="rc-band-item" key={`${it.name}-${i}`}>
+            {it.name}
+            <b>${it.price}</b>
+          </span>
+        ))}
+      </motion.div>
+    </div>
+  );
+}
 
 /**
  * How a price is built, revealed by scrolling.
@@ -139,6 +197,14 @@ export default function LandingPage() {
     setPastHero(v > h * 0.75);
   });
 
+  // The scene needs a black ground under it before WebGL's first frame. The
+  // stylesheet ships in the app-wide bundle, so the rule is scoped to this
+  // class and removed when the page unmounts.
+  useEffect(() => {
+    document.documentElement.classList.add("rc-dark");
+    return () => document.documentElement.classList.remove("rc-dark");
+  }, []);
+
   useEffect(() => {
     void fetchDevices({ categoryId: "smartphone", limit: 400 })
       .then(setDevices)
@@ -187,6 +253,9 @@ export default function LandingPage() {
 
   return (
     <div className="rc">
+      <Suspense fallback={null}>
+        <FlowWave />
+      </Suspense>
       <header className="rc-nav" data-stuck={stuck}>
         <div className="rc-wrap rc-nav-in">
           <span className="rc-mark">
@@ -216,13 +285,16 @@ export default function LandingPage() {
 
       <main>
         <section className="rc-hero" ref={heroRef}>
-          <div className="rc-wrap rc-hero-grid">
+          <div className="rc-wrap">
             <motion.div
               initial={reduce ? false : "hidden"}
               animate="shown"
               variants={{ shown: { transition: { staggerChildren: 0.085, delayChildren: 0.04 } } }}
             >
-              <motion.h1 variants={rise}>Know what a used phone is worth before you buy it.</motion.h1>
+              <motion.h1 variants={rise}>
+                <span>Know what a phone is worth</span>
+                <span className="rc-line-ghost">before you pay for it.</span>
+              </motion.h1>
               <motion.p className="rc-hero-sub" variants={rise}>
                 Reclaim prices trade-ins from what buyers are paying this week, puts the
                 quote on your website, and tracks the device through to payout.
@@ -238,7 +310,25 @@ export default function LandingPage() {
               <motion.p className="rc-hero-note" variants={rise}>
                 No card to start. Your first quote works before you finish reading this page.
               </motion.p>
+              <motion.p className="rc-scroll-cue" variants={rise}>
+                Scroll — the engine is running below
+              </motion.p>
             </motion.div>
+          </div>
+        </section>
+
+        {/* Everything past the hero sits on a veil (see .rc-below): the field
+            stays visible as texture, but body copy gets a ground to read on. */}
+        <div className="rc-below">
+        <PriceBand devices={devices} />
+
+        <section className="rc-try" id="try">
+          <div className="rc-wrap">
+            <h2>Type in a phone you bought last week.</h2>
+            <p className="rc-try-lead">
+              No sandbox, no sample data. This is the engine your customers would use,
+              quoting against today's catalogue.
+            </p>
 
             <motion.div
               className="rc-quote"
@@ -246,7 +336,7 @@ export default function LandingPage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.24, ease: [0.22, 1, 0.36, 1] }}
             >
-              <p className="rc-quote-label">Try it — this is the live pricing engine.</p>
+              <p className="rc-quote-label">Live pricing engine</p>
               <input
                 className="rc-quote-input"
                 value={query}
@@ -399,6 +489,7 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
+        </div>
       </main>
 
       <footer className="rc-wrap rc-foot">
