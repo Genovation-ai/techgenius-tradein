@@ -73,7 +73,20 @@ const corsOrigins = (process.env.TG_CORS_ORIGINS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
-const PUBLIC_CORS_PATHS = ["/api/catalog", "/api/quote", "/api/widget", "/devices", "/embed"];
+// /api/health belongs here: the widget calls it before loading the catalogue,
+// and treats a failure as "backend is down" and renders nothing. Blocked by
+// CORS it always failed, so the catalogue only appeared because the fetch
+// usually won the race against the health check. On a slow connection, or when
+// the shopper paused before choosing a category, the check landed first and the
+// widget sat empty with no error.
+const PUBLIC_CORS_PATHS = [
+  "/api/health",
+  "/api/catalog",
+  "/api/quote",
+  "/api/widget",
+  "/devices",
+  "/embed",
+];
 const openCors = cors();
 const restrictedCors = corsOrigins.length > 0 ? cors({ origin: corsOrigins }) : cors();
 
