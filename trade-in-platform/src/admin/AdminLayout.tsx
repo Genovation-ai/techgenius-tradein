@@ -1,4 +1,5 @@
 import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
+import { WelcomeTour } from "./WelcomeTour";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { adminFetch, clearAdminSession, getAdminApiKey, getAdminOrg, getAdminUser, logoutAdmin, setAdminChannelPreference } from "./api";
 import {
@@ -34,7 +35,10 @@ const STORE_KEY = "tg-admin-store";
 const nav: NavGroup[] = [
   {
     label: "Main",
-    items: [{ to: "/admin", end: true, icon: <NavDashboard />, text: "Dashboard", cap: "dashboard:read" }],
+    items: [
+      { to: "/admin", end: true, icon: <NavDashboard />, text: "Dashboard", cap: "dashboard:read" },
+      { to: "/admin/setup", icon: <NavSettings />, text: "Connect your site" },
+    ],
   },
   {
     label: "Operations",
@@ -304,6 +308,7 @@ export function AdminLayout() {
           </button>
         </div>
 
+        <WelcomeTour />
         {nav.map((group) => {
           const items = group.items.filter((item) => !item.cap || !caps || caps.includes(item.cap));
           if (!items.length) return null;

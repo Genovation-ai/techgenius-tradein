@@ -1,0 +1,70 @@
+/* First-run tour. Sits above the admin shell but never traps the reader:
+   scrim click, Escape and a visible Skip all close it. */
+.tour-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  background: rgba(14, 20, 23, 0.42);
+  backdrop-filter: blur(2px);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.tour-card {
+  background: var(--paper, #fff);
+  color: var(--ink, #2a2a2a);
+  border-radius: var(--radius-lg, 16px);
+  padding: 26px 28px 20px;
+  width: min(480px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow-y: auto;
+  box-shadow: 0 24px 60px rgba(14, 20, 23, 0.28);
+}
+.tour-card h2 { margin: 14px 0 8px; font-size: 1.28rem; line-height: 1.2; }
+.tour-card p { margin: 0; color: var(--ink-soft, #5c5c5c); line-height: 1.6; font-size: 0.96rem; }
+
+.tour-progress { display: flex; gap: 5px; }
+.tour-progress span {
+  height: 3px; flex: 1; border-radius: 2px;
+  background: var(--line, #e4e6e4);
+  transition: background 0.3s ease;
+}
+.tour-progress span[data-done="true"] { background: var(--cta, #f79347); }
+
+.tour-actions {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.tour-right { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+.tour-card button {
+  font: inherit;
+  font-size: 0.93rem;
+  font-weight: 600;
+  min-height: 40px;
+  padding: 9px 16px;
+  border-radius: var(--radius, 10px);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.tour-next { background: var(--cta, #f79347); color: #fff; }
+.tour-next:hover { background: var(--cta-hover, #e07f32); }
+.tour-ghost { background: transparent; border-color: var(--line-strong, #c9cbc9); color: var(--ink, #2a2a2a); }
+.tour-ghost:hover { background: var(--fog, #f6f7f5); }
+.tour-skip { background: transparent; color: var(--ink-soft, #5c5c5c); padding-left: 0; }
+.tour-skip:hover { color: var(--ink, #2a2a2a); }
+.tour-card button:focus-visible { outline: 2px solid var(--cta, #f79347); outline-offset: 2px; }
+
+.tour-count { margin-top: 12px !important; font-size: 0.8rem !important; color: var(--ink-soft, #8a8a8a) !important; }
+
+/* On a phone the actions stack, so the primary action goes full width. */
+@media (max-width: 480px) {
+  .tour-card { padding: 20px 18px 16px; }
+  .tour-right { width: 100%; }
+  .tour-right button { flex: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tour-scrim, .tour-card { transition: none !important; animation: none !important; }
+}

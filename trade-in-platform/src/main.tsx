@@ -17,6 +17,7 @@ import { CustomersPage } from "./admin/pages/CustomersPage.tsx";
 import { InventoryPage } from "./admin/pages/InventoryPage.tsx";
 import { ReportsPage } from "./admin/pages/ReportsPage.tsx";
 import { SettingsPage } from "./admin/pages/SettingsPage.tsx";
+import { SetupPage } from "./admin/pages/SetupPage.tsx";
 import { ShippingPage } from "./admin/pages/ShippingPage.tsx";
 import { OfferDetailPage } from "./admin/pages/OfferDetailPage.tsx";
 import { TeamPage } from "./admin/pages/TeamPage.tsx";
@@ -64,6 +65,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="team" element={<TeamPage />} />
           <Route path="reports" element={<ReportsPage />} />
           <Route path="settings" element={<SettingsPage />} />
+          <Route path="setup" element={<SetupPage />} />
           <Route path="shipping" element={<ShippingPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

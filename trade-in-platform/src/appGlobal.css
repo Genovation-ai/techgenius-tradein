@@ -99,3 +99,53 @@ body {
   border-color: var(--cta, #1f6f4a);
   color: #fff;
 }
+
+/* ---- Connect page ------------------------------------------------------- */
+.admin-page-head { margin-bottom: 22px; }
+.admin-page-head h1 { margin: 0 0 6px; }
+
+.admin-card {
+  background: var(--paper, #fff);
+  border: 1px solid var(--line, #e4e6e4);
+  border-radius: var(--radius-lg, 16px);
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.admin-card h2 {
+  margin: 0 0 6px;
+  font-size: 1.05rem;
+}
+.admin-card > .admin-muted { margin: 0 0 14px; }
+.admin-card .admin-table { margin-top: 14px; }
+.admin-card .admin-btn { margin-top: 14px; }
+
+/* Snippets are copied, so they must never soft-wrap mid-attribute — a broken
+   data-api is a support ticket. Scroll instead. */
+.admin-code {
+  background: var(--fog, #f6f7f5);
+  border: 1px solid var(--line, #e4e6e4);
+  border-radius: var(--radius, 12px);
+  padding: 14px 16px;
+  margin: 0;
+  overflow-x: auto;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  white-space: pre;
+  color: var(--ink, #2a2a2a);
+}
+.admin-mono {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px;
+}
+.admin-danger { color: var(--danger, #c94b38); font-size: 0.92rem; }
+.admin-callout {
+  border-left: 3px solid var(--cta, #f79347);
+  background: var(--fog, #f6f7f5);
+  padding: 14px 16px;
+  border-radius: 0 var(--radius, 12px) var(--radius, 12px) 0;
+  margin: 14px 0;
+  font-size: 0.94rem;
+}
+.admin-callout .admin-code { margin: 10px 0; }
+.admin-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
