@@ -124,11 +124,17 @@ if (devicesDir) {
 }
 
 // The built widget bundle the Framer page loads.
+//
+// Freshly-built output wins over the committed copy in framer-deliverable/.
+// That copy is a hand-off convenience and goes stale the moment anyone edits
+// the widget without re-exporting it — and a stale bundle here is invisible,
+// because the file still serves a 200 and the widget still works, just as it
+// did last month. Only fall back to it when there is no build to serve.
 const embedDir = firstExisting(
   path.resolve(HERE, "../public/embed"),
   path.resolve(HERE, "../../public/embed"),
-  path.resolve(HERE, "../../framer-deliverable"),
   path.resolve(HERE, "../../trade-in-platform/dist-embed-lite"),
+  path.resolve(HERE, "../../framer-deliverable"),
 );
 if (embedDir) {
   app.use("/embed", express.static(embedDir, { maxAge: "1h" }));
