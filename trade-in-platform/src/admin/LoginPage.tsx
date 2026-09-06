@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { PriceTicker } from "../marketing/PriceTicker";
+import "../marketing/reclaim.css";
 import { loginAdmin } from "./api";
-import { TgMark } from "../components/BrandIcons";
 import "./admin.css";
 
 export function LoginPage() {
@@ -31,7 +32,7 @@ export function LoginPage() {
     <div className="admin-login">
       <section className="admin-login-left">
         <div className="admin-login-brand-row">
-          <TgMark size={22} />
+          <span className="rc-auth-mark" aria-hidden />
           Reclaim
         </div>
         <Link to="/" className="admin-login-back">Back to Reclaim</Link>
@@ -87,6 +88,7 @@ export function LoginPage() {
       </section>
 
       <section className="admin-login-right">
+        <PriceTicker />
         <h2>Trade-ins, priced by the market</h2>
         <p>
           Reclaim watches what buyers actually pay and quotes from that, so an

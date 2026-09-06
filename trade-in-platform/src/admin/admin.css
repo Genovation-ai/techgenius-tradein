@@ -1,21 +1,25 @@
 /* Tech Genius Admin — quiet ops console */
 :root {
-  --tg-green: #39b54a;
-  --tg-green-dark: #2d9a3c;
-  --tg-green-soft: #eaf7ec;
-  --tg-orange: #f79347;
-  --tg-orange-dark: #e8843a;
-  --tg-ink: #2a2a2a;
-  --tg-muted: #6b7280;
-  --tg-border: #e4e6e3;
-  --tg-bg: #f3f5f2;
+  /* Remapped onto the Reclaim palette so the workspace matches the landing and
+     sign-in pages a shop owner arrives through. The names are unchanged because
+     32 rules reference them; only the values moved. The customer widget is
+     untouched — it wears the shop's colours, not ours. */
+  --tg-green: #1d4e4a;
+  --tg-green-dark: #16403c;
+  --tg-green-soft: #e4edea;
+  --tg-orange: #0d1417;
+  --tg-orange-dark: #000000;
+  --tg-ink: #0d1417;
+  --tg-muted: #66787d;
+  --tg-border: #d8e0dd;
+  --tg-bg: #f2f5f4;
   --tg-white: #ffffff;
   --tg-sidebar: 248px;
   --tg-sidebar-collapsed: 72px;
   --tg-radius: 8px;
   --tg-shadow: 0 1px 0 rgba(42, 42, 42, 0.04), 0 8px 20px rgba(42, 42, 42, 0.04);
-  --tg-font: "DM Sans", "Segoe UI", sans-serif;
-  --tg-display: "Fraunces", "Georgia", serif;
+  --tg-font: "Instrument Sans", "Segoe UI", sans-serif;
+  --tg-display: "Bricolage Grotesque", "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }

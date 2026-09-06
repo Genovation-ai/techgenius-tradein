@@ -1,0 +1,200 @@
+/* Reclaim platform identity.
+ *
+ * The surfaces a shop owner sees while buying and running the software —
+ * landing, sign-in, sign-up — share one palette and one pair of typefaces. The
+ * customer widget deliberately does not: it wears the shop's own colours,
+ * because a shopper is selling to them, not to us.
+ *
+ * Loaded after tokens.css so it overrides the storefront's warm orange on
+ * platform pages only. */
+
+:root {
+  --rc-ink: #0d1417;
+  --rc-ink-2: #33454a;
+  --rc-muted: #66787d;
+  --rc-paper: #f2f5f4;
+  --rc-surface: #ffffff;
+  --rc-mat: #1d4e4a;
+  --rc-mat-soft: #e4edea;
+  --rc-rule: #d8e0dd;
+  --rc-rule-2: #b9c6c2;
+  --rc-display: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  --rc-body: "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --rc-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---- sign-in / sign-up ---------------------------------------------------
+   These were the storefront's green button, serif headline and a green-to-brown
+   radial wash, which read as a different product from the page that links to
+   them. Brought onto the platform palette. */
+
+.admin-login {
+  background: var(--rc-paper);
+  font-family: var(--rc-body);
+  color: var(--rc-ink);
+}
+.admin-login-left {
+  background: var(--rc-paper);
+}
+.admin-login-left h1,
+.admin-login-right h2 {
+  font-family: var(--rc-display) !important;
+  letter-spacing: -0.025em;
+  font-weight: 600;
+}
+.admin-login-brand-row {
+  font-family: var(--rc-display) !important;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--rc-ink);
+}
+.admin-login-left label {
+  color: var(--rc-ink-2);
+  font-family: var(--rc-body);
+}
+.admin-login-left input {
+  font-family: var(--rc-body);
+  border-color: var(--rc-rule-2) !important;
+  background: var(--rc-surface);
+  color: var(--rc-ink);
+}
+.admin-login-left input:focus {
+  outline: 2px solid var(--rc-mat);
+  outline-offset: 1px;
+  border-color: var(--rc-mat) !important;
+}
+.admin-login-left .admin-btn,
+.admin-login-left button[type="submit"] {
+  background: var(--rc-ink) !important;
+  border-color: var(--rc-ink) !important;
+  color: #fff !important;
+  font-family: var(--rc-body);
+  font-weight: 600;
+  border-radius: 8px !important;
+  min-height: 44px;
+  transition: transform 0.16s var(--rc-ease), background 0.16s var(--rc-ease);
+}
+.admin-login-left .admin-btn:hover,
+.admin-login-left button[type="submit"]:hover {
+  background: #000 !important;
+  transform: translateY(-1px);
+}
+.admin-login-left input[type="checkbox"] { accent-color: var(--rc-mat); }
+.admin-login-back { color: var(--rc-muted) !important; }
+.admin-login-back:hover { color: var(--rc-ink) !important; }
+.admin-login-back:focus-visible { outline-color: var(--rc-mat) !important; }
+
+/* ---- the cinematic panel -------------------------------------------------
+   A slow drift of real models and the prices this engine would pay for them.
+   It is atmosphere, but atmosphere made of the product's own output rather than
+   an abstract gradient — the thing being sold, quietly running behind the form.
+   Continuous and low-contrast so it never competes with the password field. */
+
+.admin-login-right {
+  background: var(--rc-ink) !important;
+  color: #e6efec !important;
+  position: relative;
+  overflow: hidden;
+  padding: 3rem clamp(1.5rem, 4vw, 3.4rem) !important;
+}
+.admin-login-right::before {
+  content: "";
+  position: absolute;
+  inset: -30%;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(29, 78, 74, 0.55), transparent 55%),
+    radial-gradient(ellipse at 78% 78%, rgba(29, 78, 74, 0.3), transparent 50%) !important;
+  pointer-events: none;
+  animation: rc-drift 26s ease-in-out infinite alternate;
+}
+@keyframes rc-drift {
+  from { transform: translate3d(-2%, -1%, 0) scale(1); }
+  to { transform: translate3d(2%, 2%, 0) scale(1.08); }
+}
+.admin-login-right > * { position: relative; z-index: 2; }
+.admin-login-right h2 {
+  color: #fff !important;
+  font-size: clamp(1.9rem, 3vw, 2.6rem) !important;
+  line-height: 1.12 !important;
+}
+.admin-login-right p {
+  color: rgba(230, 239, 236, 0.74) !important;
+  font-family: var(--rc-body);
+  max-width: 42ch;
+  line-height: 1.6;
+}
+
+/* The ticker itself */
+.rc-ticker {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+  pointer-events: none;
+}
+.rc-ticker-col {
+  position: absolute;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  will-change: transform;
+}
+.rc-ticker-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  white-space: nowrap;
+  font-family: var(--rc-body);
+  font-size: 13.5px;
+  color: rgba(230, 239, 236, 0.2);
+}
+.rc-ticker-row b {
+  font-family: var(--rc-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  color: rgba(230, 239, 236, 0.34);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-login-right::before { animation: none; }
+  .rc-ticker-col { transform: none !important; }
+}
+@media (max-width: 900px) {
+  .rc-ticker { display: none; }
+}
+
+/* Platform mark: the same square used on the landing page, not the storefront's
+   green monogram. */
+.rc-auth-mark {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--rc-mat);
+  display: inline-block;
+  flex: none;
+}
+
+/* The ticker sat at the same weight as the headline, so both were hard to read.
+   Pushed further back, and the copy gets its own ground so it never lands on a
+   price row. */
+.rc-ticker-row { color: rgba(230, 239, 236, 0.11) !important; }
+.rc-ticker-row b { color: rgba(230, 239, 236, 0.19) !important; }
+.admin-login-right h2,
+.admin-login-right p {
+  position: relative;
+}
+.admin-login-right h2::before,
+.admin-login-right p::before {
+  content: "";
+  position: absolute;
+  inset: -14px -22px;
+  background: var(--rc-ink);
+  filter: blur(18px);
+  opacity: 0.82;
+  z-index: -1;
+  border-radius: 20px;
+}

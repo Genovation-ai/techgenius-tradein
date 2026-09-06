@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { PriceTicker } from "../marketing/PriceTicker";
+import "../marketing/reclaim.css";
 import { signupShop } from "./api";
-import { TgMark } from "../components/BrandIcons";
 import "./admin.css";
 
 export function SignupPage() {
@@ -42,7 +43,7 @@ export function SignupPage() {
       <div className="admin-login">
         <section className="admin-login-left">
           <div className="admin-login-brand-row">
-            <TgMark size={22} />
+            <span className="rc-auth-mark" aria-hidden />
             Reclaim
           </div>
           <h1>Your shop is live</h1>
@@ -57,6 +58,7 @@ export function SignupPage() {
           </button>
         </section>
         <section className="admin-login-right">
+        <PriceTicker />
           <h2>Sell trade-in as a service</h2>
           <p>Offers, intake, inventory, invoices, and a white-label widget — ready for your brand.</p>
         </section>
@@ -68,7 +70,7 @@ export function SignupPage() {
     <div className="admin-login">
       <section className="admin-login-left">
         <div className="admin-login-brand-row">
-          <TgMark size={22} />
+          <span className="rc-auth-mark" aria-hidden />
           Trade-In SaaS
         </div>
         <Link to="/" className="admin-login-back">Back to Reclaim</Link>
