@@ -6,6 +6,7 @@ import { nanoid } from "nanoid";
 import { notifyOfferStatusChange, recordOfferNotification } from "../services/notifications.js";
 import { ensureInvoiceForCompletedOffer } from "./invoices.js";
 import { requireCapability } from "../middleware/auth.js";
+import { orgFilter, ownsRow } from "../middleware/orgScope.js";
 import { computeServerQuote } from "../services/quoteEngine.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 
@@ -35,6 +36,9 @@ offersRouter.get("/leads", requireCapability("offers:read"), (req, res) => {
     const store = req.query.store_id ? String(req.query.store_id) : null;
     const params: unknown[] = [status];
     let sql = "SELECT * FROM abandoned_leads WHERE status = ?";
+    const org = orgFilter(req);
+    sql += org.sql;
+    params.push(...org.params);
     if (store) {
       sql += " AND store_id = ?";
       params.push(store);
@@ -47,9 +51,9 @@ offersRouter.get("/leads", requireCapability("offers:read"), (req, res) => {
     const totals = db
       .prepare(
         `SELECT status, COUNT(*) AS count, COALESCE(SUM(quoted_total), 0) AS value
-           FROM abandoned_leads GROUP BY status`,
+           FROM abandoned_leads WHERE 1=1${orgFilter(req).sql} GROUP BY status`,
       )
-      .all();
+      .all(...orgFilter(req).params);
     res.json({ rows, totals });
   } finally {
     db.close();
@@ -64,9 +68,12 @@ offersRouter.patch("/leads/:id", requireCapability("offers:write"), (req, res) =
   }
   const db = getDb();
   try {
+    const org = orgFilter(req);
     const result = db
-      .prepare("UPDATE abandoned_leads SET status = ?, updated_at = datetime('now') WHERE id = ?")
-      .run(next, req.params.id);
+      .prepare(
+        `UPDATE abandoned_leads SET status = ?, updated_at = datetime('now') WHERE id = ?${org.sql}`,
+      )
+      .run(next, req.params.id, ...org.params);
     if (!result.changes) return res.status(404).json({ error: "Lead not found" });
     res.json({ ok: true, id: req.params.id, status: next });
   } finally {
@@ -82,7 +89,11 @@ offersRouter.get("/", requireCapability("offers:read"), (req, res) => {
     "SELECT o.*, c.first_name, c.last_name, c.email FROM offers o LEFT JOIN customers c ON o.customer_id = c.id WHERE 1=1";
   const params: unknown[] = [];
   if (orgId) {
-    sql += " AND (o.org_id = ? OR o.org_id IS NULL)";
+    // Hard filter. The old clause also matched rows with no org, so anything
+    // created without one was visible to every tenant at once. ensureSaasSchema
+    // adopts orphaned rows into the default org on boot, so an unassigned row
+    // now belongs to nobody rather than everybody.
+    sql += " AND o.org_id = ?";
     params.push(orgId);
   }
   if (status) {
@@ -120,7 +131,7 @@ offersRouter.get("/:id", requireCapability("offers:read"), (req, res) => {
      WHERE o.id = ?`,
     )
     .get(req.params.id);
-  if (!offer) {
+  if (!offer || !ownsRow(req, offer as { org_id?: unknown })) {
     db.close();
     return res.status(404).json({ error: "Not found" });
   }

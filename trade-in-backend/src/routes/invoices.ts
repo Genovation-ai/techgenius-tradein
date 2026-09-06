@@ -2,6 +2,7 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
+import { orgFilter, ownsRow } from "../middleware/orgScope.js";
 
 export const invoicesRouter = Router();
 
@@ -40,6 +41,9 @@ invoicesRouter.get("/", requireCapability("invoices:read"), (req, res) => {
   let sql = `SELECT i.*, c.first_name, c.last_name, c.email
              FROM invoices i LEFT JOIN customers c ON c.id = i.customer_id WHERE 1=1`;
   const params: unknown[] = [];
+  const scope = orgFilter(req, "i");
+  sql += scope.sql;
+  params.push(...scope.params);
   if (store) {
     sql += " AND i.store_id = ?";
     params.push(store);
@@ -60,6 +64,7 @@ invoicesRouter.get("/:id", requireCapability("invoices:read"), (req, res) => {
     )
     .get(req.params.id) as Record<string, unknown> | undefined;
   db.close();
+  if (row && !ownsRow(req, row)) return res.status(404).json({ error: "Not found" });
   if (!row) return res.status(404).json({ error: "Not found" });
   const line_items = JSON.parse(String(row.line_items_json || "[]"));
   res.json({ ...row, line_items });

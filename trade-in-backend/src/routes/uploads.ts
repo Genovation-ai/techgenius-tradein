@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
+import { orgFilter, ownsRow } from "../middleware/orgScope.js";
 
 export const uploadsRouter = Router();
 
@@ -69,19 +70,23 @@ uploadsRouter.post("/", requireCapability("uploads:write"), (req, res) => {
 uploadsRouter.get("/", requireCapability("uploads:write"), (req, res) => {
   const db = getDb();
   const offerId = req.query.offer_id ? String(req.query.offer_id) : null;
+  // Uploads are photographs of a customer's device, often showing serials and
+  // sometimes the room they were taken in. They are scoped like any other
+  // customer record.
+  const org = orgFilter(req);
   let rows;
   if (offerId) {
     rows = db
       .prepare(
-        `SELECT id, offer_id, filename, mime_type, size_bytes, created_at FROM uploads WHERE offer_id = ? ORDER BY created_at DESC`,
+        `SELECT id, offer_id, filename, mime_type, size_bytes, created_at FROM uploads WHERE offer_id = ?${org.sql} ORDER BY created_at DESC`,
       )
-      .all(offerId);
+      .all(offerId, ...org.params);
   } else {
     rows = db
       .prepare(
-        `SELECT id, offer_id, filename, mime_type, size_bytes, created_at FROM uploads ORDER BY created_at DESC LIMIT 100`,
+        `SELECT id, offer_id, filename, mime_type, size_bytes, created_at FROM uploads WHERE 1=1${org.sql} ORDER BY created_at DESC LIMIT 100`,
       )
-      .all();
+      .all(...org.params);
   }
   db.close();
   res.json(rows);
@@ -90,9 +95,10 @@ uploadsRouter.get("/", requireCapability("uploads:write"), (req, res) => {
 uploadsRouter.get("/:id/file", requireCapability("uploads:write"), (req, res) => {
   const db = getDb();
   const row = db.prepare("SELECT * FROM uploads WHERE id = ?").get(req.params.id) as
-    | { storage_path: string; mime_type: string; filename: string }
+    | { storage_path: string; mime_type: string; filename: string; org_id?: unknown }
     | undefined;
   db.close();
+  if (row && !ownsRow(req, row)) return res.status(404).json({ error: "Not found" });
   if (!row) return res.status(404).json({ error: "Not found" });
   const full = path.join(UPLOAD_ROOT, row.storage_path);
   if (!fs.existsSync(full)) return res.status(404).json({ error: "File missing" });

@@ -198,9 +198,24 @@ function bootstrapDefaultOrg(db: Database): void {
     insert.run("tg-shop", DEFAULT_ORG_ID, "Shop Tech Genius", "Ontario", null);
   }
 
-  // Attach legacy rows to default org
+  // Attach legacy rows to the default org.
+  //
+  // This runs on every boot, and it is what lets the read queries filter on
+  // org_id alone. A row with no org is visible to no tenant rather than all of
+  // them, so anything that slips through gets adopted here instead of leaking.
+  // abandoned_leads belongs in this list — it holds shopper names and emails.
   db.prepare("UPDATE admin_users SET org_id = ? WHERE org_id IS NULL").run(DEFAULT_ORG_ID);
-  for (const table of ["offers", "inventory", "invoices", "customers", "uploads", "sales", "promo_codes", "notifications"]) {
+  for (const table of [
+    "offers",
+    "inventory",
+    "invoices",
+    "customers",
+    "uploads",
+    "sales",
+    "promo_codes",
+    "notifications",
+    "abandoned_leads",
+  ]) {
     try {
       db.prepare(`UPDATE ${table} SET org_id = ? WHERE org_id IS NULL`).run(DEFAULT_ORG_ID);
     } catch {

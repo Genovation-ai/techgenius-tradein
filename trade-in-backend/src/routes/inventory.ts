@@ -14,7 +14,8 @@ inventoryRouter.get("/", requireCapability("inventory:read"), (req, res) => {
   let sql = "SELECT * FROM inventory WHERE 1=1";
   const params: unknown[] = [];
   if (req.tgAuth?.orgId) {
-    sql += " AND (org_id = ? OR org_id IS NULL)";
+    // See offers.ts — an unassigned row must belong to nobody, not everybody.
+    sql += " AND org_id = ?";
     params.push(req.tgAuth.orgId);
   }
   if (status) {
