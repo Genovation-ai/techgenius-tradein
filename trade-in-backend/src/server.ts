@@ -51,20 +51,38 @@ if (process.env.TG_TRUST_PROXY === "1" || process.env.TG_TRUST_PROXY === "true")
   app.set("trust proxy", 1);
 }
 
-// CORS: permissive by default for the public embeddable widget. Auth uses
-// header tokens (not cookies), so a wildcard origin does not enable CSRF.
-// Set TG_CORS_ORIGINS to a comma-separated allowlist to lock it down.
+// CORS is split, because the widget and the admin API have opposite needs.
+//
+// Framer renders an HTML embed inside an `about:srcdoc` iframe, which is an
+// opaque origin — the browser sends `Origin: null`, and no allowlist can ever
+// name it. Locking the whole API to techgenius.ca therefore breaks the one
+// thing the widget exists to do: a shopper opens /sell, the widget loads, and
+// no price ever arrives. The same applies to any other site that embeds it.
+//
+// So the shopper-facing endpoints accept any origin. They are public by design
+// — anyone may browse the catalogue and request a quote — and the data behind
+// them is the price list already published on the website. Nothing here reads
+// or writes another customer's record.
+//
+// Everything else keeps the allowlist. That is defence in depth rather than the
+// real boundary: those routes require an API key or a session token in a header,
+// and header auth is not attached automatically by a browser the way a cookie
+// is, so a hostile page cannot ride along on a logged-in staff session.
 const corsOrigins = (process.env.TG_CORS_ORIGINS || "")
   .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
-app.use(
-  cors(
-    corsOrigins.length > 0
-      ? { origin: corsOrigins }
-      : undefined,
-  ),
-);
+
+const PUBLIC_CORS_PATHS = ["/api/catalog", "/api/quote", "/api/widget", "/devices", "/embed"];
+const openCors = cors();
+const restrictedCors = corsOrigins.length > 0 ? cors({ origin: corsOrigins }) : cors();
+
+app.use((req, res, next) => {
+  const isPublic = PUBLIC_CORS_PATHS.some(
+    (p) => req.path === p || req.path.startsWith(`${p}/`),
+  );
+  return isPublic ? openCors(req, res, next) : restrictedCors(req, res, next);
+});
 app.use(securityHeaders);
 app.use(express.json({ limit: "10mb" }));
 
