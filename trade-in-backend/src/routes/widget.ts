@@ -5,6 +5,7 @@ import { getDb } from "../db/migrate.js";
 import { nanoid } from "nanoid";
 import { computeServerQuote } from "../services/quoteEngine.js";
 import { notifyOfferStatusChange, recordOfferNotification } from "../services/notifications.js";
+import { CUSTOMER_JOURNEY, customerStatus, journeyIndex } from "../services/customerStatus.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 import { ensureDeviceFromName, looksLikeProductName } from "../services/deviceBootstrap.js";
 import { DEFAULT_ORG_ID, getOrgBySlug, listOrgStores } from "../services/tenancy.js";
@@ -500,7 +501,17 @@ widgetRouter.get("/offers/:id", (req, res) => {
       local.length <= 2 ? `${local[0] ?? ""}*` : `${local[0]}***${local[local.length - 1]}`;
     offer.email = `${maskedLocal}@${domain}`;
   }
-  res.json({ ...offer, items });
+  // The tracker used to render whatever came back here, which was the raw
+  // column: a customer was told their offer was "active_lead".
+  const shown = customerStatus(String(offer.status));
+  res.json({
+    ...offer,
+    status_label: shown.label,
+    status_note: shown.note,
+    journey: CUSTOMER_JOURNEY,
+    journey_index: journeyIndex(String(offer.status)),
+    items,
+  });
 });
 
 /**
@@ -549,14 +560,17 @@ widgetRouter.post("/portal", (req, res) => {
   const invoice = db
     .prepare("SELECT id, status, amount, issued_at FROM invoices WHERE offer_id = ? ORDER BY issued_at DESC LIMIT 1")
     .get(offerId);
-  const stage = db
-    .prepare("SELECT label FROM workflow_stages WHERE id = ?")
-    .get(String(offer.status)) as { label?: string } | undefined;
   db.close();
 
+  // workflow_stages.label is what the staff board calls this stage. The person
+  // who sold us the phone gets the customer wording instead.
+  const shown = customerStatus(String(offer.status));
   res.json({
     ...offer,
-    status_label: stage?.label || offer.status,
+    status_label: shown.label,
+    status_note: shown.note,
+    journey: CUSTOMER_JOURNEY,
+    journey_index: journeyIndex(String(offer.status)),
     items,
     invoice: invoice || null,
     portal: true,

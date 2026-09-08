@@ -63,7 +63,18 @@ export function clearAdminSession(): void {
   localStorage.removeItem(ORG_STORAGE);
 }
 
-const STORE_KEY = "tg-admin-store";
+/**
+ * Storage key is versioned; the event name is not.
+ *
+ * v1 defaulted every admin to the literal store id "tg-burlington". Offers are
+ * filed under the org's first store, so on this account that filter matched
+ * nothing and Offer Management looked empty while offers were arriving. Reading
+ * a fresh key resets everyone to "all locations" once; whatever they pick after
+ * that persists. The event name has to stay put — AdminLayout broadcasts it and
+ * every scoped list listens for it.
+ */
+const STORE_KEY = "tg-admin-store-v2";
+const STORE_EVENT = "tg-admin-store";
 
 /**
  * Store currently selected in the admin header, or null for "not chosen yet".
@@ -86,8 +97,8 @@ export function withStoreScope(params: URLSearchParams): URLSearchParams {
  * whenever staff switch locations; every scoped list reloads through this.
  */
 export function onStoreChange(handler: () => void): () => void {
-  window.addEventListener(STORE_KEY, handler);
-  return () => window.removeEventListener(STORE_KEY, handler);
+  window.addEventListener(STORE_EVENT, handler);
+  return () => window.removeEventListener(STORE_EVENT, handler);
 }
 
 export function apiUrl(path: string): string {

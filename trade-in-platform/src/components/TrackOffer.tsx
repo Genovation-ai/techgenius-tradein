@@ -5,6 +5,20 @@ import "./FormSteps.css";
 import "./TrackOffer.css";
 import { displayStorage, joinDetails } from "../lib/tradeInTypes";
 
+/**
+ * Short forms of the customer-facing stage names, for the progress trail.
+ * The server sends the full sentence for the current stage; these only have to
+ * be readable in a row of six on a phone.
+ */
+const JOURNEY_LABELS: Record<string, string> = {
+  active_lead: "Accepted",
+  in_transit: "On its way",
+  delivered: "Arrived",
+  being_inspected: "Checked",
+  payout_processing: "Paying",
+  completed: "Paid",
+};
+
 export function TrackOffer() {
   const [query, setQuery] = useState("");
   const [email, setEmail] = useState("");
@@ -75,11 +89,39 @@ export function TrackOffer() {
         <div className="track-result">
           {isRemote(result) ? (
             <>
-              <p>
-                <strong>{result.id}</strong> ·{" "}
-                {"status_label" in result && result.status_label ? result.status_label : result.status} · $
-                {result.total_value.toLocaleString()} CAD
+              <p className="track-headline">
+                <strong>{result.id}</strong> · ${result.total_value.toLocaleString()} CAD
               </p>
+
+              {/* Where it is, and what happens next. The second line is the one
+                  that stops the phone call. */}
+              <p className="track-status">{result.status_label ?? result.status}</p>
+              {result.status_note ? <p className="track-note">{result.status_note}</p> : null}
+
+              {result.journey?.length ? (
+                <ol
+                  className="track-trail"
+                  aria-label={`Progress: ${result.status_label ?? result.status}`}
+                >
+                  {result.journey.map((stage, i) => (
+                    <li
+                      key={stage}
+                      data-state={
+                        result.journey_index === null || result.journey_index === undefined
+                          ? "off"
+                          : i < result.journey_index
+                            ? "done"
+                            : i === result.journey_index
+                              ? "now"
+                              : "next"
+                      }
+                    >
+                      <span className="track-dot" aria-hidden />
+                      <span className="track-stage">{JOURNEY_LABELS[stage] ?? stage}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : null}
               {isPortal(result) ? (
                 <ul>
                   <li>Payout: {result.payout_method || "—"} · {result.payout_status || "pending"}</li>

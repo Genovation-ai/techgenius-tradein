@@ -30,7 +30,8 @@ type NavItem = { to: string; icon: ReactNode; text: string; end?: boolean; cap?:
 type NavGroup = { label: string; items: NavItem[] };
 
 const CHANNEL_KEY = "tg-admin-channel";
-const STORE_KEY = "tg-admin-store";
+/** Versioned with api.ts — see the note there. */
+const STORE_KEY = "tg-admin-store-v2";
 
 const nav: NavGroup[] = [
   {
@@ -89,7 +90,17 @@ export function AdminLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [channel, setChannel] = useState(() => localStorage.getItem(CHANNEL_KEY) || "mail-in");
-  const [store, setStore] = useState(() => localStorage.getItem(STORE_KEY) || "tg-burlington");
+  /**
+   * "" means every location.
+   *
+   * This defaulted to the literal id "tg-burlington". Offers are filed by the
+   * backend under the org's first store, which on this account is "tg-shop", so
+   * the owner opened Offer Management filtered to a location no offer had ever
+   * been written to and saw an empty board — while offers were arriving fine.
+   * Any other tenant fared worse: "tg-burlington" is not one of their stores at
+   * all. Showing everything until someone chooses a location cannot hide work.
+   */
+  const [store, setStore] = useState(() => localStorage.getItem(STORE_KEY) ?? "");
   const [stores, setStores] = useState<Array<{ id: string; name: string }>>([]);
   const [orgName, setOrgName] = useState(cachedOrg?.name || "Reclaim");
   const [orgPlan, setOrgPlan] = useState(cachedOrg?.plan || "starter");
@@ -133,18 +144,19 @@ export function AdminLayout() {
         // Functional update: reads the current store without making it a
         // dependency, so this stays a mount-once fetch instead of re-running
         // (and re-fetching the org) every time staff switch location.
+        // Only correct a stored choice that no longer exists; "" is a valid
+        // choice meaning all locations, so it is left alone.
         setStore((current) =>
-          data.stores?.length && !data.stores.some((s) => s.id === current)
-            ? data.stores[0].id
+          current && data.stores?.length && !data.stores.some((s) => s.id === current)
+            ? ""
             : current,
         );
         document.documentElement.style.setProperty("--admin-brand", data.branding?.brand_color || "#0B3D2E");
       })
       .catch(() => {
-        setStores([
-          { id: "tg-burlington", name: "Tech Genius Burlington" },
-          { id: "tg-shop", name: "Shop Tech Genius" },
-        ]);
+        // No invented locations: a tenant whose org call failed should see the
+        // all-locations view, not another shop's store names.
+        setStores([]);
       });
   }, []);
 
@@ -268,18 +280,12 @@ export function AdminLayout() {
             onChange={(e) => setStore(e.target.value)}
             aria-label="Store"
           >
-            {stores.length ? (
-              stores.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))
-            ) : (
-              <>
-                <option value="tg-burlington">Tech Genius Burlington</option>
-                <option value="tg-shop">Shop Tech Genius</option>
-              </>
-            )}
+            <option value="">All locations</option>
+            {stores.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
           </select>
           <div className="admin-field-label" style={{ marginTop: "0.35rem", opacity: 0.75 }}>
             Plan · {orgPlan}

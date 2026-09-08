@@ -156,7 +156,16 @@ export interface WidgetSubmitRequest {
 
 export interface TrackedOffer {
   id: string;
+  /** Raw workflow id. Prefer status_label — this is the shop's internal word. */
   status: string;
+  /** Customer-facing stage name, e.g. "Being checked". */
+  status_label?: string;
+  /** One sentence on what happens next. */
+  status_note?: string;
+  /** The ordinary stages in order, for the progress trail. */
+  journey?: string[];
+  /** Position on that trail, or null for held / revised / returned offers. */
+  journey_index?: number | null;
   total_value: number;
   offer_type?: string;
   payout_method?: string;
@@ -277,7 +286,6 @@ export async function trackOffer(id: string): Promise<TrackedOffer> {
 
 export interface PortalOffer extends TrackedOffer {
   portal: true;
-  status_label?: string;
   payout_status?: string;
   tracking_number?: string | null;
   courier?: string | null;

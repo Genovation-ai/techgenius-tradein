@@ -73,3 +73,96 @@
   font-size: 1.15rem;
   margin-right: auto;
 }
+
+/* ---- status view --------------------------------------------------------
+   The tracker used to answer "where is my device" with one line containing a
+   database value. Stage, next step, and a trail so the answer is legible at a
+   glance on a phone. */
+
+.track-headline {
+  font-size: 14px;
+  color: var(--muted, #6b7280);
+}
+.track-status {
+  font-family: var(--font-display, "PT Sans", sans-serif);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 1.2;
+  margin-top: 4px;
+}
+.track-note {
+  margin-top: 6px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: var(--muted, #4b5563);
+  max-width: 52ch;
+}
+
+/* A grid rather than a wrapping flex row: at 390px the six stages wrapped onto
+   two lines and the connector on the first stage of the second row drew a rule
+   out to the edge of the panel from nothing. */
+.track-trail {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+}
+.track-trail li {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  text-align: center;
+}
+/* The connecting rule, drawn behind the dot rather than as a border so the
+   first and last stages do not hang a half-line off the ends. */
+.track-trail li::before {
+  content: "";
+  position: absolute;
+  top: 5px;
+  left: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--rule, #e5e7eb);
+}
+.track-trail li:first-child::before {
+  display: none;
+}
+.track-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--rule, #e5e7eb);
+  position: relative;
+  z-index: 1;
+}
+.track-stage {
+  font-size: 10.5px;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+  color: var(--muted, #9ca3af);
+}
+.track-trail li[data-state="done"] .track-dot,
+.track-trail li[data-state="done"]::before {
+  background: var(--brand, #16a34a);
+}
+.track-trail li[data-state="now"] .track-dot {
+  background: var(--brand, #16a34a);
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.18);
+}
+.track-trail li[data-state="now"] .track-stage {
+  color: var(--ink, #111827);
+  font-weight: 700;
+}
+.track-trail li[data-state="done"] .track-stage {
+  color: var(--ink, #374151);
+}
+/* Held, revised or returned: the offer is not on the ordinary path, so the
+   trail greys out rather than implying a position it does not have. */
+.track-trail li[data-state="off"] .track-dot,
+.track-trail li[data-state="off"]::before {
+  background: var(--rule, #e5e7eb);
+}
