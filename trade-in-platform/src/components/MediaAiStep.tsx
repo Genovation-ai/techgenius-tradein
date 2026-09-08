@@ -225,7 +225,7 @@ export function MediaAiStep({
   return (
     <section className="flow-panel ai-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Step 6 · Vision check</p>
+        <p className="flow-kicker">Photos</p>
         <h1>Photograph every side</h1>
         <p className="flow-lead">
           Front (screen on), back, left, and right — we detect cracks, scratches, dents, and

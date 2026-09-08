@@ -1,10 +1,12 @@
 import type { ExteriorCondition, ValuationAnswers } from "../data/catalog";
-import { valuationComplete } from "../lib/tradeInTypes";
+import { asksAccountLock, asksBattery, asksCarrier, valuationComplete } from "../lib/tradeInTypes";
 import { exteriorConditionDescriptions } from "../lib/pricingBackend";
 import "./FormSteps.css";
 
 interface Props {
   value: ValuationAnswers;
+  /** Drives which questions apply — a monitor has no battery and no carrier. */
+  category: string | null;
   onChange: (patch: Partial<ValuationAnswers>) => void;
   onContinue: () => void;
 }
@@ -56,17 +58,17 @@ const exteriorOptions: { id: ExteriorCondition; label: string }[] = [
   { id: "cracks", label: "Cracks / damage" },
 ];
 
-export function ValuationStep({ value, onChange, onContinue }: Props) {
-  const ready = valuationComplete(value);
+export function ValuationStep({ value, category, onChange, onContinue }: Props) {
+  const ready = valuationComplete(value, category);
 
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Step 5 · Valuation checklist</p>
-        <h1>Answer every required field</h1>
+        <p className="flow-kicker">Condition</p>
+        <h1>A few questions about your device</h1>
         <p className="flow-lead">
-          Tell us about power, function, exterior wear, battery health, and locks so we can price
-          fairly.
+          These are what change the price. Answer honestly — we check on arrival, and an accurate
+          answer now is the offer you actually get paid.
         </p>
       </header>
 
@@ -114,9 +116,10 @@ export function ValuationStep({ value, onChange, onContinue }: Props) {
         onChange={(liquidDamage) => onChange({ liquidDamage })}
       />
 
+      {asksBattery(category) ? (
       <div className="form-block">
         <h2 className="form-label">
-          Battery health (BH)? <span className="req">*</span>
+          Battery health <span className="req">*</span>
         </h2>
         <p className="field-hint">
           Check Settings → Battery for the percentage. Higher health usually means a stronger offer.
@@ -137,46 +140,42 @@ export function ValuationStep({ value, onChange, onContinue }: Props) {
           />
         </label>
       </div>
+      ) : null}
+
+      {asksAccountLock(category) ? (
+        <YesNo
+          required
+          label="iCloud / FRP / activation lock removed?"
+          hint="Must be unlocked — no iCloud, Google FRP, or Samsung account lock."
+          value={value.activationLockFree}
+          onChange={(activationLockFree) => onChange({ activationLockFree })}
+        />
+      ) : null}
 
       <YesNo
         required
-        label="iCloud / FRP / activation lock removed?"
-        hint="Must be unlocked — no iCloud, Google FRP, or Samsung account lock."
-        value={value.activationLockFree}
-        onChange={(activationLockFree) => onChange({ activationLockFree })}
-      />
-
-      <YesNo
-        required
-        label="Clean IMEI / serial (not lost or stolen)?"
-        hint="Must be Yes to continue (iCloud / Google lock removed)."
+        label={
+          asksCarrier(category)
+            ? "Clean IMEI (not lost or stolen)?"
+            : "Is it yours to sell (not lost or stolen)?"
+        }
+        hint="We check this on arrival. A blacklisted device cannot be bought."
         value={value.cleanImei}
         onChange={(cleanImei) => onChange({ cleanImei })}
       />
 
       {/* Like New and Good both require an unlocked Canadian model; Acceptable
-          only requires it to work on Canadian networks. */}
-      <YesNo
-        required
-        label="Unlocked Canadian model?"
-        hint="Carrier-unlocked and bought in Canada. A working import still sells — it just grades lower."
-        value={value.canadianModel}
-        onChange={(canadianModel) => onChange({ canadianModel })}
-      />
-
-      <YesNo
-        required
-        label="Is your device under contract?"
-        value={value.underContract}
-        onChange={(underContract) => onChange({ underContract })}
-      />
-
-      <YesNo
-        required
-        label="Is the charger included?"
-        value={value.chargerIncluded}
-        onChange={(chargerIncluded) => onChange({ chargerIncluded })}
-      />
+          only requires it to work on Canadian networks. Meaningless for a
+          device with no cellular radio, so it is only asked where it applies. */}
+      {asksCarrier(category) ? (
+        <YesNo
+          required
+          label="Unlocked Canadian model?"
+          hint="Carrier-unlocked and bought in Canada. A working import still sells — it just grades lower."
+          value={value.canadianModel}
+          onChange={(canadianModel) => onChange({ canadianModel })}
+        />
+      ) : null}
 
       {!ready && value.cleanImei === false ? (
         <p className="form-error">
@@ -185,7 +184,7 @@ export function ValuationStep({ value, onChange, onContinue }: Props) {
       ) : null}
 
       <button type="button" className="btn btn-primary flow-cta" disabled={!ready} onClick={onContinue}>
-        Continue to photo / video AI
+        Continue
       </button>
     </section>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   applyStoreCreditBoost,
   isGradeLockedToDefective,
@@ -42,6 +42,31 @@ import "./TradeInFlow.css";
 // and the Shopify/Framer embed bundle always ship them with the widget.
 import "../templates.css";
 
+/**
+ * How much of the top of the viewport the shop's own header is covering.
+ *
+ * The widget is a guest on someone else's page, and most of them have a sticky
+ * header. Scrolling the widget's top to y=0 tucked the step heading underneath
+ * it, so the customer arrived at a step already looking past its title. Rather
+ * than hard-coding a guess, ask the browser what is actually painted at the top
+ * centre and measure the fixed or sticky ones.
+ */
+function stickyHeaderOffset(): number {
+  if (typeof document.elementsFromPoint !== "function") return 0;
+  let offset = 0;
+  for (const el of document.elementsFromPoint(window.innerWidth / 2, 1)) {
+    const pos = getComputedStyle(el).position;
+    if (pos !== "fixed" && pos !== "sticky") continue;
+    const rect = el.getBoundingClientRect();
+    // Only bars pinned to the top, and only sane ones — a full-screen fixed
+    // overlay would otherwise push the scroll target off the page.
+    if (rect.top <= 0 && rect.bottom > offset && rect.height < window.innerHeight / 2) {
+      offset = rect.bottom;
+    }
+  }
+  return offset;
+}
+
 function resolveStickyImage(device: DeviceModel & { imageUrl?: string | null }) {
   return deviceImageUrl(device) || assetUrl(deviceImage(device.id, device));
 }
@@ -84,6 +109,39 @@ export function TradeInFlow() {
   useEffect(() => {
     emitWidgetEvent("techgenius:flow_started");
   }, []);
+
+  /**
+   * Put the customer at the top of each new step.
+   *
+   * Every step renders into the same scroll container, and the browser keeps
+   * the scroll offset across the swap. The model list is long — 23,000px on a
+   * phone — so someone who scrolled down to find their device and tapped it
+   * landed near the bottom of the much shorter step that replaced it, looking
+   * at the continue button with the specifications off-screen above. Testers
+   * read that as the page jumping to the bottom.
+   *
+   * Scrolls the widget's own top into view rather than the window's, because
+   * the widget is embedded in the shop's page and the header above it is theirs,
+   * not ours. Skipped on first mount so landing on /sell does not yank the host
+   * page down to the widget.
+   */
+  const rootRef = useRef<HTMLDivElement | null>(null);
+  const mountedRef = useRef(false);
+  useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    const root = rootRef.current;
+    if (!root) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const top = root.getBoundingClientRect().top + window.scrollY - stickyHeaderOffset() - 12;
+    // Only pull the page up. Scrolling down to the widget on a step change is
+    // the same yank the mount guard above avoids.
+    if (window.scrollY > top) {
+      window.scrollTo({ top: Math.max(0, top), behavior: reduce ? "auto" : "smooth" });
+    }
+  }, [state.step]);
 
   const patch = (p: Partial<TradeInState>) => setState((s) => ({ ...s, ...p }));
 
@@ -410,7 +468,7 @@ export function TradeInFlow() {
     state.step !== "done";
 
   return (
-    <div className="trade-in-embed" data-tech-genius-trade-in data-template={template}>
+    <div className="trade-in-embed" data-tech-genius-trade-in data-template={template} ref={rootRef}>
       <TradeInProgress
         step={state.step}
         onBack={state.step !== "category" && state.step !== "done" ? goBack : undefined}
@@ -510,6 +568,7 @@ export function TradeInFlow() {
       {state.step === "valuation" && (
         <ValuationStep
           value={state.valuation}
+          category={state.category}
           onChange={(v: Partial<ValuationAnswers>) =>
             patch({ valuation: { ...state.valuation, ...v } })
           }
@@ -546,7 +605,7 @@ export function TradeInFlow() {
       {state.step === "offer" && offerValue === null && !quoteLoading ? (
         <section className="flow-panel">
           <header className="flow-header">
-            <p className="flow-kicker">Step 8 · Your offer</p>
+            <p className="flow-kicker">Your offer</p>
             <h1>We couldn&rsquo;t price this one right now</h1>
             <p className="flow-lead">
               Your offer is calculated on our server, so we won&rsquo;t show you a number we

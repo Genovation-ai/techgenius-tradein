@@ -232,20 +232,72 @@ export const stepLabels: Record<TradeInStep, string> = {
   done: "Done",
 };
 
-export function valuationComplete(v: ValuationAnswers): boolean {
+/**
+ * Which categories a question is worth asking for.
+ *
+ * The checklist asked every question of every device, so someone selling a
+ * monitor was asked for its battery percentage and whether it was a
+ * carrier-unlocked Canadian model. Both are meaningless there, and a form that
+ * asks meaningless questions reads as long and careless.
+ */
+const BATTERY_CATEGORIES = new Set<string>([
+  "smartphone",
+  "tablet",
+  "smartwatch",
+  "laptop",
+]);
+const CARRIER_CATEGORIES = new Set<string>(["smartphone", "tablet", "smartwatch"]);
+/* Devices that sign in to an account and can come back activation-locked. A
+   monitor cannot, and being asked to confirm its iCloud status reads as a form
+   that was not written for what you are actually selling. */
+const ACCOUNT_LOCK_CATEGORIES = new Set<string>([
+  "smartphone",
+  "tablet",
+  "smartwatch",
+  "laptop",
+  "computer",
+  "gaming-console",
+]);
+
+/* An unknown category asks the question. Skipping it on `undefined` would let
+   a caller that forgot to pass a category quietly drop a field that changes the
+   price. */
+export function asksBattery(category: string | null | undefined): boolean {
+  return category == null || BATTERY_CATEGORIES.has(category);
+}
+export function asksCarrier(category: string | null | undefined): boolean {
+  return category == null || CARRIER_CATEGORIES.has(category);
+}
+export function asksAccountLock(category: string | null | undefined): boolean {
+  return category == null || ACCOUNT_LOCK_CATEGORIES.has(category);
+}
+
+/**
+ * `underContract` and `chargerIncluded` are deliberately absent.
+ *
+ * Neither is sent to /api/quote and neither appears anywhere in the pricing
+ * engine, so both were required fields that could only stop a customer from
+ * reaching their offer. They stay on the type for stored offers written before
+ * this change.
+ */
+export function valuationComplete(
+  v: ValuationAnswers,
+  category?: string | null,
+): boolean {
+  const batteryOk =
+    !asksBattery(category) ||
+    (v.batteryHealth !== null && v.batteryHealth >= 0 && v.batteryHealth <= 100);
+  const carrierOk = !asksCarrier(category) || v.canadianModel !== null;
+  const lockOk = !asksAccountLock(category) || v.activationLockFree === true;
   return (
     v.powerOn !== null &&
     v.fullyFunctional !== null &&
     v.exterior !== null &&
     v.liquidDamage !== null &&
-    v.batteryHealth !== null &&
-    v.batteryHealth >= 0 &&
-    v.batteryHealth <= 100 &&
-    v.activationLockFree === true &&
+    batteryOk &&
+    lockOk &&
     v.cleanImei === true &&
-    v.canadianModel !== null &&
-    v.underContract !== null &&
-    v.chargerIncluded !== null
+    carrierOk
   );
 }
 

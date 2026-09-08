@@ -16,7 +16,7 @@ export function CheckoutStep({ contact, cartTotal, cartCount, onChange, onSubmit
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Step 9 · Confirm &amp; payout</p>
+        <p className="flow-kicker">Confirm &amp; payout</p>
         <h1>Lock in your offer</h1>
         <p className="flow-lead">
           {cartCount > 1

@@ -11,7 +11,7 @@ export function CategoryStep({ onSelect }: Props) {
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Step 1 · Category</p>
+        <p className="flow-kicker">Category</p>
         <h1>What are you selling?</h1>
         <p className="flow-lead">
           Choose a category to see matching devices we buy.

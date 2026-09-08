@@ -69,7 +69,7 @@ export function DetailsStep({
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Step 4 · Details</p>
+        <p className="flow-kicker">Details</p>
         <h1>{device.name}</h1>
         <p className="flow-lead">
           {showStoragePicker
@@ -155,7 +155,7 @@ export function DetailsStep({
       ) : null}
 
       <button type="button" className="btn btn-primary flow-cta" disabled={!ready} onClick={onContinue}>
-        Continue to valuation checklist
+        Continue
       </button>
     </section>
   );

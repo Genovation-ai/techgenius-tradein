@@ -107,6 +107,25 @@ describe("valuation gates", () => {
     expect(valuationComplete(fullValuation({ batteryHealth: null }))).toBe(false);
   });
 
+  it("only asks questions the device can answer", () => {
+    // A monitor has no battery and no carrier. Asking anyway made the checklist
+    // longer than it needed to be and left the customer guessing.
+    const noBatteryNoCarrier = fullValuation({ batteryHealth: null, canadianModel: null });
+    expect(valuationComplete(noBatteryNoCarrier, "monitor")).toBe(true);
+    expect(valuationComplete(noBatteryNoCarrier, "smartphone")).toBe(false);
+    // An unknown category still asks, so a missing category cannot quietly drop
+    // a field that changes the price.
+    expect(valuationComplete(noBatteryNoCarrier)).toBe(false);
+  });
+
+  it("does not gate on answers the pricing engine never sees", () => {
+    // underContract and chargerIncluded reach neither /api/quote nor the
+    // pricing engine, so they can only ever have blocked the customer.
+    expect(
+      valuationComplete(fullValuation({ underContract: null, chargerIncluded: null }), "smartphone"),
+    ).toBe(true);
+  });
+
   it("infers defective when device will not power on", () => {
     expect(inferGradeFromAnswers(fullValuation({ powerOn: false }))).toBe("defective");
   });
@@ -308,9 +327,15 @@ describe("local vision", () => {
 });
 
 describe("device images never stand in for another model", () => {
-  it("returns a bundled photo for a known catalog id", () => {
+  it("serves photos from the API rather than inlining them", () => {
+    // The 9.5 MB of inlined base64 is aliased out of deviceImages.ts (see
+    // vite.config.ts), so deviceImage() no longer has a photo to hand back for
+    // any id — photos come from the device's own image_url, pointing at the
+    // backend's /devices route. deviceImageBundles is still importable by its
+    // full path, which is why the generated file is asserted separately.
     const known = Object.keys(deviceImageBundles)[0];
-    expect(deviceImage(known)).toBe(deviceImageBundles[known]);
+    expect(known).toBeTruthy();
+    expect(deviceImage(known)).toBe("");
   });
 
   it("returns empty rather than a stock handset for an unknown device", () => {

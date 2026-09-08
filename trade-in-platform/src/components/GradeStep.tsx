@@ -28,7 +28,7 @@ export function GradeStep({ aiResult, grade, valuation, onSelect, onContinue }: 
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Step 7 · Confirm grade</p>
+        <p className="flow-kicker">Confirm grade</p>
         <h1>State of your device</h1>
         <p className="flow-lead">
           Pick the band that matches what you see and how it works. We’ll verify at intake.
