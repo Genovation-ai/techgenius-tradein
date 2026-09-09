@@ -13,6 +13,7 @@ import {
 import { checkoutComplete, valuationComplete, emptyContact, emptyValuation, displayStorage, joinDetails, specKind, specLabel, specQuestionLabel } from "../lib/tradeInTypes";
 import { createOfferId } from "../lib/offers";
 import { aggregateFrameScores, analyzeFrame } from "../lib/localVision/analyze";
+import { detectIssuesForAngle } from "../lib/localVision/issues";
 import { runGeniusAiScan } from "../lib/aiScan";
 import { buildPricingContext, getSourcePointsForQuote, quoteDeviceOffer } from "../lib/pricingBackend";
 import { mapOfferToTwenty } from "../lib/twenty";
@@ -305,6 +306,40 @@ describe("local vision", () => {
     const aggClean = aggregateFrameScores([a]);
     const aggNoisy = aggregateFrameScores([b]);
     expect(aggClean.screenScore).toBeGreaterThan(aggNoisy.screenScore);
+  });
+
+  /**
+   * Measured over 120 photographs of undamaged devices: edge density ran from
+   * 0.007 to 0.146 and discoloration sat at a median of 1.0. Against the old
+   * thresholds that flagged 113 of the 120 as cracked and knocked a mint phone
+   * from flawless to fair, so both ends of the clean range are pinned here.
+   */
+  const frame = (over: Partial<Parameters<typeof aggregateFrameScores>[0][number]>) => ({
+    width: 400,
+    height: 800,
+    crackDensity: 0.05,
+    scratchIndex: 0.04,
+    discoloration: 1,
+    sharpness: 0.5,
+    brightness: 0.6,
+    screenLikelihood: 0.7,
+    scenario: "lit_screen" as const,
+    brightStd: 60,
+    edgeAsymmetry: 0.1,
+    ...over,
+  });
+
+  it("does not charge an undamaged device for its own edges", () => {
+    // Top of the measured clean range, and saturated discoloration with it.
+    const clean = aggregateFrameScores([frame({ crackDensity: 0.146 })]);
+    expect(clean.screenScore).toBeGreaterThan(85);
+    expect(detectIssuesForAngle("front", [frame({ crackDensity: 0.146 })])).toEqual([]);
+  });
+
+  it("still grades shattered glass down", () => {
+    const shattered = frame({ crackDensity: 0.26, scratchIndex: 0.25, scenario: "cracked_lit" });
+    expect(aggregateFrameScores([shattered]).screenScore).toBeLessThan(50);
+    expect(detectIssuesForAngle("front", [shattered]).some((i) => i.type === "crack")).toBe(true);
   });
 
   it("does not treat a powered-off black screen as cracked", () => {

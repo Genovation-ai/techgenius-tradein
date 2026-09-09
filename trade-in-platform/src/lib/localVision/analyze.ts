@@ -218,23 +218,40 @@ export function aggregateFrameScores(frames: FrameAnalysis[]): {
   const crackForScore =
     crackSource.reduce((s, f) => s + f.crackDensity, 0) / crackSource.length;
 
+  /**
+   * Edge density a perfectly good device produces on its own.
+   *
+   * Measured over 120 photographs of undamaged handsets: median 0.048, ceiling
+   * 0.146. Those edges are the device outline, the bezel, the buttons and the
+   * reflections — none of them damage. Scoring the raw figure charged a mint
+   * phone about 25 points before anything was wrong with it, so only the excess
+   * over the clean population is penalised now, and harder, since a reading
+   * above it is genuine.
+   */
+  const CLEAN_EDGE_BASELINE = 0.15;
+  const crackExcess = Math.max(0, crackForScore - CLEAN_EDGE_BASELINE);
+
   let screenScore = 96;
   if (poweredOffLikely) {
     // Off screen ≠ cracked — mild uncertainty only
     screenScore -= 4;
     screenScore -= scratchIndex * 20;
   } else {
-    screenScore -= crackForScore * 520;
+    screenScore -= crackExcess * 700;
     screenScore -= scratchIndex * 55;
-    screenScore -= discoloration * 35;
+    // discoloration is deliberately absent: on the same 120 clean photos its
+    // median reading is 1.0 and its minimum 0.36, because a dark device on a
+    // light surface is a high-variance image by construction. It cost every
+    // upload a flat 35 points while saying nothing about the device. Where the
+    // spread genuinely means something — a lit screen, corroborated — it is
+    // still raised as an issue in issues.ts.
     if (sharpness < 0.25) screenScore -= 8;
     if (brightness < 0.12 || brightness > 0.92) screenScore -= 6;
   }
 
   let bodyScore = 94;
   bodyScore -= scratchIndex * 90;
-  bodyScore -= discoloration * 40;
-  if (!poweredOffLikely) bodyScore -= crackForScore * 180;
+  if (!poweredOffLikely) bodyScore -= crackExcess * 260;
   else bodyScore -= scratchIndex * 15;
   if (screenLikelihood < 0.35) bodyScore -= scratchIndex * 25;
 

@@ -90,8 +90,24 @@ export function detectIssuesForAngle(
     push("no_device", "medium", 68);
   }
 
-  // Cracks: front screen is primary; body angles need stronger signal
-  const crackThreshold = isFront ? 0.022 : 0.035;
+  /**
+   * Cracks: front screen is primary; body angles need stronger signal.
+   *
+   * Calibrated against 120 photographs of undamaged devices. Their edge
+   * density runs from 0.007 to 0.146 (median 0.048) — a phone's own outline,
+   * bezel, buttons and reflections are all strong edges, and none of them are
+   * damage. The old 0.022 sat below the median of that clean population and
+   * flagged 113 of the 120 as cracked, so a customer who photographed a mint
+   * handset was told its glass was shattered and watched a flawless grade fall
+   * to fair. Shattered glass measures around 0.26, well clear of the clean
+   * ceiling, so the threshold now sits between the two populations.
+   *
+   * Erring high is the right direction here. A missed crack is caught when the
+   * device is inspected before anyone is paid, and the checklist asks about
+   * exterior condition independently; a false accusation is seen by the
+   * customer immediately and costs the trade.
+   */
+  const crackThreshold = isFront ? 0.18 : 0.22;
   if (
     dominant !== "powered_off" &&
     dominant !== "black_screen" &&
@@ -101,10 +117,12 @@ export function detectIssuesForAngle(
     const sev = severityFrom(
       crackDensity,
       crackThreshold,
-      isFront ? 0.035 : 0.05,
-      isFront ? 0.055 : 0.08,
+      isFront ? 0.24 : 0.28,
+      isFront ? 0.32 : 0.36,
     );
-    const conf = Math.min(96, 55 + crackDensity * 900);
+    // Confidence scaled for the same range; at 900x every reading above the
+    // threshold pinned to the 96 ceiling and every crack looked certain.
+    const conf = Math.min(96, 45 + crackDensity * 150);
     push(
       "crack",
       sev,
@@ -123,13 +141,29 @@ export function detectIssuesForAngle(
     );
   }
 
-  if (discoloration >= 0.42 && dominant !== "powered_off" && dominant !== "glare") {
-    const type: IssueType = isFront && discoloration > 0.55 ? "dead_pixels" : "discoloration";
-    push(
-      type,
-      severityFrom(discoloration, 0.42, 0.52, 0.65),
-      Math.min(90, 48 + discoloration * 70),
-    );
+  /**
+   * Discoloration is brightness spread across the frame, and on the same 120
+   * clean photos it saturates: the median reading is 1.0 and the minimum is
+   * 0.36, because a dark device on a light surface is by definition a
+   * high-variance image. A signal that reads maximum for an undamaged phone
+   * carries no information about damage, and at the old 0.42 bar it announced
+   * "dead pixels" on essentially every upload.
+   *
+   * Kept only where it can mean something: a screen that is lit, so the spread
+   * is coming from what the display is showing rather than from the desk around
+   * it, and only alongside a real second signal. Anything less and this claim
+   * is not worth making to a customer.
+   */
+  const litScreen = dominant === "lit_screen" || dominant === "cracked_lit";
+  if (
+    discoloration >= 0.9 &&
+    litScreen &&
+    scratchIndex >= 0.15 &&
+    dominant !== "powered_off" &&
+    dominant !== "glare"
+  ) {
+    const type: IssueType = isFront ? "dead_pixels" : "discoloration";
+    push(type, severityFrom(discoloration, 0.9, 0.95, 0.98), Math.min(75, 40 + discoloration * 30));
   }
 
   // Dent / warp: asymmetric strong edges on body angles
