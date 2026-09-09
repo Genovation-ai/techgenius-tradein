@@ -5,7 +5,7 @@ import {
   type DeviceCategory,
   type DeviceModel,
 } from "../data/catalog";
-import { brandImages, deviceImage } from "../data/deviceImages";
+import { deviceImage } from "../data/deviceImages";
 import { assetUrl, deviceImageUrl, ensureDeviceFromName, mapApiDevice } from "../lib/tradeInApi";
 import "./ChoiceGrid.css";
 import "./FormSteps.css";
@@ -52,6 +52,21 @@ export function DevicePickStep({
         d.id.toLowerCase().includes(q),
     );
   }, [devices, deferredQuery, apiOnline]);
+
+  /**
+   * How many models to show before the customer asks for more.
+   *
+   * The full smartphone list is 146 cards, which rendered a 23,000px page on a
+   * phone — the customer scrolled past a hundred models they were never going
+   * to sell to reach theirs. The search box above is the fast path; this keeps
+   * the default screen to something a thumb can cross. Searching shows every
+   * match, since a search is already a narrowing.
+   */
+  const INITIAL_VISIBLE = 24;
+  const [showAll, setShowAll] = useState(false);
+  const searching = deferredQuery.trim().length > 0;
+  const visible = showAll || searching ? list : list.slice(0, INITIAL_VISIBLE);
+  const hiddenCount = list.length - visible.length;
 
   const [failed, setFailed] = useState<Record<string, boolean>>({});
   const [adding, setAdding] = useState(false);
@@ -130,7 +145,7 @@ export function DevicePickStep({
           >
             {/* Brands without a bundled thumbnail (LG, TCL, Nothing…) render
                 the name alone rather than an empty image box. */}
-            {brandImages[b] ? <img src={assetUrl(brandImages[b])} alt="" width={22} height={26} /> : null}
+
             {b}
           </button>
         ))}
@@ -161,7 +176,7 @@ export function DevicePickStep({
         </div>
       ) : (
         <div className="device-grid">
-          {list.map((device) => (
+          {visible.map((device) => (
             <button
               key={device.id}
               type="button"
@@ -200,6 +215,12 @@ export function DevicePickStep({
           ))}
         </div>
       )}
+
+      {hiddenCount > 0 ? (
+        <button type="button" className="btn btn-secondary device-more" onClick={() => setShowAll(true)}>
+          Show all {list.length} models
+        </button>
+      ) : null}
     </section>
   );
 }

@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   applyStoreCreditBoost,
   isGradeLockedToDefective,
+  valuationFromGrade,
   type Carrier,
   type ConditionGrade,
   type DeviceCategory,
   type DeviceModel,
-  type ValuationAnswers,
 } from "../data/catalog";
 import { useCatalog } from "../hooks/useCatalog";
 import { useWidgetTemplate } from "../hooks/useWidgetTemplate";
@@ -30,7 +30,6 @@ import { TradeInProgress } from "./TradeInProgress";
 import { CategoryStep } from "./CategoryStep";
 import { DevicePickStep } from "./DevicePickStep";
 import { DetailsStep } from "./DetailsStep";
-import { ValuationStep } from "./ValuationStep";
 import { MediaAiStep } from "./MediaAiStep";
 import { GradeStep } from "./GradeStep";
 import { OfferStep } from "./OfferStep";
@@ -84,6 +83,7 @@ function resetDeviceFields(prev: TradeInState): TradeInState {
     memory: null,
     carrier: null,
     color: null,
+    owned: false,
     modelQuery: "",
     valuation: emptyValuation,
     media: [],
@@ -550,6 +550,7 @@ export function TradeInFlow() {
               memory: null,
               carrier: null,
               color: null,
+              owned: false,
               step: "details",
             });
           }}
@@ -567,17 +568,6 @@ export function TradeInFlow() {
           onStorage={(storage) => patch({ storage })}
           onCarrier={(carrier: Carrier) => patch({ carrier })}
           onColor={(color) => patch({ color })}
-          onContinue={() => patch({ step: "valuation" })}
-        />
-      )}
-
-      {state.step === "valuation" && (
-        <ValuationStep
-          value={state.valuation}
-          category={state.category}
-          onChange={(v: Partial<ValuationAnswers>) =>
-            patch({ valuation: { ...state.valuation, ...v } })
-          }
           onContinue={() => patch({ step: "media-ai" })}
         />
       )}
@@ -600,10 +590,20 @@ export function TradeInFlow() {
           aiResult={state.aiResult}
           grade={state.grade}
           valuation={state.valuation}
-          onSelect={(grade: ConditionGrade) => {
-            if (isGradeLockedToDefective(state.valuation) && grade !== "defective") return;
-            patch({ grade });
-          }}
+          owned={state.owned}
+          onOwned={(owned) =>
+            patch({
+              owned,
+              valuation: state.grade
+                ? valuationFromGrade(state.grade, owned)
+                : { ...state.valuation, cleanImei: owned, activationLockFree: owned },
+            })
+          }
+          onSelect={(grade: ConditionGrade) =>
+            // The condition cards are the only place condition is stated now, so
+            // the answers the rest of the system reads are derived from the card.
+            patch({ grade, valuation: valuationFromGrade(grade, state.owned) })
+          }
           onContinue={() => void goToOffer()}
         />
       )}

@@ -85,6 +85,13 @@ export function MediaAiStep({
       try {
         const res = await runGeniusAiScan({ valuation, media: scanMedia });
         if (cancelled) return;
+        // Nothing was photographed, so there is nothing to report. Showing a
+        // findings panel with screen and body scores derived from no photos
+        // was a screen that existed only to be clicked past.
+        if (scanMedia.length === 0) {
+          onComplete(res);
+          return;
+        }
         setResult(res);
         setPhase("result");
       } catch (e) {
@@ -97,7 +104,7 @@ export function MediaAiStep({
     return () => {
       cancelled = true;
     };
-  }, [phase, valuation, scanMedia]);
+  }, [phase, valuation, scanMedia, onComplete]);
 
   const stopCamera = () => {
     recorderRef.current?.stop();
@@ -226,10 +233,11 @@ export function MediaAiStep({
     <section className="flow-panel ai-panel">
       <header className="flow-header">
         <p className="flow-kicker">Photos</p>
-        <h1>Photograph every side</h1>
+        <h1>Add a few photos?</h1>
         <p className="flow-lead">
-          Front (screen on), back, left, and right — we detect cracks, scratches, dents, and
-          discoloration on your phone to set the exact trade-in condition.
+          Optional, and it usually helps: photos let us confirm the condition now rather than
+          after your device arrives, so the price you see is the price you get. You can skip
+          this and go straight to your offer.
         </p>
       </header>
 
@@ -367,7 +375,7 @@ export function MediaAiStep({
                 setPhase("scanning");
               }}
             >
-              Skip photos — use checklist only
+              Skip photos
             </button>
           </div>
         </div>
@@ -413,10 +421,7 @@ export function MediaAiStep({
               <span>Body</span>
               <strong>{result.bodyScore}</strong>
             </div>
-            <div className="ai-score">
-              <span>Confidence</span>
-              <strong>{result.confidence}%</strong>
-            </div>
+
           </div>
 
           {result.issues && result.issues.length > 0 ? (
@@ -426,9 +431,7 @@ export function MediaAiStep({
                 {result.issues.map((issue) => (
                   <li key={issue.id} className={`issue-chip issue-chip--${issue.severity}`}>
                     <strong>{issue.label}</strong>
-                    <span>
-                      {issue.angle} · {issue.severity} · {issue.confidence}%
-                    </span>
+                    <span>{issue.angle}</span>
                   </li>
                 ))}
               </ul>

@@ -138,6 +138,8 @@ export interface TradeInState {
   memory: string | null;
   carrier: Carrier | null;
   color: string | null;
+  /** The single ownership / lock confirmation on the condition step. */
+  owned: boolean;
   modelQuery: string;
   valuation: ValuationAnswers;
   media: MediaFile[];
@@ -190,6 +192,7 @@ export const initialTradeInState: TradeInState = {
   memory: null,
   carrier: null,
   color: null,
+  owned: false,
   modelQuery: "",
   valuation: emptyValuation,
   media: [],
@@ -202,11 +205,18 @@ export const initialTradeInState: TradeInState = {
   offerId: null,
 };
 
+/**
+ * "valuation" is intentionally absent.
+ *
+ * It asked eight questions the condition cards on the next step already
+ * answered in their own descriptions, so the customer stated their device's
+ * condition twice. The step type is kept so leads recorded against it before
+ * this change still resolve to a label.
+ */
 export const stepOrder: TradeInStep[] = [
   "category",
   "device",
   "details",
-  "valuation",
   "media-ai",
   "grade",
   "offer",

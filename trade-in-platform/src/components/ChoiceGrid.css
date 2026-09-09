@@ -35,10 +35,13 @@
   font-size: 0.9rem;
 }
 
+/* Two comfortable columns on a phone rather than two cramped ones, and the
+   photo gets the room: recognising your own handset is the entire job of this
+   screen. */
 .device-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(138px, 1fr));
-  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
+  gap: 1rem;
 }
 
 .device-grid--cats {
@@ -56,9 +59,9 @@
   border: 1.5px solid var(--line);
   background: var(--paper);
   border-radius: var(--radius);
-  padding: 0.7rem 0.65rem 0.85rem;
+  padding: 0.85rem 0.75rem 1rem;
   display: grid;
-  gap: 0.35rem;
+  gap: 0.5rem;
   justify-items: center;
   text-align: center;
   transition: border-color 0.18s var(--ease), background 0.18s var(--ease);
@@ -76,14 +79,16 @@
 
 .device-card-media {
   width: 100%;
-  aspect-ratio: 1;
+  /* Portrait, because phones and tablets are. A square box wasted a third of
+     its height on empty background and shrank the device to fit. */
+  aspect-ratio: 3 / 4;
   display: grid;
   place-items: center;
   background: linear-gradient(180deg, #f7f8f6 0%, #fff 100%);
   border-radius: var(--radius-sm);
   overflow: hidden;
   border: 1px solid rgba(42, 42, 42, 0.06);
-  padding: 0.7rem;
+  padding: 0.3rem;
 }
 
 .device-card-media img {
@@ -99,7 +104,7 @@
 
 .device-card-fallback {
   font-family: var(--font-display);
-  font-size: 1.75rem;
+  font-size: 2.4rem;
   font-weight: 650;
   color: var(--mint-dim);
 }
@@ -107,7 +112,7 @@
 .device-card-name {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.2;
   color: var(--ink);
 }
@@ -125,17 +130,19 @@
   margin-bottom: 0.25rem;
 }
 
+/* Brand chips carried a device photograph shrunk to 18x22 as a stand-in for a
+   brand mark. At that size it read as a smudge, and it was the same handset
+   picture the customer would meet again full-size two taps later. The name on
+   its own is what a person recognises, so the chip is now type, sized to be
+   read and tapped. */
 .chip-brand {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding-inline: 0.7rem;
-}
-
-.chip-brand img {
-  width: 18px;
-  height: 22px;
-  object-fit: contain;
+  justify-content: center;
+  min-height: 44px;
+  padding-inline: 1.1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
 }
 
 @media (max-width: 560px) {
@@ -150,4 +157,11 @@
   .device-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+
+/* Sits under the grid when the list is capped. */
+.device-more {
+  margin-top: 1rem;
+  width: 100%;
 }

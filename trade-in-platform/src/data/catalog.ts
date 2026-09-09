@@ -372,3 +372,52 @@ export function filterDevices(opts: {
     );
   });
 }
+
+/**
+ * The condition answers a chosen grade already implies.
+ *
+ * The flow used to ask eight checklist questions and then, one step later, show
+ * five condition cards whose own descriptions restate every one of those
+ * questions — "no liquid damage", "not iCloud locked", "battery 85% or higher",
+ * "unlocked Canadian model". The customer was answering the same thing twice,
+ * which is most of what made the flow feel long and repetitive.
+ *
+ * Only the cards are asked now, the way the buyers customers compare us against
+ * do it, and the answers are derived here. Pricing, grading and hand-off keep
+ * reading the same ValuationAnswers shape they always did.
+ *
+ * Battery health stays null rather than guessing a number. The pricing engine
+ * treats null as no adjustment, so a weak battery is caught at inspection
+ * rather than by inventing a percentage the customer never gave us.
+ */
+export function valuationFromGrade(
+  grade: ConditionGrade,
+  confirmedOwnership: boolean,
+): ValuationAnswers {
+  const base: ValuationAnswers = {
+    powerOn: true,
+    fullyFunctional: true,
+    exterior: "none",
+    liquidDamage: false,
+    batteryHealth: null,
+    activationLockFree: confirmedOwnership,
+    cleanImei: confirmedOwnership,
+    canadianModel: true,
+    underContract: false,
+    chargerIncluded: false,
+  };
+  switch (grade) {
+    case "flawless":
+      return base;
+    case "good":
+      return { ...base, exterior: "minor" };
+    case "average":
+      return { ...base, exterior: "visible" };
+    case "fair":
+      // A cracked-but-working screen, or one minor defect.
+      return { ...base, exterior: "cracks", fullyFunctional: false };
+    case "defective":
+      // The card that says liquid damage, will not power on, or iCloud locked.
+      return { ...base, exterior: "heavy", fullyFunctional: false, powerOn: false };
+  }
+}

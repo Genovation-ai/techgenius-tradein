@@ -239,3 +239,30 @@
   margin-left: 6px;
   vertical-align: middle;
 }
+
+/* The one confirmation that replaced two checklist questions. Given a real
+   target rather than a bare inline checkbox, since it is now the only thing
+   between the customer and their offer. */
+.own-confirm {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.7rem;
+  margin-top: 1.25rem;
+  padding: 0.9rem 1rem;
+  border: 1.5px solid var(--line, #e5e7eb);
+  border-radius: var(--radius-sm, 10px);
+  background: var(--paper, #fff);
+  cursor: pointer;
+  line-height: 1.45;
+  font-size: 0.92rem;
+}
+.own-confirm:hover {
+  border-color: var(--mint, #16a34a);
+}
+.own-confirm input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  margin-top: 1px;
+  accent-color: var(--mint, #16a34a);
+}
