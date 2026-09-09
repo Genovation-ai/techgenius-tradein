@@ -148,6 +148,7 @@ export interface WidgetSubmitRequest {
     storage?: string;
     memory?: string | null;
     carrier?: string;
+    color?: string | null;
     condition_grade?: string;
     quoted_price: number;
     battery_health?: number | null;
@@ -178,6 +179,7 @@ export interface TrackedOffer {
     storage?: string;
     memory?: string | null;
     carrier?: string;
+    color?: string | null;
     condition_grade?: string;
     quoted_price: number;
   }>;

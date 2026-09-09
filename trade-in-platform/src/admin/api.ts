@@ -254,6 +254,8 @@ export interface OfferDetail extends OfferRow {
     final_price?: number;
     battery_health?: number;
     imei?: string;
+    /** Customer-declared, optional; helps match the parcel to the offer. */
+    color?: string | null;
     device_image_url?: string;
   }>;
 }

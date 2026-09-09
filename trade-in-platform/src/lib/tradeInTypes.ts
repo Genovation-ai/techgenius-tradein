@@ -121,6 +121,8 @@ export interface QuotedDevice {
   /** Second spec axis (laptop memory config); null for single-axis devices. */
   memory?: string | null;
   carrier: Carrier;
+  /** Customer-declared colour. Optional, and never priced on. */
+  color?: string | null;
   grade: ConditionGrade;
   offer: number;
   batteryHealth: number | null;
@@ -135,6 +137,7 @@ export interface TradeInState {
   storage: string | null;
   memory: string | null;
   carrier: Carrier | null;
+  color: string | null;
   modelQuery: string;
   valuation: ValuationAnswers;
   media: MediaFile[];
@@ -186,6 +189,7 @@ export const initialTradeInState: TradeInState = {
   storage: null,
   memory: null,
   carrier: null,
+  color: null,
   modelQuery: "",
   valuation: emptyValuation,
   media: [],
@@ -390,3 +394,31 @@ export function specQuestionLabel(values: string[], category?: string | null): s
   }
   return "Storage capacity";
 }
+
+
+/**
+ * Colours a customer can pick from.
+ *
+ * Deliberately generic rather than per-model. The catalogue's upstream source
+ * carries no colour data at all, so a per-device list would have to be invented,
+ * and an invented list is worse than none — it would offer finishes a model was
+ * never sold in. These are the shades a person recognises on their own desk;
+ * anything unusual goes under "Other" and gets confirmed when the device lands.
+ *
+ * It is never required and never changes the price. Its job is to help the shop
+ * match the parcel on the bench to the offer on the screen.
+ */
+export const DEVICE_COLORS = [
+  "Black",
+  "White",
+  "Silver",
+  "Grey",
+  "Gold",
+  "Blue",
+  "Green",
+  "Red",
+  "Purple",
+  "Pink",
+  "Yellow",
+  "Other",
+] as const;

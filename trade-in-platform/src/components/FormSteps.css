@@ -224,3 +224,18 @@
   outline: 2px solid rgba(57, 181, 74, 0.35);
   border-color: var(--mint-dim);
 }
+
+/* "optional" beside a label, so the asterisk stays the only thing that means
+   required and a customer can see at a glance what they may skip. */
+.form-optional {
+  font-size: 0.72em;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  color: var(--muted, #6b7280);
+  border: 1px solid var(--rule, #e5e7eb);
+  border-radius: 999px;
+  padding: 2px 8px;
+  margin-left: 6px;
+  vertical-align: middle;
+}

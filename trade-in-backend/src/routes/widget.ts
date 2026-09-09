@@ -36,6 +36,26 @@ widgetRouter.get("/template", (req, res) => {
   }
 });
 
+/**
+ * Colours the widget offers. The column is free text, so this is what keeps a
+ * crafted request from writing arbitrary strings into a field the shop reads
+ * off a packing bench. Kept in step with DEVICE_COLORS in the widget.
+ */
+const ALLOWED_COLORS = new Set([
+  "Black",
+  "White",
+  "Silver",
+  "Grey",
+  "Gold",
+  "Blue",
+  "Green",
+  "Red",
+  "Purple",
+  "Pink",
+  "Yellow",
+  "Other",
+]);
+
 function defaultStoreId(db: Database, orgId: string): string {
   const stores = listOrgStores(db, orgId, true);
   return stores[0]?.id || "tg-burlington";
@@ -198,6 +218,7 @@ widgetRouter.post("/submit", (req, res) => {
       storage?: string;
       memory?: string;
       carrier?: string;
+      color?: string;
       condition_grade?: string;
       quoted_price?: number;
       battery_health?: number | null;
@@ -232,6 +253,7 @@ widgetRouter.post("/submit", (req, res) => {
     storage: string | null;
     memory: string | null;
     carrier: string | null;
+    color: string | null;
     condition_grade: string | null;
     quoted_price: number;
     battery_health: number | null;
@@ -275,6 +297,12 @@ widgetRouter.post("/submit", (req, res) => {
       storage,
       memory: memory || null,
       carrier: item.carrier ? String(item.carrier).slice(0, 40) : null,
+      // Whatever the browser sends is untrusted text on a page staff will read.
+      // Only the colours the widget actually offers are accepted; anything else
+      // is dropped rather than stored, since it is optional and decorative.
+      color: ALLOWED_COLORS.has(String(item.color || "").trim())
+        ? String(item.color).trim()
+        : null,
       condition_grade: grade,
       quoted_price: quote.quotedPrice,
       battery_health: item.battery_health ?? null,
@@ -347,8 +375,8 @@ widgetRouter.post("/submit", (req, res) => {
     }
 
     const insertItem = db.prepare(
-      `INSERT INTO offer_items (offer_id, device_id, device_name, storage, memory, carrier, condition_grade, quoted_price, battery_health, imei)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO offer_items (offer_id, device_id, device_name, storage, memory, carrier, color, condition_grade, quoted_price, battery_health, imei)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     );
     for (const item of pricedItems) {
       insertItem.run(
@@ -358,6 +386,7 @@ widgetRouter.post("/submit", (req, res) => {
         item.storage,
         item.memory,
         item.carrier,
+        item.color,
         item.condition_grade,
         item.quoted_price,
         item.battery_health,
@@ -490,7 +519,7 @@ widgetRouter.get("/offers/:id", (req, res) => {
 
   const items = db
     .prepare(
-      "SELECT device_name, storage, carrier, condition_grade, quoted_price FROM offer_items WHERE offer_id = ?",
+      "SELECT device_name, storage, carrier, color, condition_grade, quoted_price FROM offer_items WHERE offer_id = ?",
     )
     .all(req.params.id);
 
@@ -554,7 +583,7 @@ widgetRouter.post("/portal", (req, res) => {
 
   const items = db
     .prepare(
-      "SELECT device_name, storage, carrier, condition_grade, quoted_price FROM offer_items WHERE offer_id = ?",
+      "SELECT device_name, storage, carrier, color, condition_grade, quoted_price FROM offer_items WHERE offer_id = ?",
     )
     .all(offerId);
   const invoice = db

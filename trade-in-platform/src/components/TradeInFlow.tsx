@@ -83,6 +83,7 @@ function resetDeviceFields(prev: TradeInState): TradeInState {
     storage: null,
     memory: null,
     carrier: null,
+    color: null,
     modelQuery: "",
     valuation: emptyValuation,
     media: [],
@@ -272,6 +273,7 @@ export function TradeInFlow() {
     storage: state.storage!,
     memory: state.memory,
     carrier: state.carrier!,
+    color: state.color,
     grade: state.grade!,
     offer,
     batteryHealth: state.valuation.batteryHealth,
@@ -381,6 +383,7 @@ export function TradeInFlow() {
           storage: d.storage,
           memory: d.memory ?? null,
           carrier: d.carrier,
+          color: d.color ?? null,
           condition_grade: d.grade,
           quoted_price: d.offer,
           battery_health: d.batteryHealth,
@@ -546,6 +549,7 @@ export function TradeInFlow() {
               storage: null,
               memory: null,
               carrier: null,
+              color: null,
               step: "details",
             });
           }}
@@ -559,8 +563,10 @@ export function TradeInFlow() {
           memory={state.memory}
           onMemory={(memory: string) => patch({ memory })}
           carrier={state.carrier}
+          color={state.color}
           onStorage={(storage) => patch({ storage })}
           onCarrier={(carrier: Carrier) => patch({ carrier })}
+          onColor={(color) => patch({ color })}
           onContinue={() => patch({ step: "valuation" })}
         />
       )}

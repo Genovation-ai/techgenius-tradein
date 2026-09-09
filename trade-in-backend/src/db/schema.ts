@@ -202,6 +202,7 @@ CREATE TABLE IF NOT EXISTS offer_items (
   device_name TEXT NOT NULL,
   storage TEXT,
   carrier TEXT,
+  color TEXT,
   condition_grade TEXT,
   quoted_price REAL NOT NULL DEFAULT 0,
   final_price REAL,

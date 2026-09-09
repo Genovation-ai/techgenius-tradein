@@ -151,6 +151,11 @@ export function applySchemaPatches(db: Database): void {
   if (offerItemCols.size && !offerItemCols.has("memory")) {
     db.exec("ALTER TABLE offer_items ADD COLUMN memory TEXT");
   }
+  // Customer-declared colour. Never priced on — it is there so the parcel on
+  // the bench can be matched to the offer on the screen.
+  if (offerItemCols.size && !offerItemCols.has("color")) {
+    db.exec("ALTER TABLE offer_items ADD COLUMN color TEXT");
+  }
 
   const uploadCols = new Set(
     (db.prepare("PRAGMA table_info(uploads)").all() as Array<{ name: string }>).map((c) => c.name),

@@ -235,6 +235,7 @@ export function OfferDetailPage() {
               <strong>{item.device_name}</strong>
               <div style={{ color: "#8b93a7", fontSize: "0.82rem" }}>
                 {item.storage || "—"} · {item.condition_grade || "—"} · {item.carrier || "—"}
+                {item.color ? ` · ${item.color}` : ""}
               </div>
             </div>
             <strong>${Number(item.quoted_price || 0).toLocaleString()}</strong>

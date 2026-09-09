@@ -139,7 +139,13 @@ export function TrackOffer() {
               <ul>
                 {result.items.map((d, i) => (
                   <li key={`${d.device_name}-${i}`}>
-                    {joinDetails(d.device_name, displayStorage(d.storage), displayStorage(d.memory))} · ${d.quoted_price}
+                    {joinDetails(
+                  d.device_name,
+                  displayStorage(d.storage),
+                  displayStorage(d.memory),
+                  d.color ?? "",
+                )}{" "}
+                · ${d.quoted_price}
                   </li>
                 ))}
               </ul>

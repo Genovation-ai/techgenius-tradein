@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import type { Carrier, DeviceCategory, DeviceModel } from "../data/catalog";
 import { carriers } from "../data/catalog";
-import { specKind, specLabel, specQuestionLabel } from "../lib/tradeInTypes";
+import { DEVICE_COLORS, specKind, specLabel, specQuestionLabel } from "../lib/tradeInTypes";
 import "./FormSteps.css";
 
 interface Props {
@@ -9,9 +9,11 @@ interface Props {
   storage: string | null;
   memory?: string | null;
   carrier: Carrier | null;
+  color: string | null;
   onStorage: (v: string) => void;
   onMemory?: (v: string) => void;
   onCarrier: (v: Carrier) => void;
+  onColor: (v: string | null) => void;
   onContinue: () => void;
 }
 
@@ -24,9 +26,11 @@ export function DetailsStep({
   storage,
   memory,
   carrier,
+  color,
   onStorage,
   onMemory,
   onCarrier,
+  onColor,
   onContinue,
 }: Props) {
   const carrierRequired = needsCarrier(device.category);
@@ -153,6 +157,29 @@ export function DetailsStep({
           </div>
         </div>
       ) : null}
+
+      {/* Optional, and deliberately last: it never gates the quote and never
+          changes it. Tapping a selected colour again clears it, so someone who
+          is not sure is not stuck with a guess. */}
+      <div className="form-block">
+        <h2 className="form-label">
+          Colour <span className="form-optional">optional</span>
+        </h2>
+        <p className="field-hint">Helps us match your device to your offer when it arrives.</p>
+        <div className="chip-row">
+          {DEVICE_COLORS.map((c) => (
+            <button
+              key={c}
+              type="button"
+              className={`chip ${color === c ? "chip--on" : ""}`}
+              aria-pressed={color === c}
+              onClick={() => onColor(color === c ? null : c)}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <button type="button" className="btn btn-primary flow-cta" disabled={!ready} onClick={onContinue}>
         Continue
