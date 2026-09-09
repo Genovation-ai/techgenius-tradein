@@ -3,10 +3,12 @@ import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 import { emailStatusSummary } from "../services/email.js";
+import { orgIdOf } from "../middleware/orgScope.js";
+import { emailIdentityFor } from "../services/emailIdentity.js";
 
 export const integrationsRouter = Router();
 
-integrationsRouter.get("/status", requireCapability("settings:read"), (_req, res) => {
+integrationsRouter.get("/status", requireCapability("settings:read"), (req, res) => {
   const db = getDb();
   const crmBlocked = (
     db.prepare("SELECT COUNT(*) AS c FROM crm_outbox WHERE status = 'blocked'").get() as { c: number }
@@ -14,9 +16,18 @@ integrationsRouter.get("/status", requireCapability("settings:read"), (_req, res
   const crmSent = (
     db.prepare("SELECT COUNT(*) AS c FROM crm_outbox WHERE status = 'sent'").get() as { c: number }
   ).c;
+  const identity = emailIdentityFor(db, orgIdOf(req));
   db.close();
   res.json({
-    email: emailStatusSummary(),
+    email: emailStatusSummary(orgIdOf(req)),
+    // What a customer of this tenant actually sees in their inbox. Surfaced so
+    // a shared platform sender that still points at one tenant's domain is
+    // visible rather than discovered by a customer.
+    sender: {
+      from: `${identity.fromName} <${identity.from}>`,
+      reply_to: identity.replyTo,
+      platform_domain_shared: true,
+    },
     crm: {
       configured: Boolean((process.env.TG_CRM_WEBHOOK_URL || "").trim()),
       blocked: crmBlocked,
@@ -57,13 +68,26 @@ integrationsRouter.get("/crm/outbox", requireCapability("crm:dispatch"), (_req, 
   res.json(rows);
 });
 
-integrationsRouter.get("/email/outbox", requireCapability("settings:read"), (_req, res) => {
+/**
+ * One tenant's queue only.
+ *
+ * This listed the last 50 rows platform-wide, so any shop with settings access
+ * could read the recipient addresses and subject lines of every other shop's
+ * customers. Rows written before email_outbox was org-scoped have a null
+ * org_id and belong to the original tenant, so they are shown to it and to
+ * nobody else.
+ */
+integrationsRouter.get("/email/outbox", requireCapability("settings:read"), (req, res) => {
   const db = getDb();
+  const orgId = orgIdOf(req);
   const rows = db
     .prepare(
-      "SELECT id, offer_id, recipient, subject, status, created_at, sent_at FROM email_outbox ORDER BY id DESC LIMIT 50",
+      `SELECT id, offer_id, recipient, subject, status, created_at, sent_at
+         FROM email_outbox
+        WHERE org_id = ?
+        ORDER BY id DESC LIMIT 50`,
     )
-    .all();
+    .all(orgId);
   db.close();
   res.json(rows);
 });

@@ -49,6 +49,7 @@ export function applySchemaPatches(db: Database): void {
 
     CREATE TABLE IF NOT EXISTS email_outbox (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id TEXT,
       offer_id TEXT,
       recipient TEXT NOT NULL,
       subject TEXT NOT NULL,

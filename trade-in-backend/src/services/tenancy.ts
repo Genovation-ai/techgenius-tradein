@@ -144,7 +144,7 @@ export function ensureSaasSchema(db: Database): void {
     db.exec("ALTER TABLE org_settings ADD COLUMN widget_template TEXT");
   }
 
-  for (const table of ["offers", "inventory", "invoices", "customers", "uploads", "sales", "promo_codes", "notifications"] as const) {
+  for (const table of ["offers", "inventory", "invoices", "customers", "uploads", "sales", "promo_codes", "notifications", "email_outbox"] as const) {
     try {
       const cols = new Set(
         (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((c) => c.name),
@@ -263,6 +263,7 @@ function bootstrapDefaultOrg(db: Database): void {
     "promo_codes",
     "notifications",
     "abandoned_leads",
+    "email_outbox",
   ]) {
     try {
       db.prepare(`UPDATE ${table} SET org_id = ? WHERE org_id IS NULL`).run(DEFAULT_ORG_ID);

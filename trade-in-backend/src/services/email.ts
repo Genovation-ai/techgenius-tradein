@@ -1,4 +1,5 @@
 import { getDb } from "../db/migrate.js";
+import { emailIdentityFor } from "./emailIdentity.js";
 
 export type EmailSendResult = {
   status: "sent" | "queued" | "blocked" | "failed";
@@ -11,30 +12,34 @@ export type EmailSendResult = {
  */
 export async function sendTradeInEmail(opts: {
   offerId?: string | null;
+  /** Whose customer this is. Decides the name and reply address on the mail,
+   *  and keeps one shop's queue out of another's outbox view. */
+  orgId?: string | null;
   recipient: string;
   subject: string;
   body: string;
 }): Promise<EmailSendResult> {
   const webhook = (process.env.TG_EMAIL_WEBHOOK || "").trim();
-  const from = process.env.TG_EMAIL_FROM || "tradein@techgenius.ca";
   const db = getDb();
+  const identity = emailIdentityFor(db, opts.orgId);
+  const orgId = opts.orgId || null;
 
   try {
     if (!opts.recipient || !opts.recipient.includes("@")) {
       db.prepare(
-        `INSERT INTO email_outbox (offer_id, recipient, subject, body, status)
-         VALUES (?, ?, ?, ?, 'failed')`,
-      ).run(opts.offerId || null, opts.recipient || "unknown", opts.subject, opts.body);
+        `INSERT INTO email_outbox (org_id, offer_id, recipient, subject, body, status)
+         VALUES (?, ?, ?, ?, ?, 'failed')`,
+      ).run(orgId, opts.offerId || null, opts.recipient || "unknown", opts.subject, opts.body);
       return { status: "failed", detail: "Invalid recipient" };
     }
 
     if (!webhook) {
       const info = db
         .prepare(
-          `INSERT INTO email_outbox (offer_id, recipient, subject, body, status)
-           VALUES (?, ?, ?, ?, 'blocked')`,
+          `INSERT INTO email_outbox (org_id, offer_id, recipient, subject, body, status)
+           VALUES (?, ?, ?, ?, ?, 'blocked')`,
         )
-        .run(opts.offerId || null, opts.recipient, opts.subject, opts.body);
+        .run(orgId, opts.offerId || null, opts.recipient, opts.subject, opts.body);
       if (opts.offerId) {
         db.prepare(
           `INSERT INTO notifications (offer_id, type, channel, recipient, subject)
@@ -57,7 +62,9 @@ export async function sendTradeInEmail(opts: {
             : {}),
         },
         body: JSON.stringify({
-          from,
+          // Resend and every provider with a compatible shape read "Name <addr>".
+          from: `${identity.fromName} <${identity.from}>`,
+          ...(identity.replyTo ? { reply_to: identity.replyTo } : {}),
           to: opts.recipient,
           subject: opts.subject,
           text: opts.body,
@@ -67,9 +74,10 @@ export async function sendTradeInEmail(opts: {
       const text = await res.text();
       const status = res.ok ? "sent" : "failed";
       db.prepare(
-        `INSERT INTO email_outbox (offer_id, recipient, subject, body, status, provider_response, sent_at)
-         VALUES (?, ?, ?, ?, ?, ?, CASE WHEN ? = 'sent' THEN datetime('now') ELSE NULL END)`,
+        `INSERT INTO email_outbox (org_id, offer_id, recipient, subject, body, status, provider_response, sent_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, CASE WHEN ? = 'sent' THEN datetime('now') ELSE NULL END)`,
       ).run(
+        orgId,
         opts.offerId || null,
         opts.recipient,
         opts.subject,
@@ -93,9 +101,9 @@ export async function sendTradeInEmail(opts: {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       db.prepare(
-        `INSERT INTO email_outbox (offer_id, recipient, subject, body, status, provider_response)
-         VALUES (?, ?, ?, ?, 'failed', ?)`,
-      ).run(opts.offerId || null, opts.recipient, opts.subject, opts.body, msg.slice(0, 2000));
+        `INSERT INTO email_outbox (org_id, offer_id, recipient, subject, body, status, provider_response)
+         VALUES (?, ?, ?, ?, ?, 'failed', ?)`,
+      ).run(orgId, opts.offerId || null, opts.recipient, opts.subject, opts.body, msg.slice(0, 2000));
       return { status: "failed", detail: msg };
     }
   } finally {
@@ -103,7 +111,8 @@ export async function sendTradeInEmail(opts: {
   }
 }
 
-export function emailStatusSummary(): {
+/** Counts for one tenant. Called with no org only by single-tenant tooling. */
+export function emailStatusSummary(orgId?: string | null): {
   configured: boolean;
   pending: number;
   sent: number;
@@ -113,8 +122,15 @@ export function emailStatusSummary(): {
   const db = getDb();
   try {
     const count = (status: string) =>
-      (db.prepare("SELECT COUNT(*) AS c FROM email_outbox WHERE status = ?").get(status) as { c: number })
-        .c;
+      (
+        db
+          .prepare(
+            orgId
+              ? "SELECT COUNT(*) AS c FROM email_outbox WHERE status = ? AND org_id = ?"
+              : "SELECT COUNT(*) AS c FROM email_outbox WHERE status = ?",
+          )
+          .get(...(orgId ? [status, orgId] : [status])) as { c: number }
+      ).c;
     return {
       configured: Boolean((process.env.TG_EMAIL_WEBHOOK || "").trim()),
       pending: count("pending"),
