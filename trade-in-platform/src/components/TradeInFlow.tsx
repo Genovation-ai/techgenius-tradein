@@ -596,7 +596,11 @@ export function TradeInFlow() {
               owned,
               valuation: state.grade
                 ? valuationFromGrade(state.grade, owned)
-                : { ...state.valuation, cleanImei: owned, activationLockFree: owned },
+                : {
+                    ...state.valuation,
+                    cleanImei: owned ? true : null,
+                    activationLockFree: owned ? true : null,
+                  },
             })
           }
           onSelect={(grade: ConditionGrade) =>

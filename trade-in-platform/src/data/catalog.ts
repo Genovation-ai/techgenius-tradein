@@ -29,11 +29,14 @@ export type ConditionGrade =
  *   defective→ As-Is (outside every published condition)
  */
 export const gradeLabels: Record<ConditionGrade, string> = {
-  flawless: "Like New",
+  flawless: "Like new",
   good: "Good",
-  average: "Acceptable",
-  fair: "Unacceptable",
-  defective: "As-Is",
+  average: "Fair",
+  // "Unacceptable" and "As-Is" are grading-desk words. A customer reading that
+  // their phone is unacceptable hears a judgement, not a category; these say
+  // what is actually wrong with it.
+  fair: "Cracked or faulty",
+  defective: "Not working",
 };
 
 /** Short subtitle under each grade name (shown in GradeStep) */
@@ -400,8 +403,11 @@ export function valuationFromGrade(
     exterior: "none",
     liquidDamage: false,
     batteryHealth: null,
-    activationLockFree: confirmedOwnership,
-    cleanImei: confirmedOwnership,
+    // null, not false, until the box is ticked. false means "this device is
+    // locked or stolen", which locks the grade to defective — and an unticked
+    // box means the customer has not answered yet, not that the answer is no.
+    activationLockFree: confirmedOwnership ? true : null,
+    cleanImei: confirmedOwnership ? true : null,
     canadianModel: true,
     underContract: false,
     chargerIncluded: false,

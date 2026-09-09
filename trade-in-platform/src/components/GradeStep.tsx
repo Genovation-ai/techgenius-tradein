@@ -92,11 +92,17 @@ export function GradeStep({
             >
               <span className="grade-card-title">{gradeLabels[g]}</span>
               <span className="grade-card-tagline">{gradeTaglines[g]}</span>
-              <ul>
-                {gradeDefinitions[g].map((line) => (
-                  <li key={line}>{line}</li>
-                ))}
-              </ul>
+              {/* Five cards each listing six or seven bullets made this a
+                  5,000px page to answer one question. The tagline is what a
+                  customer chooses on; the full definition appears for the card
+                  they picked, which is the only one they need to check. */}
+              {selected ? (
+                <ul>
+                  {gradeDefinitions[g].map((line) => (
+                    <li key={line}>{line}</li>
+                  ))}
+                </ul>
+              ) : null}
             </button>
           );
         })}
