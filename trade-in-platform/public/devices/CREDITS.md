@@ -40,3 +40,19 @@ Source: Wikimedia Commons — article infobox images, and per-device categories
 (`Category:Samsung Galaxy S20 FE` and similar), which name one model and are
 curated, so they avoid the family lineups and wrong variants that plain search
 returns.
+
+
+## The 25 drawn illustrations
+
+The devices no free image library documents — legacy Pixels, the 2014 Galaxy
+Tabs, the early iPads — are drawn rather than photographed, by
+`trade-in-backend/scripts/render_device_illustration.py`. They need no credit:
+they are this project's own artwork.
+
+They are illustrations, not photographs, and they are accurate rather than
+generic: proportions come from the manufacturer's published millimetre
+dimensions where those exist, and the front is drawn as that model's front
+actually looks — home button on the iPads and the S4, forehead and chin bezels
+on the 2016 Pixels, notch on the Pixel 3 XL, corner punch-hole on the S10e.
+Replace any of them with a real photograph and the drawing simply stops being
+used.
