@@ -42,10 +42,30 @@ curated, so they avoid the family lineups and wrong variants that plain search
 returns.
 
 
-## The 25 drawn illustrations
+## Manufacturer product images
 
-The devices no free image library documents — legacy Pixels, the 2014 Galaxy
-Tabs, the early iPads — are drawn rather than photographed, by
+Fifteen devices use the manufacturer's own product photography, added at the
+shop owner's direction after the free-licensed sources were exhausted:
+
+* Four iPads use Apple's own model-identification photographs from
+  support.apple.com — the images Apple publishes precisely so a specific
+  generation can be told apart from its neighbours.
+* Eleven phones and one tablet use the manufacturer press renders mirrored by
+  GSMArena, matched by the device slug in the image URL so the model is
+  verifiable rather than guessed.
+
+These are not freely licensed. Copyright stays with Apple, Samsung and Google,
+and they are used here to identify the exact product being bought — the same
+use a retailer makes of them. That is the owner's call and it is recorded here
+so the position is known rather than assumed. Replacing any of them with a
+photograph of the shop's own stock removes the question entirely; see
+`trade-in-backend/scripts/import_shop_photos.py`.
+
+## The remaining drawn illustrations
+
+The ten devices with no photograph from any source — the Galaxy S21 and S4, the
+Pixel 2 XL, 3 XL, 4 and 4 XL, the 2014 Galaxy Tabs and the original Galaxy Tab —
+are drawn rather than photographed, by
 `trade-in-backend/scripts/render_device_illustration.py`. They need no credit:
 they are this project's own artwork.
 
