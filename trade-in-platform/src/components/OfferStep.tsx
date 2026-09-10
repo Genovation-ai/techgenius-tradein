@@ -52,7 +52,6 @@ export function OfferStep({
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Your offer</p>
         <h1>Here’s what we’ll pay</h1>
         <p className="flow-lead">
           {joinDetails(

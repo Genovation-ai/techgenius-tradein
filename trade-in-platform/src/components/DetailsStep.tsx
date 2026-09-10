@@ -73,7 +73,6 @@ export function DetailsStep({
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Details</p>
         <h1>{device.name}</h1>
         <p className="flow-lead">
           {showStoragePicker

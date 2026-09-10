@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   applyStoreCreditBoost,
   isGradeLockedToDefective,
@@ -96,6 +97,7 @@ function resetDeviceFields(prev: TradeInState): TradeInState {
 
 /** Embeddable trade-in — connected to Tech Genius backend */
 export function TradeInFlow() {
+  const reduceMotion = useReducedMotion();
   const [state, setState] = useState<TradeInState>(initialTradeInState);
   const [quotedPrice, setQuotedPrice] = useState<number | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
@@ -511,6 +513,18 @@ export function TradeInFlow() {
         </div>
       ) : null}
 
+      {/* Steps cross-fade instead of snapping. mode="wait" lets the outgoing
+          step finish before the next mounts, so the panel never shows two
+          headings at once, and the key is the step id so React treats each as
+          a fresh element. Reduced motion gets the swap with no movement. */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={state.step}
+          initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
+          transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+        >
       {state.step === "category" && (
         <CategoryStep
           onSelect={(category: DeviceCategory) =>
@@ -615,7 +629,6 @@ export function TradeInFlow() {
       {state.step === "offer" && offerValue === null && !quoteLoading ? (
         <section className="flow-panel">
           <header className="flow-header">
-            <p className="flow-kicker">Your offer</p>
             <h1>We couldn&rsquo;t price this one right now</h1>
             <p className="flow-lead">
               Your offer is calculated on our server, so we won&rsquo;t show you a number we
@@ -684,6 +697,8 @@ export function TradeInFlow() {
           onRestart={restart}
         />
       )}
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 }

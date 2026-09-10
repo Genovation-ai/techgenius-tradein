@@ -39,7 +39,6 @@ export function GradeStep({
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Condition</p>
         <h1>What sort of shape is it in?</h1>
         <p className="flow-lead">
           Pick the one that sounds like your device. We check it when it arrives — if it is better

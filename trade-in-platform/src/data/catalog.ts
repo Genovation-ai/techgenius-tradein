@@ -29,14 +29,16 @@ export type ConditionGrade =
  *   defective→ As-Is (outside every published condition)
  */
 export const gradeLabels: Record<ConditionGrade, string> = {
-  flawless: "Like new",
+  // These are the shop's published condition names, so they are reproduced
+  // exactly rather than softened. "Unacceptable" and "As-Is" do read as
+  // grading-desk language, but a customer quoted under a name that does not
+  // appear in the published conditions has been told two different things.
+  // The tagline under each one carries the plain explanation instead.
+  flawless: "Like New",
   good: "Good",
-  average: "Fair",
-  // "Unacceptable" and "As-Is" are grading-desk words. A customer reading that
-  // their phone is unacceptable hears a judgement, not a category; these say
-  // what is actually wrong with it.
-  fair: "Cracked or faulty",
-  defective: "Not working",
+  average: "Acceptable",
+  fair: "Unacceptable",
+  defective: "As-Is",
 };
 
 /** Short subtitle under each grade name (shown in GradeStep) */

@@ -105,7 +105,6 @@ export function DevicePickStep({
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Your model</p>
         <h1>Search or select your {catLabel.toLowerCase()}</h1>
         <p className="flow-lead">
           Type a model name or tap a device photo — powered by Tech Genius catalog

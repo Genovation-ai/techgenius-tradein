@@ -232,7 +232,6 @@ export function MediaAiStep({
   return (
     <section className="flow-panel ai-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Photos</p>
         <h1>Add a few photos?</h1>
         <p className="flow-lead">
           Optional, and it usually helps: photos let us confirm the condition now rather than

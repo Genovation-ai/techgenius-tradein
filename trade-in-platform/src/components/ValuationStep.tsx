@@ -64,7 +64,6 @@ export function ValuationStep({ value, category, onChange, onContinue }: Props) 
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <p className="flow-kicker">Condition</p>
         <h1>A few questions about your device</h1>
         <p className="flow-lead">
           These are what change the price. Answer honestly — we check on arrival, and an accurate
