@@ -10,7 +10,7 @@ import {
   gradeDefinitions,
   type ValuationAnswers,
 } from "../data/catalog";
-import { checkoutComplete, valuationComplete, emptyContact, emptyValuation, displayStorage, joinDetails, specKind, specLabel, specQuestionLabel } from "../lib/tradeInTypes";
+import { checkoutComplete, emptyContact, emptyValuation, displayStorage, joinDetails, specKind, specLabel, specQuestionLabel } from "../lib/tradeInTypes";
 import { createOfferId } from "../lib/offers";
 import { aggregateFrameScores, analyzeFrame } from "../lib/localVision/analyze";
 import { detectIssuesForAngle } from "../lib/localVision/issues";
@@ -100,37 +100,13 @@ describe("market pricing backend", () => {
   });
 });
 
-describe("valuation gates", () => {
-  it("requires clean IMEI, activation unlock, and all fields", () => {
-    expect(valuationComplete(fullValuation())).toBe(true);
-    expect(valuationComplete(fullValuation({ cleanImei: false }))).toBe(false);
-    expect(valuationComplete(fullValuation({ activationLockFree: false }))).toBe(false);
-    expect(valuationComplete(fullValuation({ batteryHealth: null }))).toBe(false);
-  });
-
-  it("only asks questions the device can answer", () => {
-    // A monitor has no battery and no carrier. Asking anyway made the checklist
-    // longer than it needed to be and left the customer guessing.
-    const noBatteryNoCarrier = fullValuation({ batteryHealth: null, canadianModel: null });
-    expect(valuationComplete(noBatteryNoCarrier, "monitor")).toBe(true);
-    expect(valuationComplete(noBatteryNoCarrier, "smartphone")).toBe(false);
-    // An unknown category still asks, so a missing category cannot quietly drop
-    // a field that changes the price.
-    expect(valuationComplete(noBatteryNoCarrier)).toBe(false);
-  });
-
-  it("does not gate on answers the pricing engine never sees", () => {
-    // underContract and chargerIncluded reach neither /api/quote nor the
-    // pricing engine, so they can only ever have blocked the customer.
-    expect(
-      valuationComplete(fullValuation({ underContract: null, chargerIncluded: null }), "smartphone"),
-    ).toBe(true);
-  });
-
+describe("grade inference from the condition answers", () => {
+  // The checklist step these once guarded is gone; the answers are now
+  // derived from the condition card. Grade inference still runs, so the
+  // cases that exercise it stay and the completeness cases go.
   it("infers defective when device will not power on", () => {
     expect(inferGradeFromAnswers(fullValuation({ powerOn: false }))).toBe("defective");
   });
-
   it("forces As-Is for water damage even when it powers on", () => {
     expect(
       inferGradeFromAnswers(

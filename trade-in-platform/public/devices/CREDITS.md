@@ -25,6 +25,7 @@ row; the obligation goes with the file.
 | `galaxy-s10.png` | Samsung Galaxy S10 | FarihF10 | CC BY-SA 4.0 |
 | `galaxy-s10-plus.png` | Samsung Galaxy S10+ | TheWikiContributor | CC BY-SA 4.0 |
 | `galaxy-watch-global-bluetooth-42mm.png` | Samsung Galaxy Watch 42mm | Louis PL | CC BY-SA 4.0 |
+| `samsung-galaxy-tab-s3-9-7.png` | Samsung Galaxy Tab S3 9.7 | AnVuong1222004 | CC BY-SA 4.0 |
 
 ## A note on the CC BY-SA files
 

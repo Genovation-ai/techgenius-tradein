@@ -34,21 +34,6 @@ export const categoryImages: Record<string, string> = {
   monitor: bundledOrPath("studio-display"),
 };
 
-export const brandImages: Record<string, string> = {
-  Apple: bundledOrPath("iphone-16", "iphone-15"),
-  Samsung: bundledOrPath("s24", "s23"),
-  Google: bundledOrPath("pixel-9", "pixel-8"),
-  Sony: bundledOrPath("playstation-5"),
-  Microsoft: bundledOrPath("xbox-seriesx"),
-  Nintendo: bundledOrPath("nintendo-switch"),
-  Meta: bundledOrPath("quest-3"),
-  Valve: bundledOrPath("steam-deck"),
-  Asus: bundledOrPath("rog-ally"),
-  Lenovo: bundledOrPath("legion-go"),
-  Dell: bundledOrPath("xps-15-series"),
-  HP: bundledOrPath("macbook-air-m3", "iphone-15"),
-  Other: bundledOrPath("s24", "iphone-15"),
-};
 
 /**
  * Bundled photo for a catalog id, or "" when we have none.
