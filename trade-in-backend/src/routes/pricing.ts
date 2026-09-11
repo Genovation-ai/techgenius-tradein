@@ -131,8 +131,11 @@ pricingRouter.get("/freshness", (_req, res) => {
     last_synced_at: string | null;
     sync_interval_hours: number | null;
   }>;
+  // The scrape table is scraped_prices; an earlier version of this query named
+  // a table that does not exist, which is the sort of thing that only shows up
+  // when the endpoint is actually called.
   const covered = db
-    .prepare("SELECT COUNT(DISTINCT product_id) AS n FROM competitor_prices")
+    .prepare("SELECT COUNT(DISTINCT product_id) AS n FROM scraped_prices WHERE product_id IS NOT NULL")
     .get() as { n: number };
   const catalogue = db.prepare("SELECT COUNT(*) AS n FROM devices WHERE enabled = 1").get() as {
     n: number;

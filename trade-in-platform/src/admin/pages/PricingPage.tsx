@@ -360,7 +360,8 @@ export function PricingPage() {
       {fresh ? (
         <p className="admin-coverage">
           {fresh.coverage.devices_with_live_prices} of {fresh.coverage.devices_in_catalogue} devices
-          have a competitor price from this week. The rest are quoted from your saved price list.
+          have a competitor price on file. The rest are quoted from your saved price list. Ages
+          are listed above whenever a source falls behind.
         </p>
       ) : null}
       {message ? <p className="admin-ok">{message}</p> : null}
