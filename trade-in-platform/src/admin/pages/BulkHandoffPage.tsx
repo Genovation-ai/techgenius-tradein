@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { Link } from "react-router-dom";
 import { adminFetch } from "../api";
 
@@ -115,6 +116,13 @@ export function BulkHandoffPage() {
         Quote many devices at once, create a bulk offer, or hand off a walk-in drop-off from the counter.
         New phone releases: type the model name and hit <strong>Build</strong> — we generate the image and add it.
       </p>
+      <HowThisWorks
+        steps={[
+        "Use this when someone brings in several devices at once.",
+        "Add each device with its condition; the prices come from your live pricing rules.",
+        "Hand off as one offer so the customer gets a single payout and one invoice.",
+      ]}
+      />
 
       <div className="admin-tabs">
         <button type="button" className={mode === "handoff" ? "active" : ""} onClick={() => setMode("handoff")}>

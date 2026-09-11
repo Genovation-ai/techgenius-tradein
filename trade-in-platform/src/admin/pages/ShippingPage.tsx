@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { Link } from "react-router-dom";
 import { adminFetch, PIPELINE_STAGES, type OfferRow } from "../api";
 
@@ -58,6 +59,13 @@ export function ShippingPage() {
       </div>
 
       <p className="admin-section-lead">Quick shipping status management (edit details in Offer Detail).</p>
+      <HowThisWorks
+        steps={[
+        "Offers a customer chose to mail appear here once they accept.",
+        "Send the customer a label, then record the tracking number against the offer.",
+        "The customer sees that tracking number on their own tracker straight away.",
+      ]}
+      />
 
       <div className="admin-toolbar">
         <input

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { Link } from "react-router-dom";
 import { adminFetch, PIPELINE_STAGES, type DashboardData, type OfferRow } from "../api";
 
@@ -107,6 +108,13 @@ export function DashboardPage() {
       <p className="admin-section-lead">
         Customer-facing sell flow with device photos, live catalog pricing, and offer pipeline sync.
       </p>
+      <HowThisWorks
+        steps={[
+        "The tiles are your totals; the columns below are every offer by stage.",
+        "Anything sitting in Being Inspected or General Hold is waiting on you.",
+        "Use the store selector in the sidebar to see one location on its own.",
+      ]}
+      />
     </>
   );
 }

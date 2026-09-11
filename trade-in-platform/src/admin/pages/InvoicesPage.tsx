@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { Link } from "react-router-dom";
 import { adminFetch, apiUrl, getAdminApiKey, onStoreChange, withStoreScope } from "../api";
 
@@ -75,6 +76,13 @@ export function InvoicesPage() {
       <p className="admin-section-lead">
         Invoices are auto-issued when an offer is completed. You can also generate one manually.
       </p>
+      <HowThisWorks
+        steps={[
+        "An invoice is created automatically when an offer completes.",
+        "Open one to see the devices, the agreed price and the customer's details.",
+        "Mark it paid once the money has left your account.",
+      ]}
+      />
       {error ? <p className="admin-error">{error}</p> : null}
 
       <div className="admin-toolbar">

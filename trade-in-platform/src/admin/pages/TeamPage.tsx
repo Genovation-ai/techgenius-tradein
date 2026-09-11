@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { adminFetch, getAdminUser } from "../api";
 
 interface TeamUser {
@@ -61,6 +62,13 @@ export function TeamPage() {
         Admin, Manager, and Operator roles control access to pricing, settings, and team management.
         Signed in as {me?.email} ({me?.role}).
       </p>
+      <HowThisWorks
+        steps={[
+        "Invite the people who work the counter; each gets their own sign-in.",
+        "Admins can change pricing and pay out. Staff can move offers but not change what you pay.",
+        "Turn someone off when they leave — their history stays on the offers they handled.",
+      ]}
+      />
       {error ? <p className="admin-error">{error}</p> : null}
 
       <form className="admin-pricing-form" onSubmit={(e) => void create(e)} style={{ maxWidth: 640 }}>

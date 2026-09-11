@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { adminFetch, onStoreChange, withStoreScope } from "../api";
 
 interface LeadItem {
@@ -82,6 +83,13 @@ export function LeadsPage() {
         People who priced a device and gave us a way to reach them, but never submitted. Calling
         these back is usually the cheapest stock you can buy.
       </p>
+      <HowThisWorks
+        steps={[
+        "A lead is someone who priced a device but did not finish the checkout.",
+        "Open one to see what they were quoting and how to reach them.",
+        "Following up quickly is where most of these turn into offers.",
+      ]}
+      />
 
       {error ? <p className="admin-error">{error}</p> : null}
 

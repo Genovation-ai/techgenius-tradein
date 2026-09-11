@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { useSearchParams } from "react-router-dom";
 import { adminFetch, apiUrl, type CatalogDevice } from "../api";
 import { DeviceThumb } from "../DeviceThumb";
@@ -111,6 +112,13 @@ export function CatalogPage() {
         Every device shows exact buyback prices by storage and condition. New phone releases can be
         added by name — the platform builds the product image and seeds starter prices.
       </p>
+      <HowThisWorks
+        steps={[
+        "This is the list of devices customers can pick from on your sell page.",
+        "Turn a device off to stop quoting it without deleting its history.",
+        "Prices come from the Pricing page — this page controls what is offered, not what it is worth.",
+      ]}
+      />
 
       <div className="admin-toolbar">
         <select className="admin-select" value={category} onChange={(e) => setCategory(e.target.value)}>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { adminFetch } from "../api";
 
 interface PromoCodeRow {
@@ -82,6 +83,13 @@ function WidgetTemplatePanel() {
         How the customer sell widget looks. Same steps and the same
         server-authoritative pricing in every template — presentation only.
       </p>
+      <HowThisWorks
+        steps={[
+        "Your shop's name, logo and colours — these appear on the sell page customers see.",
+        "Set the payout methods you actually offer; the customer only sees those.",
+        "Changes apply to the next quote, not to offers already made.",
+      ]}
+      />
       <div className="admin-pricing-form" style={{ maxWidth: 720, display: "grid", gap: "0.5rem" }}>
         <label>
           Template

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { useSearchParams } from "react-router-dom";
 import { adminFetch } from "../api";
 
@@ -45,6 +46,13 @@ export function CustomersPage() {
         </button>
       </div>
       <p className="admin-section-lead">Search and manage customers who submitted trade-in offers.</p>
+      <HowThisWorks
+        steps={[
+        "Everyone who has completed a trade-in with you, added automatically.",
+        "Open a customer to see every offer they have made and what you paid.",
+        "Use it before agreeing a price with someone who has traded with you before.",
+      ]}
+      />
 
       <div className="admin-toolbar">
         <input

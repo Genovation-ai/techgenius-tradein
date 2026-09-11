@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { adminFetch, getAdminOrg } from "../api";
 import { resolveApiBase } from "../../lib/tradeInApi";
 
@@ -116,6 +117,13 @@ export function SetupPage() {
           Paste one block into your website and customers can price a device without
           leaving it. The code below already has your shop's details in it.
         </p>
+      <HowThisWorks
+        steps={[
+        "Copy the block of HTML below; your shop's details are already filled in.",
+        "Paste it into any page on your site — Framer, Shopify, WordPress, plain HTML.",
+        "Load that page and take a test quote. Offers appear under Offer Management straight away.",
+      ]}
+      />
       </header>
 
       <section className="admin-card">

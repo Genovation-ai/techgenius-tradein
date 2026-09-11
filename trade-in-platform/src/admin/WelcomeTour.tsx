@@ -5,6 +5,20 @@ import "./WelcomeTour.css";
 
 const SEEN_KEY = "tg-admin-tour-seen";
 
+/**
+ * Asks the tour to open, from anywhere.
+ *
+ * It ran once on first sign-in and was then unreachable for the life of the
+ * account — which is the wrong way round, because the person who most wants a
+ * walkthrough is usually not the person who saw it on day one. It is the same
+ * tour either way; only the trigger is new.
+ */
+export const TOUR_EVENT = "tg-admin-tour-open";
+
+export function openAdminTour(): void {
+  window.dispatchEvent(new CustomEvent(TOUR_EVENT));
+}
+
 interface Stop {
   title: string;
   body: string;
@@ -21,8 +35,9 @@ interface Stop {
  * the work actually happens — get it on your site, watch offers arrive, price
  * them, get paid — rather than walking the menu top to bottom.
  *
- * Shown once, then remembered. Dismissible at every step — scrim, Escape or
- * Skip — because a tour you cannot leave is worse than no tour.
+ * Shown once, then remembered, and reachable from the sidebar for ever after
+ * via openAdminTour(). Dismissible at every step — scrim, Escape or Skip —
+ * because a tour you cannot leave is worse than no tour.
  */
 const STOPS: Stop[] = [
   {
@@ -60,6 +75,17 @@ export function WelcomeTour() {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
   const [open, setOpen] = useState(false);
+
+  // Replay on request. Deliberately does not clear the seen flag: asking for
+  // the tour should not mean being shown it again unprompted next sign-in.
+  useEffect(() => {
+    const open = () => {
+      setStep(0);
+      setOpen(true);
+    };
+    window.addEventListener(TOUR_EVENT, open);
+    return () => window.removeEventListener(TOUR_EVENT, open);
+  }, []);
 
   useEffect(() => {
     try {

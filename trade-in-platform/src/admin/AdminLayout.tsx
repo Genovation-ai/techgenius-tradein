@@ -1,5 +1,5 @@
 import { NavLink, Navigate, Outlet, useNavigate } from "react-router-dom";
-import { WelcomeTour } from "./WelcomeTour";
+import { openAdminTour, WelcomeTour } from "./WelcomeTour";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { adminFetch, clearAdminSession, getAdminApiKey, getAdminOrg, getAdminUser, logoutAdmin, setAdminChannelPreference } from "./api";
 import {
@@ -353,6 +353,12 @@ export function AdminLayout() {
               </span>
             </div>
           ) : null}
+          {/* The tour used to be a first-run event and nothing else. Whoever
+              actually wants the walkthrough — a new member of staff, an owner
+              back after a month — arrives long after that moment has passed. */}
+          <button type="button" className="admin-signout" onClick={openAdminTour}>
+            Take the tour
+          </button>
           <button type="button" className="admin-signout" onClick={() => void signOut()}>
             Sign out
           </button>

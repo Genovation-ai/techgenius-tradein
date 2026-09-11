@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { adminFetch } from "../api";
 
 type ByStatusRow = { status: string; count: number; total: number };
@@ -39,6 +40,14 @@ export function ReportsPage() {
         <h1 className="admin-page-title" style={{ margin: 0 }}>
           Reports
         </h1>
+      <p className="admin-section-lead">What you have bought, what it cost, and what is still owed.</p>
+      <HowThisWorks
+        steps={[
+        "Pick a date range; every figure below is recalculated for it.",
+        "Totals count only completed offers, so quotes a customer never sent do not inflate them.",
+        "Use the store filter in the sidebar to read one location on its own.",
+      ]}
+      />
         <span style={{ color: "#8b93a7" }}>Overview & insights</span>
       </div>
 

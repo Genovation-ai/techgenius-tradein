@@ -1281,3 +1281,60 @@ textarea.admin-input:focus {
 .admin-status-pill[data-tone="blocked"] { background: #fdecea; color: #9b2c20; border-color: #f8d7d2; }
 .admin-status-pill[data-tone="money"]   { background: #f0ecfb; color: #4c3391; border-color: #e0d8f5; }
 .admin-status-pill[data-tone="done"]    { background: #e9f5ec; color: #1f6b34; border-color: #d3ead9; }
+
+/* ——— How this works ———
+   A disclosure, not a callout. Closed it is one quiet line that does not
+   compete with the page; open it is a numbered procedure. It sits under the
+   page lead so the reading order is: what this is, then how to do it. */
+.admin-how {
+  margin: -0.15rem 0 0.9rem;
+}
+
+.admin-how-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  padding: 0 0.15rem;
+  border: 0;
+  background: transparent;
+  color: var(--tg-green);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+}
+
+.admin-how-toggle:hover { text-decoration: underline; }
+.admin-how-toggle:focus-visible { outline: 2px solid var(--tg-green); outline-offset: 2px; }
+
+.admin-how-chev {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  background: var(--tg-green-soft);
+  color: var(--tg-green-dark);
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.admin-how-steps {
+  margin: 0.5rem 0 0;
+  padding: 0.85rem 1rem 0.85rem 2.3rem;
+  background: var(--tg-white);
+  border: 1px solid var(--tg-border);
+  border-radius: var(--tg-radius);
+  max-width: 70ch;
+  display: grid;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--tg-ink);
+}
+
+.admin-how-steps li::marker {
+  color: var(--tg-muted);
+  font-variant-numeric: tabular-nums;
+}

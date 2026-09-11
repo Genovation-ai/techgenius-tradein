@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { adminFetch, onStoreChange, withStoreScope } from "../api";
 
 interface InventoryRow {
@@ -80,6 +81,13 @@ export function InventoryPage() {
       <p className="admin-section-lead">
         Inventory from completed offers. Use Sell Instantly to close a unit with a real sale record.
       </p>
+      <HowThisWorks
+        steps={[
+        "Devices arrive here on their own when you complete an offer — nothing to add by hand.",
+        "Set a condition and an asking price when you are ready to resell.",
+        "Mark it sold to take it out of stock and into your sales figures.",
+      ]}
+      />
 
       <div className="admin-toolbar">
         <input

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { Link } from "react-router-dom";
 import { adminFetch, onStoreChange, withStoreScope } from "../api";
 
@@ -52,6 +53,13 @@ export function PayoutsPage() {
       <p className="admin-section-lead">
         Track payout readiness and mark e-Transfer / cash / store-credit payouts as paid.
       </p>
+      <HowThisWorks
+        steps={[
+        "An offer moved to Payout Processing appears here with the amount you agreed.",
+        "Pay the customer by the method they chose, then mark it paid.",
+        "Marking it paid completes the offer and closes the invoice.",
+      ]}
+      />
       {error ? <p className="admin-error">{error}</p> : null}
 
       <div className="admin-kpis">

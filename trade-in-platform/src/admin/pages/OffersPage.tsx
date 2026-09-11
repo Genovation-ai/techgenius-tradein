@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   adminFetch,
@@ -77,6 +78,15 @@ export function OffersPage() {
     <>
       <h1 className="admin-page-title">Offer Management</h1>
 
+      <p className="admin-section-lead">Every quote a customer accepts lands here. Work it down the pipeline and the paperwork follows.</p>
+      <HowThisWorks
+        steps={[
+        "A customer accepts a quote on your sell page and the offer appears here as an active lead.",
+        "When the device arrives, move it to Delivered, then Being Inspected while you check it.",
+        "If it is not as described, move it to Revised Offer or General Hold — the customer sees the change on their tracker.",
+        "Move it to Completed to finish: that creates the inventory item and the invoice for you.",
+      ]}
+      />
       <div className="admin-tabs">
         {(
           [

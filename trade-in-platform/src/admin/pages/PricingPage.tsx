@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { HowThisWorks } from "../HowThisWorks";
 import { adminFetch } from "../api";
 
 interface Adjustment {
@@ -311,6 +312,14 @@ export function PricingPage() {
       <p className="admin-section-lead">
         Choose whose prices your quotes follow, and by how much you beat them.
       </p>
+      <HowThisWorks
+        steps={[
+        "Choose whose prices you follow — GoRecell, a carrier, or your own manual list.",
+        "Pick a mode: match them, or beat them by a percentage so your quote is the better one.",
+        "Use Adjust every quote for a promotion or to protect margin without re-pricing the catalogue.",
+        "Check the preview before saving — it shows a real device at the price a customer would be quoted.",
+      ]}
+      />
       {message ? <p className="admin-ok">{message}</p> : null}
       {error ? <p className="admin-error">{error}</p> : null}
 
