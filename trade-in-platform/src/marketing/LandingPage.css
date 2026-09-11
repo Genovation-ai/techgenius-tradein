@@ -752,3 +752,30 @@ html.rc-dark body {
     opacity: 1 !important;
   }
 }
+
+/* The install steps. A code block on its own told a shop owner what to paste
+   but never where the value in it comes from or what happens after — the two
+   things they actually need. Numbered because this genuinely is a sequence. */
+.rc-install-steps {
+  margin: 0 0 22px;
+  padding-left: 1.4rem;
+  display: grid;
+  gap: 12px;
+  max-width: 62ch;
+  color: var(--rc-ink-2);
+  font-size: clamp(14px, 1.15vw, 15.5px);
+  line-height: 1.6;
+}
+
+.rc-install-steps strong { color: var(--rc-ink); font-weight: 600; }
+
+.rc-install-steps code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.92em;
+  color: var(--rc-mat);
+}
+
+.rc-install-steps li::marker {
+  color: var(--rc-muted);
+  font-variant-numeric: tabular-nums;
+}

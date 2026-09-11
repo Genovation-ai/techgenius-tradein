@@ -1338,3 +1338,36 @@ textarea.admin-input:focus {
   color: var(--tg-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ——— Pricing freshness ———
+   The shop is told when the numbers behind its quotes stopped being current.
+   Amber rather than red: quotes are still going out and nothing is broken —
+   they are just older than the page claims, which is worth knowing before you
+   agree a price, not an emergency. */
+.admin-stale {
+  border: 1px solid #f0dcb4;
+  background: #fdf6e9;
+  color: #7a4d10;
+  border-radius: var(--tg-radius);
+  padding: 0.8rem 0.95rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  max-width: 72ch;
+}
+
+.admin-stale strong { color: #613c08; }
+
+.admin-stale ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.admin-coverage {
+  margin: -0.3rem 0 0.9rem;
+  font-size: 0.83rem;
+  color: var(--tg-muted);
+  font-variant-numeric: tabular-nums;
+}

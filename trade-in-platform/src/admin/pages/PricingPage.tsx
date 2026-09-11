@@ -66,6 +66,12 @@ const SOURCE_OPTIONS: Array<{ id: string; label: string }> = [
   { id: "best", label: "Best of all competitors" },
 ];
 
+type Freshness = {
+  sources: { id: string; label: string; last_synced_at: string | null; age_hours: number | null; state: string }[];
+  stale: string[];
+  coverage: { devices_with_live_prices: number; devices_in_catalogue: number };
+};
+
 const CONDITIONS = ["excellent", "good", "fair", "broken"] as const;
 
 // The table printed the raw grade ids as headers, so two capitalised columns
@@ -78,6 +84,17 @@ const CONDITION_LABELS: Record<(typeof CONDITIONS)[number], string> = {
 };
 
 export function PricingPage() {
+  const [fresh, setFresh] = useState<Freshness | null>(null);
+
+  // The landing page promises that nothing quietly goes stale. This is the
+  // part that has to be true: it reads when each source last answered, so an
+  // enabled source that has never succeeded cannot pass for a healthy one.
+  useEffect(() => {
+    void adminFetch<Freshness>("/api/pricing/freshness")
+      .then(setFresh)
+      .catch(() => setFresh(null));
+  }, []);
+
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [competitors, setCompetitors] = useState<CompetitorsPayload | null>(null);
   const [matrix, setMatrix] = useState<MatrixPayload | null>(null);
@@ -320,6 +337,32 @@ export function PricingPage() {
         "Check the preview before saving — it shows a real device at the price a customer would be quoted.",
       ]}
       />
+      {fresh && fresh.stale.length > 0 ? (
+        <div className="admin-stale" role="status">
+          <strong>
+            {fresh.stale.length === 1
+              ? `${fresh.stale[0]} is not reporting prices.`
+              : `${fresh.stale.length} price sources are not reporting.`}
+          </strong>{" "}
+          Quotes are still going out, worked from the last prices on file rather than this
+          week's. Choose Check competitor prices above to try the sources again.
+          <ul>
+            {fresh.sources
+              .filter((x) => x.state !== "ok")
+              .map((x) => (
+                <li key={x.id}>
+                  {x.label} — {x.state === "never" ? "has never reported" : `last answered ${x.age_hours}h ago`}
+                </li>
+              ))}
+          </ul>
+        </div>
+      ) : null}
+      {fresh ? (
+        <p className="admin-coverage">
+          {fresh.coverage.devices_with_live_prices} of {fresh.coverage.devices_in_catalogue} devices
+          have a competitor price from this week. The rest are quoted from your saved price list.
+        </p>
+      ) : null}
       {message ? <p className="admin-ok">{message}</p> : null}
       {error ? <p className="admin-error">{error}</p> : null}
 

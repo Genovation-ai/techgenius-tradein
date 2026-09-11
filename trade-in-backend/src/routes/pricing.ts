@@ -108,6 +108,62 @@ pricingRouter.get("/sources", (_req, res) => {
   res.json(rows);
 });
 
+/**
+ * Whether the prices behind today's quotes are actually current.
+ *
+ * The product's promise is that nothing quietly goes stale — that if a source
+ * stops answering, the shop is told rather than served last month's numbers as
+ * though they were this week's. Nothing was reading last_synced_at, so an
+ * enabled source that had never once succeeded looked exactly like a healthy
+ * one. This is what makes that promise checkable.
+ *
+ * A source is late when it has not synced within twice its own interval: one
+ * missed run is a blip, two is a pattern worth a shop owner's attention.
+ */
+pricingRouter.get("/freshness", (_req, res) => {
+  const db = getDb();
+  const rows = db
+    .prepare("SELECT id, label, enabled, last_synced_at, sync_interval_hours FROM price_sources")
+    .all() as Array<{
+    id: string;
+    label: string;
+    enabled: number;
+    last_synced_at: string | null;
+    sync_interval_hours: number | null;
+  }>;
+  const covered = db
+    .prepare("SELECT COUNT(DISTINCT product_id) AS n FROM competitor_prices")
+    .get() as { n: number };
+  const catalogue = db.prepare("SELECT COUNT(*) AS n FROM devices WHERE enabled = 1").get() as {
+    n: number;
+  };
+  db.close();
+
+  const now = Date.now();
+  const sources = rows
+    .filter((r) => r.enabled)
+    .map((r) => {
+      const every = (r.sync_interval_hours || 168) * 3600 * 1000;
+      const last = r.last_synced_at ? Date.parse(r.last_synced_at.replace(" ", "T") + "Z") : null;
+      const ageMs = last ? now - last : null;
+      return {
+        id: r.id,
+        label: r.label,
+        last_synced_at: r.last_synced_at,
+        age_hours: ageMs == null ? null : Math.round(ageMs / 3600000),
+        // Never synced counts as late: an enabled source that has never
+        // answered is the exact case this is here to surface.
+        state: ageMs == null ? "never" : ageMs > every * 2 ? "late" : "ok",
+      };
+    });
+
+  res.json({
+    sources,
+    stale: sources.filter((s) => s.state !== "ok").map((s) => s.label),
+    coverage: { devices_with_live_prices: covered.n, devices_in_catalogue: catalogue.n },
+  });
+});
+
 /** Competitor scrape details for admin Pricing page */
 pricingRouter.get("/competitors", (req, res) => {
   const productId = req.query.product_id ? String(req.query.product_id) : undefined;

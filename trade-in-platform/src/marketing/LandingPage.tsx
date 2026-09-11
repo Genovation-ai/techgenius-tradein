@@ -134,7 +134,7 @@ function PriceBuild() {
   const steps = [
     {
       h: "Start from a real number",
-      p: "Reclaim reads the prices other buyers publish for the exact model, storage and condition in front of you. Not an estimate, not last quarter's book value — what someone is paying for it this week.",
+      p: "Reclaim reads what other buyers publish for the exact model, storage and condition in front of you. Popular models are checked against live competitor listings each week; the rest of the catalogue is quoted from a price list synced from the same source. The Pricing page shows which is which, and how many are current.",
     },
     {
       h: "Take your margin off the top",
@@ -301,8 +301,8 @@ export default function LandingPage() {
                 <span className="rc-line-ghost">before you pay for it.</span>
               </motion.h1>
               <motion.p className="rc-hero-sub" variants={rise}>
-                Reclaim prices trade-ins from what buyers are paying this week, puts the
-                quote on your website, and tracks the device through to payout.
+                Reclaim quotes from published buyback prices, puts the offer on your
+                website, and tracks the device through to payout.
               </motion.p>
               <motion.div className="rc-hero-actions" variants={rise}>
                 <Link className="rc-btn" to="/admin/signup">
@@ -401,8 +401,9 @@ export default function LandingPage() {
               <div className="rc-point">
                 <h3>Nothing quietly goes stale</h3>
                 <p>
-                  Sources refresh weekly. If one stops answering, the dashboard says so
-                  instead of serving last month's numbers as if they were current.
+                  Sources refresh weekly. If one stops answering, Pricing says so — which
+                  source, and how long since it last reported — instead of serving older
+                  numbers as if they were current.
                 </p>
               </div>
               <div className="rc-point">
@@ -425,13 +426,33 @@ export default function LandingPage() {
 
         <section className="rc-section" id="install">
           <div className="rc-wrap">
-            <h2>One block of HTML, on any site.</h2>
+            <h2>Two lines, on any site.</h2>
             <p className="rc-section-lead">
               Works on Framer, Shopify, WordPress or hand-written HTML. Your shop's name and
               colours come through automatically — customers never see ours.
             </p>
+            <ol className="rc-install-steps">
+              <li>
+                <strong>Create your shop.</strong> You pick a web address during sign-up —
+                that is the <code>data-org</code> value below, already filled in for you on
+                the Connect page.
+              </li>
+              <li>
+                <strong>Paste these two lines</strong> into any page on your site, wherever
+                you want the trade-in form to appear.
+              </li>
+              <li>
+                <strong>Take a test quote.</strong> It shows up under Offer Management
+                straight away, and you can delete it.
+              </li>
+            </ol>
             <div className="rc-install">
-              <pre>{`<div id="tg-trade-in-root"
+              {/* The stylesheet line was missing here while the Connect page inside
+                  the product had it, so anyone copying from this page got a working
+                  but completely unstyled widget. These two lines are now exactly
+                  what Connect hands out. */}
+              <pre>{`<link rel="stylesheet" href="https://reclaim-hq.up.railway.app/embed/tg-trade-in.css">
+<div id="tg-trade-in-root"
      data-api="https://reclaim-hq.up.railway.app"
      `}<span className="tok">data-org="your-shop"</span>{`></div>
 <script src="https://reclaim-hq.up.railway.app/embed/tg-trade-in.js" defer></script>`}</pre>
