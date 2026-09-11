@@ -234,15 +234,24 @@ export const stepOrder: TradeInStep[] = [
  * The keys are unchanged: they are what gets written to `furthest_step` on a
  * lead, so renaming a label never breaks stored data or the Follow-ups page.
  */
+/**
+ * What each step asks for, in the words a customer would use.
+ *
+ * "Specs", "Grade" and "Payout" are what these steps are called in the code
+ * and on the staff board. Someone selling a phone does not have specs; they
+ * have a phone with a certain amount of storage on a certain network. The
+ * point of the rail is to tell them what is coming, and a word they have to
+ * decode does not do that.
+ */
 export const stepLabels: Record<TradeInStep, string> = {
-  category: "Category",
-  device: "Model",
-  details: "Specs",
+  category: "Device type",
+  device: "Your model",
+  details: "Storage & carrier",
   valuation: "Condition",
   "media-ai": "Photos",
-  grade: "Grade",
-  offer: "Offer",
-  checkout: "Payout",
+  grade: "Condition",
+  offer: "Your offer",
+  checkout: "Getting paid",
   done: "Done",
 };
 

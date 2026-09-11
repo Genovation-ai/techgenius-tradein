@@ -1,4 +1,8 @@
-/* Tech Genius Admin — quiet ops console */
+/* Tech Genius Admin — quiet ops console.
+   Labels read in sentence case. Tracked-out capitals are the house style of
+   every generated dashboard, and they cost legibility at the small sizes
+   labels are actually set at. Letter-spacing went with them: it existed to
+   make the capitals readable and only loosens lowercase. */
 :root {
   /* Remapped onto the Reclaim palette so the workspace matches the landing and
      sign-in pages a shop owner arrives through. The names are unchanged because
@@ -118,8 +122,7 @@ body:has(.admin-login) {
 
 .admin-field-label {
   font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
   color: var(--tg-muted);
   font-weight: 700;
   margin-top: 0.2rem;
@@ -147,7 +150,6 @@ body:has(.admin-login) {
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
-  box-shadow: 0 6px 16px rgba(57, 181, 74, 0.25);
 }
 .admin-tradein-btn:hover { background: var(--tg-green-dark); }
 
@@ -155,8 +157,7 @@ body:has(.admin-login) {
 
 .admin-nav-label {
   font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.01em;
   color: var(--tg-muted);
   padding: 0.4rem 0.55rem 0.2rem;
   font-weight: 700;
@@ -293,7 +294,7 @@ body:has(.admin-login) {
   color: var(--tg-muted);
 }
 .admin-search:focus-within {
-  border-color: rgba(57, 181, 74, 0.45);
+  border-color: rgba(29, 78, 74, 0.40);
   background: #fff;
 }
 .admin-search input {
@@ -356,8 +357,7 @@ body:has(.admin-login) {
 .admin-search-group-label {
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: var(--tg-muted);
   padding: 0.45rem 0.55rem 0.2rem;
 }
@@ -537,8 +537,13 @@ body:has(.admin-login) {
 
 /* ——— KPI cards ——— */
 .admin-kpis {
+  /* Fixed at three columns, so the dashboard's four figures wrapped to a
+     second row with two empty cells beside the last one — the page looked
+     half-finished before any data loaded. Fitting to the available width lets
+     three tiles sit as three and four sit as four, and narrow screens get
+     however many fit. */
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: 0.9rem;
   margin-bottom: 1rem;
 }
@@ -676,8 +681,8 @@ textarea.admin-input {
 .admin-select:focus,
 textarea.admin-input:focus {
   outline: none;
-  border-color: rgba(57, 181, 74, 0.55);
-  box-shadow: 0 0 0 3px rgba(57, 181, 74, 0.12);
+  border-color: rgba(29, 78, 74, 0.45);
+  box-shadow: 0 0 0 3px rgba(29, 78, 74, 0.12);
 }
 
 .admin-table-wrap {
@@ -756,8 +761,8 @@ textarea.admin-input:focus {
 }
 .admin-device-card:hover,
 .admin-device-card.selected {
-  border-color: rgba(57, 181, 74, 0.55);
-  box-shadow: 0 8px 24px rgba(57, 181, 74, 0.12);
+  border-color: rgba(29, 78, 74, 0.45);
+  box-shadow: 0 8px 24px rgba(29, 78, 74, 0.12);
   transform: translateY(-1px);
 }
 .admin-device-card img {
@@ -1085,8 +1090,8 @@ textarea.admin-input:focus {
 }
 .admin-login-left input:focus {
   outline: none;
-  border-color: rgba(57, 181, 74, 0.55);
-  box-shadow: 0 0 0 3px rgba(57, 181, 74, 0.12);
+  border-color: rgba(29, 78, 74, 0.45);
+  box-shadow: 0 0 0 3px rgba(29, 78, 74, 0.12);
 }
 
 .admin-login-row label {
@@ -1120,7 +1125,7 @@ textarea.admin-input:focus {
 
 .admin-login-right {
   background:
-    radial-gradient(circle at 18% 18%, rgba(57, 181, 74, 0.28), transparent 42%),
+    radial-gradient(circle at 18% 18%, rgba(29, 78, 74, 0.20), transparent 42%),
     radial-gradient(circle at 85% 70%, rgba(247, 147, 71, 0.22), transparent 40%),
     linear-gradient(155deg, #2a2a2a 0%, #323232 45%, #1f1f1f 100%);
   color: #fff;
@@ -1136,7 +1141,7 @@ textarea.admin-input:focus {
   position: absolute;
   inset: -20% -10%;
   background:
-    radial-gradient(ellipse at 70% 30%, rgba(57, 181, 74, 0.35), transparent 45%),
+    radial-gradient(ellipse at 70% 30%, rgba(29, 78, 74, 0.24), transparent 45%),
     radial-gradient(ellipse at 10% 80%, rgba(255, 255, 255, 0.08), transparent 40%);
   pointer-events: none;
 }
@@ -1246,3 +1251,19 @@ textarea.admin-input:focus {
   color: #b45309;
   font-weight: 600;
 }
+
+/* ——— Status tones ———
+   One pill, six meanings. Each tone is a tinted ground with its own text
+   colour rather than a saturated block, so a table of forty offers still reads
+   as a table and not as a bag of sweets, while a glance down the status column
+   tells you what needs a person. Contrast is checked against the tint, not
+   against white. */
+.admin-status-pill[data-tone] {
+  border: 1px solid transparent;
+}
+.admin-status-pill[data-tone="neutral"] { background: #f1f2f4; color: #4b5563; border-color: #e3e5e9; }
+.admin-status-pill[data-tone="transit"] { background: #eaf1fb; color: #1e4e8c; border-color: #d5e3f7; }
+.admin-status-pill[data-tone="working"] { background: #fdf2e3; color: #8a5216; border-color: #f7e3c4; }
+.admin-status-pill[data-tone="blocked"] { background: #fdecea; color: #9b2c20; border-color: #f8d7d2; }
+.admin-status-pill[data-tone="money"]   { background: #f0ecfb; color: #4c3391; border-color: #e0d8f5; }
+.admin-status-pill[data-tone="done"]    { background: #e9f5ec; color: #1f6b34; border-color: #d3ead9; }

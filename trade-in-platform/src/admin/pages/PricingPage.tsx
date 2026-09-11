@@ -67,6 +67,15 @@ const SOURCE_OPTIONS: Array<{ id: string; label: string }> = [
 
 const CONDITIONS = ["excellent", "good", "fair", "broken"] as const;
 
+// The table printed the raw grade ids as headers, so two capitalised columns
+// sat beside four lowercase ones.
+const CONDITION_LABELS: Record<(typeof CONDITIONS)[number], string> = {
+  excellent: "Excellent",
+  good: "Good",
+  fair: "Fair",
+  broken: "Broken",
+};
+
 export function PricingPage() {
   const [adjustments, setAdjustments] = useState<Adjustment[]>([]);
   const [competitors, setCompetitors] = useState<CompetitorsPayload | null>(null);
@@ -285,7 +294,7 @@ export function PricingPage() {
             className="admin-btn admin-btn--ghost"
             disabled={busy}
             onClick={() => void runCatalogSync()}
-            title="Scrape every GoRecell product for exact per-storage prices"
+            title="Read today's competitor prices for every storage size"
           >
             {busy ? "Working…" : "Sync full catalog prices"}
           </button>
@@ -295,22 +304,22 @@ export function PricingPage() {
             disabled={busy}
             onClick={() => void runLiveScraper()}
           >
-            {busy ? "Working…" : "Scrape live competitors"}
+            {busy ? "Checking…" : "Check competitor prices"}
           </button>
         </div>
       </div>
       <p className="admin-section-lead">
-        Sync exact per-storage GoRecell prices for the whole catalog (weekly auto-refresh), compare
-        competitors, then undercut slightly so customer quotes stay competitive.
+        Choose whose prices your quotes follow, and by how much you beat them.
       </p>
       {message ? <p className="admin-ok">{message}</p> : null}
       {error ? <p className="admin-error">{error}</p> : null}
 
       <section className="admin-pricing-grid">
         <form className="admin-pricing-form" onSubmit={(e) => void addAdjustment(e)}>
-          <h2>Global price adjustment</h2>
+          <h2>Adjust every quote</h2>
           <p style={{ margin: 0, fontSize: "0.85rem", color: "#6b7280" }}>
-            Applied on top of whatever source the frontend is using.
+            Applied after the rule above, to every device. Use it to run a promotion
+            or to protect margin without re-pricing the catalogue.
           </p>
           <label>
             Percent (%)
@@ -326,12 +335,13 @@ export function PricingPage() {
         </form>
 
         <div className="admin-pricing-form">
-          <h2>Frontend price source</h2>
+          <h2>What customers are quoted</h2>
           <p style={{ margin: 0, fontSize: "0.85rem", color: "#6b7280" }}>
-            Controls what <code>/api/quote</code> returns to the Framer embed and storefront widget.
+            Every quote on your sell page is worked out from this. Changes take effect
+            on the next quote — nothing already offered to a customer moves.
           </p>
           <label>
-            Reflect this source
+            Follow these prices
             <select value={source} onChange={(e) => setSource(e.target.value)}>
               {SOURCE_OPTIONS.map((o) => (
                 <option key={o.id} value={o.id}>
@@ -361,7 +371,7 @@ export function PricingPage() {
             </label>
           ) : null}
           <button type="button" className="admin-btn" disabled={busy} onClick={() => void saveFrontendSource()}>
-            Save frontend source
+            Save quoting rule
           </button>
           {matrix?.preview ? (
             <div className="admin-price-preview">
@@ -378,7 +388,7 @@ export function PricingPage() {
       <h2 className="admin-section-title">Competitor comparison</h2>
       <div className="admin-pricing-filters">
         <label>
-          Device / product id
+          Device
           <input
             value={deviceFilter}
             onChange={(e) => setDeviceFilter(e.target.value)}
@@ -404,7 +414,7 @@ export function PricingPage() {
               <tr>
                 <th>Source</th>
                 {CONDITIONS.map((c) => (
-                  <th key={c}>{c}</th>
+                  <th key={c}>{CONDITION_LABELS[c]}</th>
                 ))}
                 <th>Actions</th>
               </tr>
@@ -449,7 +459,7 @@ export function PricingPage() {
                             })();
                           }}
                         >
-                          Use for frontend
+                          Quote from this
                         </button>
                         <button
                           type="button"
@@ -489,7 +499,7 @@ export function PricingPage() {
             {filteredRows.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="admin-empty">No competitor scrapes yet — click “Scrape live competitors”</div>
+                  <div className="admin-empty">No competitor prices yet — choose Check competitor prices above</div>
                 </td>
               </tr>
             ) : (
@@ -529,7 +539,7 @@ export function PricingPage() {
             {adjustments.length === 0 ? (
               <tr>
                 <td colSpan={4}>
-                  <div className="admin-empty">No adjustments yet</div>
+                  <div className="admin-empty">No adjustments yet — every quote uses the rule above</div>
                 </td>
               </tr>
             ) : (

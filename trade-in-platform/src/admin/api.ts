@@ -280,17 +280,73 @@ export interface CatalogDevice {
   }>;
 }
 
+/**
+ * The pipeline, and the colour each stage wears.
+ *
+ * Status is the most important fact on almost every admin screen, and it was
+ * being drawn with three tones across nine stages — completed, in transit and
+ * active all arrived as the same grey pill, so a table of offers carried no
+ * information until you read every row. The `tone` here is the one place this
+ * interface spends colour; everything around it stays neutral to pay for it.
+ *
+ * Tones are grouped by what the stage means to whoever is reading:
+ *   neutral  the offer is waiting on the customer
+ *   transit  it is moving, nothing to do yet
+ *   working  it is on a bench and needs staff attention
+ *   blocked  it is stuck and someone has to decide
+ *   money    payment is in flight
+ *   done     finished, no further action
+ */
 export const PIPELINE_STAGES = [
-  { id: "active_lead", label: "Active Leads" },
-  { id: "in_transit", label: "In Transit" },
-  { id: "delivered", label: "Delivered" },
-  { id: "being_inspected", label: "Being Inspected" },
-  { id: "general_hold", label: "General Hold" },
-  { id: "payout_processing", label: "Payout Processing" },
-  { id: "revised_offer", label: "Revised Offer" },
-  { id: "completed", label: "Completed" },
-  { id: "returned", label: "Returned" },
+  { id: "active_lead", label: "Active Leads", tone: "neutral" },
+  { id: "in_transit", label: "In Transit", tone: "transit" },
+  { id: "delivered", label: "Delivered", tone: "transit" },
+  { id: "being_inspected", label: "Being Inspected", tone: "working" },
+  { id: "general_hold", label: "General Hold", tone: "blocked" },
+  { id: "payout_processing", label: "Payout Processing", tone: "money" },
+  { id: "revised_offer", label: "Revised Offer", tone: "blocked" },
+  { id: "completed", label: "Completed", tone: "done" },
+  { id: "returned", label: "Returned", tone: "neutral" },
 ] as const;
+
+export type StageTone = (typeof PIPELINE_STAGES)[number]["tone"];
+
+/** Tone for a status id, falling back to neutral for anything unrecognised. */
+export function stageTone(status: string | null | undefined): StageTone {
+  return PIPELINE_STAGES.find((s) => s.id === status)?.tone ?? "neutral";
+}
+
+/**
+ * How a payout method is written for a person.
+ *
+ * The column holds "etransfer", "store-credit" and friends, and the offers
+ * table was printing them as-is — staff read "etransfer" beside a customer's
+ * name. The customer chose "Interac e-Transfer" on the sell page, so that is
+ * what the shop should see too; two names for one thing is how a counter
+ * conversation goes wrong. Unknown values are tidied rather than dropped, so a
+ * method added later still reads sensibly before anyone updates this.
+ */
+const PAYOUT_LABELS: Record<string, string> = {
+  etransfer: "Interac e-Transfer",
+  "e-transfer": "Interac e-Transfer",
+  "store-credit": "Store credit",
+  store_credit: "Store credit",
+  paypal: "PayPal",
+  cash: "Cash",
+};
+
+export function payoutLabel(method: string | null | undefined): string {
+  if (!method) return "—";
+  const key = method.trim().toLowerCase();
+  if (PAYOUT_LABELS[key]) return PAYOUT_LABELS[key];
+  const words = key.replace(/[_-]+/g, " ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
+
+/** The stage's customer-facing name, never the raw column value. */
+export function stageLabel(status: string | null | undefined): string {
+  return PIPELINE_STAGES.find((s) => s.id === status)?.label ?? "Unknown";
+}
 
 const CHANNEL_KEY = "tg-admin-channel";
 

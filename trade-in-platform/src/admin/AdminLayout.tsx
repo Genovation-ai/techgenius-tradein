@@ -288,7 +288,10 @@ export function AdminLayout() {
             ))}
           </select>
           <div className="admin-field-label" style={{ marginTop: "0.35rem", opacity: 0.75 }}>
-            Plan · {orgPlan}
+            {/* The plan name arrives lowercase from the API and used to be hidden
+                behind a text-transform. With labels in sentence case it has to be
+                capitalised properly rather than shouted. */}
+            Plan · {orgPlan ? orgPlan.charAt(0).toUpperCase() + orgPlan.slice(1) : "—"}
           </div>
 
           <label className="admin-field-label" htmlFor="tg-channel">

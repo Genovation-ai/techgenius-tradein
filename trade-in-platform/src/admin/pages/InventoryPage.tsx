@@ -112,7 +112,7 @@ export function InventoryPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="admin-empty">No inventory found</div>
+                  <div className="admin-empty">No stock yet. Devices land here once an offer completes</div>
                 </td>
               </tr>
             ) : (

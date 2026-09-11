@@ -387,7 +387,7 @@ export function OfferDetailPage() {
             {!uploads?.length ? (
               <tr>
                 <td colSpan={4}>
-                  <div className="admin-empty">No uploads yet</div>
+                  <div className="admin-empty">No photos yet. They appear here once a customer sends them</div>
                 </td>
               </tr>
             ) : (

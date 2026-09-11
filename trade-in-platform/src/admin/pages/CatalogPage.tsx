@@ -185,7 +185,7 @@ export function CatalogPage() {
         </div>
       ) : null}
 
-      {withImages.length === 0 && !loading ? <div className="admin-empty">Nothing To Show</div> : null}
+      {withImages.length === 0 && !loading ? <div className="admin-empty">Nothing here yet</div> : null}
 
       {selected ? (
         <div className="admin-panel" style={{ marginTop: "1rem" }}>

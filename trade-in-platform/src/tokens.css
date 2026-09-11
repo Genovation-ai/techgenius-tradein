@@ -184,3 +184,29 @@ p {
 .flow-panel {
   animation: tg-rise 0.45s var(--ease) both;
 }
+
+/* Numbers in this product are almost always stacked: a column of payouts, a
+   column of counts, an offer id under another offer id. Proportional figures
+   make those columns ragged and make two prices of the same magnitude look
+   like different lengths, so every figure in the interface is tabular. Prose
+   is left alone — tabular digits in a sentence look like a ransom note. */
+table,
+input,
+select,
+.admin-stat-value,
+.admin-status-pill,
+.offer-amount,
+.chip-price,
+.device-card-price {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+/* One radius scale, assigned by what a thing is rather than by which file it
+   was written in. The interface had eight in play — 6, 8, 9, 10, 12, 16, 18
+   and 50% — which reads as several products sharing a window. */
+:root {
+  --radius-pill: 999px;   /* status pills, avatars */
+  --radius-control: 8px;  /* buttons, inputs, chips */
+  --radius-surface: 10px; /* cards, panels, table shells */
+}

@@ -19,7 +19,7 @@ import { buildPricingContext, getSourcePointsForQuote, quoteDeviceOffer } from "
 import { mapOfferToTwenty } from "../lib/twenty";
 import { deviceImage } from "../data/deviceImages";
 import { deviceImageBundles } from "../data/deviceImageBundles";
-import { deviceImgSrc } from "../admin/api";
+import { deviceImgSrc, payoutLabel, stageLabel, stageTone } from "../admin/api";
 import type { DeviceModel } from "../data/catalog";
 
 function fullValuation(over: Partial<ValuationAnswers> = {}): ValuationAnswers {
@@ -476,5 +476,38 @@ describe("published Tech Genius conditions", () => {
     expect(gradeLabels.fair).toBe("Unacceptable");
     expect(gradeDefinitions.flawless).toContain("Unlocked and is a Canadian model");
     expect(gradeDefinitions.average).toContain("Compatible on Canadian cellular networks");
+  });
+});
+
+describe("the admin never shows a customer a raw column value", () => {
+  it("names payout methods the way the customer chose them", () => {
+    // The sell page offers "Interac e-Transfer"; the staff board printed
+    // "etransfer" beside the same offer.
+    expect(payoutLabel("etransfer")).toBe("Interac e-Transfer");
+    expect(payoutLabel("store-credit")).toBe("Store credit");
+    expect(payoutLabel("cash")).toBe("Cash");
+  });
+
+  it("tidies a method it has never seen rather than leaking it", () => {
+    expect(payoutLabel("wire_transfer")).toBe("Wire transfer");
+    expect(payoutLabel(null)).toBe("—");
+    expect(payoutLabel("")).toBe("—");
+  });
+
+  it("gives each pipeline stage a tone, so a table scans", () => {
+    // Three tones across nine stages meant completed and in-transit looked
+    // identical; these four must not collapse back into one another.
+    const tones = new Set([
+      stageTone("completed"),
+      stageTone("in_transit"),
+      stageTone("general_hold"),
+      stageTone("payout_processing"),
+    ]);
+    expect(tones.size).toBe(4);
+  });
+
+  it("falls back to a readable stage name, never the id", () => {
+    expect(stageLabel("payout_processing")).toBe("Payout Processing");
+    expect(stageLabel("something_new")).toBe("Unknown");
   });
 });

@@ -407,7 +407,7 @@ export function SettingsPage() {
             {promos.length === 0 ? (
               <tr>
                 <td colSpan={5}>
-                  <div className="admin-empty">No promo codes</div>
+                  <div className="admin-empty">No promo codes yet — create one to run an offer</div>
                 </td>
               </tr>
             ) : (
@@ -449,7 +449,7 @@ export function SettingsPage() {
             {workflow.length === 0 ? (
               <tr>
                 <td colSpan={4}>
-                  <div className="admin-empty">No workflow stages</div>
+                  <div className="admin-empty">No stages set up yet — add one to start routing offers</div>
                 </td>
               </tr>
             ) : (

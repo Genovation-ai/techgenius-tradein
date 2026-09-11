@@ -90,7 +90,7 @@ export function ReportsPage() {
                 {summary.topDevices.length === 0 ? (
                   <tr>
                     <td colSpan={3}>
-                      <div className="admin-empty">No device data</div>
+                      <div className="admin-empty">No devices priced yet</div>
                     </td>
                   </tr>
                 ) : (
@@ -127,7 +127,7 @@ export function ReportsPage() {
                 {summary.promos.length === 0 ? (
                   <tr>
                     <td colSpan={5}>
-                      <div className="admin-empty">No promo data</div>
+                      <div className="admin-empty">No promotions have been used yet</div>
                     </td>
                   </tr>
                 ) : (
@@ -168,7 +168,7 @@ export function ReportsPage() {
                 {summary.customers.length === 0 ? (
                   <tr>
                     <td colSpan={2}>
-                      <div className="admin-empty">No customer stats</div>
+                      <div className="admin-empty">Nothing to report until a customer trades in</div>
                     </td>
                   </tr>
                 ) : null}

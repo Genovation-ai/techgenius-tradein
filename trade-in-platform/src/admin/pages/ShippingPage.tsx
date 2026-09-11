@@ -88,7 +88,7 @@ export function ShippingPage() {
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={5}>
-                  <div className="admin-empty">No shipping offers found</div>
+                  <div className="admin-empty">No offers are in transit</div>
                 </td>
               </tr>
             ) : (

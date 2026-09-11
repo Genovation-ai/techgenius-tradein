@@ -74,7 +74,7 @@ export function CustomersPage() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={4}>
-                  <div className="admin-empty">No customers found</div>
+                  <div className="admin-empty">No customers yet. The first trade-in adds one</div>
                 </td>
               </tr>
             ) : (

@@ -78,7 +78,7 @@ export function DashboardPage() {
                 <span className="admin-count-badge">{rows.length}</span>
               </div>
               {rows.length === 0 ? (
-                <p className="admin-stage-empty">Nothing to see here</p>
+                <p className="admin-stage-empty">Nothing at this stage</p>
               ) : (
                 <ul className="admin-stage-list">
                   {rows.slice(0, 5).map((o) => (

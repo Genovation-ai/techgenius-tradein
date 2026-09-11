@@ -6,6 +6,9 @@ import {
   onStoreChange,
   PIPELINE_STAGES,
   withStoreScope,
+  payoutLabel,
+  stageLabel,
+  stageTone,
   type OfferRow,
 } from "../api";
 
@@ -91,19 +94,19 @@ export function OffersPage() {
       <div className="admin-kpis">
         <div className="admin-kpi">
           <div>
-            <span>Total Buyback</span>
+            <span>Offers</span>
             <strong>{filtered.length}</strong>
           </div>
         </div>
         <div className="admin-kpi">
           <div>
-            <span>Average Price</span>
+            <span>Average offer</span>
             <strong>${avg.toFixed(2)}</strong>
           </div>
         </div>
         <div className="admin-kpi">
           <div>
-            <span>Total Buyback Value</span>
+            <span>Total value</span>
             <strong>${totalValue.toLocaleString()}</strong>
           </div>
         </div>
@@ -130,7 +133,7 @@ export function OffersPage() {
           className="admin-input grow"
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search Everything or Scan barcode"
+          placeholder="Filter these offers — id, customer, or email"
         />
         <button type="button" className="admin-btn admin-btn--ghost" onClick={load}>
           Refresh
@@ -143,20 +146,20 @@ export function OffersPage() {
         <table className="admin-table">
           <thead>
             <tr>
-              <th>Quote ID#</th>
+              <th>Offer ID</th>
               <th>Customer</th>
               <th>Email</th>
               <th>Status</th>
               <th>Payout</th>
               <th>Value</th>
-              <th>Move</th>
+              <th>Change stage</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="admin-empty">No data to show!</div>
+                  <div className="admin-empty">No offers match this filter.</div>
                 </td>
               </tr>
             ) : (
@@ -171,18 +174,13 @@ export function OffersPage() {
                   <td>{o.email || "—"}</td>
                   <td>
                     <span
-                      className={`admin-status-pill ${
-                        o.status === "completed"
-                          ? "is-active"
-                          : o.status === "revised_offer" || o.status === "general_hold"
-                            ? "is-warn"
-                            : "is-muted"
-                      }`}
+                      className="admin-status-pill"
+                      data-tone={stageTone(o.status)}
                     >
-                      {PIPELINE_STAGES.find((s) => s.id === o.status)?.label || o.status}
+                      {stageLabel(o.status)}
                     </span>
                   </td>
-                  <td>{o.payout_method || "—"}</td>
+                  <td>{payoutLabel(o.payout_method)}</td>
                   <td>${Number(o.total_value || 0).toLocaleString()}</td>
                   <td>
                     <select

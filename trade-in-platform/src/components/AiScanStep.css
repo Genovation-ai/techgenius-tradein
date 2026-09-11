@@ -1,3 +1,7 @@
+/* Labels read in sentence case. Tracked-out capitals are the house style of
+   every generated dashboard, and they cost legibility at the small sizes
+   labels are actually set at. Letter-spacing went with them: it existed to
+   make the capitals readable and only loosens lowercase. */
 .ai-panel {
   position: relative;
 }
@@ -89,7 +93,6 @@
   background: rgba(255, 255, 255, 0.95);
   font-size: 0.72rem;
   font-weight: 700;
-  text-transform: uppercase;
   letter-spacing: 0.03em;
 }
 
@@ -199,8 +202,7 @@
 .ai-score span {
   font-size: 0.75rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
   color: rgba(50, 50, 50, 0.55);
 }
 
@@ -263,8 +265,7 @@
 .vision-metrics span {
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: rgba(50, 50, 50, 0.55);
 }
 
@@ -334,8 +335,7 @@
 .angle-slot-status {
   font-size: 0.68rem;
   color: var(--ink-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
 }
 
 .angle-active-card {

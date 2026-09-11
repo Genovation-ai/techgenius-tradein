@@ -96,7 +96,7 @@ export function PayoutsPage() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={5}>
-                  <div className="admin-empty">No payout rows</div>
+                  <div className="admin-empty">No payouts are due</div>
                 </td>
               </tr>
             ) : (

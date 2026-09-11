@@ -1,3 +1,7 @@
+/* Labels read in sentence case. Tracked-out capitals are the house style of
+   every generated dashboard, and they cost legibility at the small sizes
+   labels are actually set at. Letter-spacing went with them: it existed to
+   make the capitals readable and only loosens lowercase. */
 .tip-bar {
   display: grid;
   gap: 1rem;
@@ -94,21 +98,40 @@
 }
 
 .tip-label {
-  font-size: 0.65rem;
+  /* Was 0.65rem — around ten pixels, which is below what most people read
+     comfortably, on the one element whose job is telling them where they are. */
+  font-size: 0.74rem;
   font-weight: 650;
-  letter-spacing: 0.03em;
-  color: rgba(42, 42, 42, 0.38);
-  text-transform: uppercase;
+  color: rgba(42, 42, 42, 0.42);
 }
 
-.tip-step--current .tip-label,
 .tip-step--done .tip-label {
   color: var(--ink-soft);
 }
 
+/* The step you are on is named plainly; the rest are context. */
+.tip-step--current .tip-label {
+  color: var(--ink);
+  font-weight: 700;
+}
+
 @media (max-width: 720px) {
-  .tip-label {
+  /* Every label used to be hidden here, so a phone showed seven dots and a
+     counter and never said what any step was. The current step keeps its name
+     — that is the one a person actually needs — and the others fall back to
+     their dots for the shape of the journey. */
+  .tip-step:not(.tip-step--current) .tip-label {
     display: none;
+  }
+
+  .tip-step--current {
+    flex: 0 0 auto;
+  }
+
+  .tip-step--current .tip-label {
+    display: block;
+    white-space: nowrap;
+    font-size: 0.78rem;
   }
 
   .tip-step--current .tip-label {

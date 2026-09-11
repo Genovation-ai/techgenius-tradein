@@ -1,3 +1,7 @@
+/* Labels read in sentence case. Tracked-out capitals are the house style of
+   every generated dashboard, and they cost legibility at the small sizes
+   labels are actually set at. Letter-spacing went with them: it existed to
+   make the capitals readable and only loosens lowercase. */
 .offer-hero {
   border-radius: var(--radius-lg);
   padding: 1.5rem 1.35rem;
@@ -25,8 +29,7 @@
   z-index: 1;
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
+  letter-spacing: 0.01em;
   color: rgba(167, 224, 176, 0.95);
 }
 
@@ -120,8 +123,7 @@
 .offer-id-box span {
   font-size: 0.78rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.01em;
   color: var(--ink-soft);
 }
 

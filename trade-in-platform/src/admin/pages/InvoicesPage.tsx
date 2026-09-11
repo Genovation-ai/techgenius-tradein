@@ -108,7 +108,7 @@ export function InvoicesPage() {
             {rows.length === 0 ? (
               <tr>
                 <td colSpan={6}>
-                  <div className="admin-empty">No invoices yet</div>
+                  <div className="admin-empty">No invoices yet. One is created when an offer completes</div>
                 </td>
               </tr>
             ) : (
