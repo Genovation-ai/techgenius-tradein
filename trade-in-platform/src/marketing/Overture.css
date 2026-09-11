@@ -1,0 +1,128 @@
+/* The overture. Black ground, one number, one hairline.
+   Type and colour come from the landing page's own tokens so the handover at
+   the end is a dissolve between two states of the same page, not a cut between
+   two designs. */
+
+.rc-overture {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  background: #000;
+  opacity: 1;
+  transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.rc-overture.is-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rc-overture-inner {
+  display: grid;
+  justify-items: center;
+  gap: 0.9rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.rc-overture-mark {
+  margin: 0;
+  font-family: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  font-size: clamp(15px, 1.4vw, 18px);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: rgba(242, 248, 245, 0.62);
+}
+
+/* Uncoloured, per the landing's rule that the price carries by size alone.
+   Tabular figures matter more here than anywhere: without them the number
+   jitters sideways on every frame while the digits are still rolling. */
+.rc-overture-price {
+  margin: 0;
+  font-family: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  font-size: clamp(64px, 13vw, 168px);
+  line-height: 0.92;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  color: #f2f8f5;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
+}
+
+.rc-overture-cur {
+  font-size: 0.42em;
+  vertical-align: 0.52em;
+  margin-right: 0.06em;
+  color: rgba(242, 248, 245, 0.55);
+}
+
+.rc-overture-say {
+  margin: 0;
+  font-family: "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(13px, 1.15vw, 15px);
+  color: rgba(147, 170, 160, 0.9);
+  max-width: 34ch;
+}
+
+/* The one emerald thing, and it is doing a job: it measures the wait, so the
+   colour still means "live" when the landing takes over. */
+.rc-overture-rule {
+  width: min(220px, 42vw);
+  height: 2px;
+  margin-top: 0.4rem;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  position: relative;
+}
+
+.rc-overture-rule::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #34e89a;
+  transform-origin: left center;
+  animation: rc-overture-sweep 1.53s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes rc-overture-sweep {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.rc-overture-skip {
+  position: absolute;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(242, 248, 245, 0.7);
+  font-family: "Instrument Sans", -apple-system, sans-serif;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.rc-overture-skip:hover {
+  color: #f2f8f5;
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.rc-overture-skip:focus-visible {
+  outline: 2px solid #34e89a;
+  outline-offset: 3px;
+}
+
+/* The component does not mount when motion is reduced, so this is only a
+   belt-and-braces guard for anyone who changes the setting mid-visit. */
+@media (prefers-reduced-motion: reduce) {
+  .rc-overture,
+  .rc-overture-rule::after {
+    animation: none;
+    transition: none;
+  }
+}

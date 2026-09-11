@@ -24,7 +24,11 @@
   --rc-glass: rgba(255, 255, 255, 0.035);
   --rc-edge: rgba(255, 255, 255, 0.09);
   --rc-edge-2: rgba(255, 255, 255, 0.17);
-  --rc-ghost: rgba(242, 248, 245, 0.3);
+  /* The headline's second line is set in this, and at 0.3 it scored 2.37
+     against the hero — below the 3.0 that large text needs, on the biggest
+     words on the site. The line is meant to recede behind the first, not to
+     be unreadable; 0.42 keeps the step down and clears the bar. */
+  --rc-ghost: rgba(242, 248, 245, 0.42);
 
   --rc-display: "Bricolage Grotesque", "Segoe UI", sans-serif;
   --rc-body: "Instrument Sans", -apple-system, BlinkMacSystemFont, sans-serif;

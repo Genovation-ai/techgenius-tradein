@@ -306,6 +306,13 @@ body:has(.admin-login) {
   color: var(--tg-ink);
 }
 
+/* The magnifier is a flex child beside an input that wants all the width, so
+   it was being compressed to 17.3px across against 18px tall — a circle drawn
+   as a very slight ellipse. Every other icon in the product is square. */
+.admin-search > svg {
+  flex-shrink: 0;
+}
+
 .admin-search {
   position: relative;
 }
@@ -1079,14 +1086,21 @@ textarea.admin-input:focus {
 }
 .admin-login-pw .admin-pw-toggle:hover { background: #f3f4f6; color: var(--tg-ink); }
 
-.admin-login-left input[type="email"],
-.admin-login-left input[type="password"],
-.admin-login-left input[type="text"] {
+/* Was a list of three type selectors. Four of the six fields on the sign-up
+   form carry no type attribute at all — they default to text, but
+   input[type="text"] only matches an attribute that is actually written — so
+   those four kept the browser's own styling: a 24px box with an inset border,
+   sitting beside 44px rounded ones. Matching the element and excluding the
+   controls that should look like controls fixes the four and cannot miss a
+   field added later. */
+.admin-login-left input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]) {
   border: 1px solid var(--tg-border);
   border-radius: 8px;
   padding: 0.72rem 0.85rem;
   font-size: 0.95rem;
   font-weight: 400;
+  width: 100%;
+  min-height: 44px;
 }
 .admin-login-left input:focus {
   outline: none;

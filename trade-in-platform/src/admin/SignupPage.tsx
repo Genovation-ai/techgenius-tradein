@@ -71,7 +71,7 @@ export function SignupPage() {
       <section className="admin-login-left">
         <div className="admin-login-brand-row">
           <span className="rc-auth-mark" aria-hidden />
-          Trade-In SaaS
+          Reclaim
         </div>
         <Link to="/" className="admin-login-back">Back to Reclaim</Link>
         <h1>Create your shop</h1>
@@ -93,7 +93,7 @@ export function SignupPage() {
             />
           </label>
           <label>
-            Shop slug (widget URL key)
+            Your web address
             <input
               value={slug}
               onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
@@ -132,19 +132,19 @@ export function SignupPage() {
           Already have a shop? <Link to="/admin/login">Sign in</Link>
         </p>
       </section>
+      {/* Someone on this page has already decided to try it; the job is to get
+          them through six fields. What was here — a grid of nine unexplained
+          words and a line about multi-tenant isolation and per-shop API keys —
+          sold nothing to a shop owner and described plumbing they will never
+          touch. One sentence about what happens next earns its place; the
+          feature tour does not, and it has the whole landing page anyway. */}
       <section className="admin-login-right">
-        <h2>Built to resell</h2>
-        <div className="admin-login-preview" aria-hidden>
-          <div className="admin-login-preview-top">
-            <i /><i /><i />
-          </div>
-          <div className="admin-login-mini-grid">
-            {["Org", "Stores", "Widget", "Keys", "Offers", "Inventory", "Invoices", "Team", "Brand"].map((t) => (
-              <div key={t}>{t}</div>
-            ))}
-          </div>
-        </div>
-        <p>Multi-tenant isolation, white-label branding, and per-shop API keys — SaaS-ready.</p>
+        <h2>You'll be quoting in about a minute</h2>
+        <p>
+          We create your shop, put a working trade-in page on your own web address,
+          and price it from what buyers are paying this week. Nothing to install,
+          and no card until you decide to keep it.
+        </p>
       </section>
     </div>
   );

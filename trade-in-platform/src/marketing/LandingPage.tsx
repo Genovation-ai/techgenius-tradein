@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Overture } from "./Overture";
 import { Link } from "react-router-dom";
 import {
   motion,
@@ -253,6 +254,10 @@ export default function LandingPage() {
 
   return (
     <div className="rc">
+      {/* Sits above the page rather than in front of the route, so the landing
+          below is already mounted, painted and interactive by the time it
+          clears. */}
+      <Overture />
       <Suspense fallback={null}>
         <FlowWave />
       </Suspense>
