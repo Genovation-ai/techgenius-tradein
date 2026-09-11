@@ -197,6 +197,13 @@ export function DevicePickStep({
                       height={192}
                       loading="lazy"
                       decoding="async"
+                      ref={(el) => {
+                        // A cached photo can already be decoded before React
+                        // attaches onLoad, and that load event never fires —
+                        // without this the tile would stay invisible.
+                        if (el?.complete) el.classList.add("is-loaded");
+                      }}
+                      onLoad={(e) => e.currentTarget.classList.add("is-loaded")}
                       onError={() => setFailed((f) => ({ ...f, [device.id]: true }))}
                     />
                   ) : (

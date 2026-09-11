@@ -25,6 +25,9 @@
   border: 0;
   background: transparent;
   color: var(--ink-soft);
+  /* Back is the control people reach for most on a phone, and it was the
+     smallest thing on the screen at 31px tall. */
+  min-height: 44px;
   font-weight: 600;
   padding: 0.35rem 0;
   transition: color 0.15s ease;

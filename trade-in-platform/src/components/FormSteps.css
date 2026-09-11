@@ -56,6 +56,10 @@
   background: var(--paper);
   border-radius: var(--radius-sm);
   padding: 0.6rem 0.95rem;
+  /* 44px is the smallest target a finger hits reliably; these sat at 41 and
+     the carrier and colour rows are almost entirely chips. */
+  min-height: 44px;
+  justify-content: center;
   font-weight: 650;
   color: var(--ink);
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -265,4 +269,14 @@
   flex: none;
   margin-top: 1px;
   accent-color: var(--mint, #16a34a);
+}
+
+.chip:active,
+.grade-card:active {
+  transform: scale(0.985);
+}
+
+.chip {
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
+    transform 0.12s var(--ease);
 }

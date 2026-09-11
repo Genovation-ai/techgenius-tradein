@@ -25,7 +25,19 @@ export function CategoryStep({ onSelect }: Props) {
             onClick={() => onSelect(c.id)}
           >
             <span className="device-card-media">
-              <img src={assetUrl(categoryImages[c.id])} alt="" width={160} height={192} decoding="async" />
+              <img
+                src={assetUrl(categoryImages[c.id])}
+                alt=""
+                width={160}
+                height={192}
+                decoding="async"
+                ref={(el) => {
+                  // Cached images never fire onLoad; without this they would
+                  // stay at the fade's starting opacity of zero.
+                  if (el?.complete) el.classList.add("is-loaded");
+                }}
+                onLoad={(e) => e.currentTarget.classList.add("is-loaded")}
+              />
             </span>
             <span className="device-card-name">{c.label}</span>
             <span className="device-card-price">{c.blurb}</span>

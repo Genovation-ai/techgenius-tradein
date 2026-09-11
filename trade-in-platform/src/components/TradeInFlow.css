@@ -81,3 +81,30 @@
     padding-inline: 1rem;
   }
 }
+
+/* The widget's own motion guard. The admin and marketing stylesheets each had
+   one; the customer flow, which is the part with the most movement, did not.
+   Anyone who has asked their system to reduce motion gets the same interface
+   with the animation removed rather than a different one. */
+@media (prefers-reduced-motion: reduce) {
+  .flow-panel *,
+  .flow-panel *::before,
+  .flow-panel *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Opacity is how the photo fade and the enabled-button fade reveal content,
+     so those still need to land on their finished value, just instantly. */
+  .device-card-media img {
+    opacity: 1;
+  }
+
+  .device-card:active,
+  .chip:active,
+  .grade-card:active {
+    transform: none;
+  }
+}

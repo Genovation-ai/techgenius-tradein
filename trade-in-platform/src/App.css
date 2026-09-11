@@ -1,0 +1,10 @@
+
+/* Preview-only chrome, but it is still tapped on a phone. The links sat at
+   22px — the bare line height — so they get the same 44px target as
+   everything else rather than being the one thing you have to aim at. */
+.embed-banner a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 0.15rem;
+}

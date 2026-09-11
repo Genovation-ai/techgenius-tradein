@@ -84,6 +84,12 @@
 }
 
 .embed-banner a {
+  /* Preview-only chrome, but still tapped on a phone. These sat at 22px — the
+     bare line height — so they get the same 44px target as everything else
+     rather than being the one thing you have to aim at. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--ink);
   text-decoration: underline;
   text-underline-offset: 2px;

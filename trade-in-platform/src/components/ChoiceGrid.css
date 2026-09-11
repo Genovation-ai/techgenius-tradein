@@ -165,3 +165,27 @@
   margin-top: 1rem;
   width: 100%;
 }
+
+/* A lazily-decoded photo used to appear at full opacity the instant it
+   arrived, so a grid scrolled at speed flickered as tiles snapped in. The
+   class is added by the image's own load handler, so the fade tracks the
+   decode rather than the mount. */
+.device-card-media img {
+  opacity: 0;
+  transition: opacity 0.28s var(--ease), transform 0.35s var(--ease);
+}
+
+.device-card-media img.is-loaded {
+  opacity: 1;
+}
+
+/* Touch targets need to acknowledge the press. Without this a tap on a phone
+   gives no feedback until the next step has already rendered. */
+.device-card:active {
+  transform: scale(0.985);
+}
+
+.device-card {
+  transition: border-color 0.2s var(--ease), background 0.2s var(--ease),
+    transform 0.12s var(--ease);
+}

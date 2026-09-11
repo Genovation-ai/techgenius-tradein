@@ -1,4 +1,6 @@
 import type { Database } from "better-sqlite3";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { ensureSaasSchema } from "../services/tenancy.js";
 
 /** Additive schema patches for existing DBs (CREATE IF NOT EXISTS / ALTER safe). */
@@ -197,4 +199,52 @@ export function applySchemaPatches(db: Database): void {
 
   // SaaS multi-tenant foundation (orgs, stores, settings, API keys)
   ensureSaasSchema(db);
+
+  repointStalePlaceholderImages(db);
+}
+
+/**
+ * Point a device at its real photograph once one exists on disk.
+ *
+ * Device images are served from whatever `devices.image_url` holds, and for a
+ * device with no photograph that was a generated plate at
+ * `/devices/_silhouette-<id>.png`. Dropping a real photograph in as
+ * `/devices/<id>.png` therefore changed nothing a customer could see: the
+ * column still named the plate, and the widget kept rendering "Photo coming
+ * soon" over a file that had been replaced. Thirty devices sat like that,
+ * including iPads whose photographs had already shipped.
+ *
+ * So the column follows the disk. If a device still names a plate and a real
+ * file exists under its own id, the column is repointed. Nothing is touched
+ * when the file is absent, and a device already naming something other than a
+ * plate is left alone — a deliberate override stays a deliberate override.
+ *
+ * Runs on boot so a deployment that carries new photographs also publishes
+ * them, without a manual step that would eventually be forgotten.
+ */
+function repointStalePlaceholderImages(db: Database): void {
+  const here = import.meta.dirname;
+  const devicesDir = [
+    path.resolve(here, "../../public/devices"),
+    path.resolve(here, "../../../public/devices"),
+    path.resolve(here, "../../../trade-in-platform/public/devices"),
+  ].find((c) => existsSync(c));
+  if (!devicesDir) return;
+
+  const stale = db
+    .prepare("SELECT id, image_url FROM devices WHERE image_url LIKE '/devices/_silhouette-%'")
+    .all() as Array<{ id: string; image_url: string }>;
+  if (!stale.length) return;
+
+  const update = db.prepare("UPDATE devices SET image_url = ? WHERE id = ?");
+  let moved = 0;
+  const apply = db.transaction(() => {
+    for (const d of stale) {
+      if (!existsSync(path.join(devicesDir, `${d.id}.png`))) continue;
+      update.run(`/devices/${d.id}.png`, d.id);
+      moved++;
+    }
+  });
+  apply();
+  if (moved) console.log(`[images] repointed ${moved} device(s) from a plate to a real photo`);
 }

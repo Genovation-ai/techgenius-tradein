@@ -154,7 +154,9 @@ def main() -> int:
 
     print(f"\n{written} photo(s) {'imported' if args.apply else 'ready — re-run with --apply'}, {skipped} skipped")
     if args.apply and written:
-        print("Commit public/devices and redeploy; the widget picks them up by id.")
+        print("Commit public/devices and redeploy.")
+        print("The backend repoints each device from its placeholder to the new")
+        print("file on boot, so no database edit is needed.")
     return 0
 
 
