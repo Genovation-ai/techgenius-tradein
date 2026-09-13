@@ -201,6 +201,66 @@ export function applySchemaPatches(db: Database): void {
   ensureSaasSchema(db);
 
   repointStalePlaceholderImages(db);
+  dedupeScrapedPrices(db);
+}
+
+/**
+ * Collapse the scrape log to one row per price, and keep it that way.
+ *
+ * Every scrape run inserted a fresh row for every price it found, with no
+ * constraint stopping it, so the table held the same competitor, device,
+ * storage and condition over and over — locally 19,886 rows covering 3,360
+ * actual prices, some stored twenty-four times. Nothing read wrongly, because
+ * every query already asks for the latest row per key, but the file grows
+ * without limit and the manual "Check competitor prices" button adds a
+ * complete duplicate set on each press.
+ *
+ * The newest row per key survives — exactly the row every read already
+ * resolves to — so no price a customer or the shop can see changes. The unique
+ * index then makes a repeat physically impossible rather than merely unlikely,
+ * and the writer upserts against it.
+ *
+ * product_id is nullable and SQLite treats NULLs in a unique index as distinct
+ * from one another, which would have let null-keyed rows duplicate freely, so
+ * the index keys on COALESCE rather than on the column.
+ *
+ * The index is created only here, never in schema.ts. migrate() executes the
+ * schema before the patches, so declaring it there built it against a table
+ * that still held duplicates and threw UNIQUE constraint failed on boot — the
+ * collapse has to happen first, in the same transaction.
+ */
+function dedupeScrapedPrices(db: Database): void {
+  const has = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='scraped_prices'")
+    .get();
+  if (!has) return;
+
+  const already = db
+    .prepare("SELECT name FROM sqlite_master WHERE type='index' AND name='idx_scraped_prices_unique'")
+    .get();
+  if (already) return;
+
+  const before = (db.prepare("SELECT COUNT(*) AS n FROM scraped_prices").get() as { n: number }).n;
+
+  const run = db.transaction(() => {
+    db.exec(`
+      DELETE FROM scraped_prices
+       WHERE id NOT IN (
+         SELECT MAX(id) FROM scraped_prices
+          GROUP BY competitor_name, COALESCE(product_id, ''), variant, condition
+       );
+    `);
+    db.exec(`
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_scraped_prices_unique
+        ON scraped_prices(competitor_name, COALESCE(product_id, ''), variant, condition);
+    `);
+  });
+  run();
+
+  const after = (db.prepare("SELECT COUNT(*) AS n FROM scraped_prices").get() as { n: number }).n;
+  if (before !== after) {
+    console.log(`[pricing] scrape log collapsed ${before} rows to ${after} (one per price)`);
+  }
 }
 
 /**

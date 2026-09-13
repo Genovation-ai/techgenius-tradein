@@ -127,11 +127,28 @@ export function cleanupRows(
 
 export function persistScrapedRows(rows: ScrapedPrice[], engineHint?: string): number {
   const db = getDb();
+  // One row per competitor + device + storage + condition, updated in place.
+  // A plain insert appended a fresh row on every run, so re-scraping — weekly,
+  // or each press of "Check competitor prices" — grew the table by a full copy
+  // of itself while every read only ever wanted the newest row. The conflict
+  // target matches the unique index in patches.ts, COALESCE included, because
+  // product_id is nullable and SQLite counts NULLs as distinct.
   const stmt = db.prepare(
     `INSERT INTO scraped_prices
       (competitor_name, make, model, product_id, variant, condition,
        trade_in_price, sell_price, currency, source_url, raw_json, scraped_at, engine)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(competitor_name, COALESCE(product_id, ''), variant, condition)
+     DO UPDATE SET
+       make = excluded.make,
+       model = excluded.model,
+       trade_in_price = excluded.trade_in_price,
+       sell_price = excluded.sell_price,
+       currency = excluded.currency,
+       source_url = excluded.source_url,
+       raw_json = excluded.raw_json,
+       scraped_at = excluded.scraped_at,
+       engine = excluded.engine`,
   );
   const tx = db.transaction(() => {
     for (const r of rows) {
