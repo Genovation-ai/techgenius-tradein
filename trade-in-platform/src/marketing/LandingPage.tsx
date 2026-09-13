@@ -1,12 +1,14 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Overture } from "./Overture";
+import { MarginDrift } from "./MarginDrift";
 import { Link } from "react-router-dom";
 import {
   motion,
   useMotionValueEvent,
-  useScroll,
-  useTransform,
   useReducedMotion,
+  useScroll,
+  useSpring,
+  useTransform,
 } from "framer-motion";
 import { fetchDevices, fetchQuote, type ApiDevice } from "../lib/tradeInApi";
 import "./LandingPage.css";
@@ -188,10 +190,25 @@ export default function LandingPage() {
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
 
-  const { scrollY } = useScroll();
+  const { scrollY, scrollYProgress } = useScroll();
+  // Smoothed so the spine glides rather than tracking the wheel step for step;
+  // a bar that snaps with each notch reads as a scrollbar, not as progress.
+  const spine = useSpring(scrollYProgress, { stiffness: 120, damping: 30, mass: 0.35 });
   const [stuck, setStuck] = useState(false);
   useMotionValueEvent(scrollY, "change", (v) => setStuck(v > 8));
   const heroRef = useRef<HTMLDivElement | null>(null);
+  /* Leaving the hero moves the words and the wave at different rates, so the
+     scene has depth instead of sliding away as one flat sheet. Small numbers on
+     purpose: this should be felt while scrolling past, not noticed.
+     
+     Driven from the page's own scroll position rather than from the hero's
+     progress through the viewport. A ref-relative useScroll reports zero again
+     once its target is fully above the viewport, so the hero faded to nothing
+     and then snapped back to fully opaque the moment it cleared the top —
+     off-screen, so invisible, but wrong, and one sticky ancestor away from
+     being a flash. Pixels from the top cannot rewind. */
+  const heroLift = useTransform(scrollY, [0, 700], [0, -90], { clamp: true });
+  const heroFade = useTransform(scrollY, [0, 520], [1, 0], { clamp: true });
   const [pastHero, setPastHero] = useState(false);
   useMotionValueEvent(scrollY, "change", (v) => {
     const h = heroRef.current?.getBoundingClientRect().height ?? 640;
@@ -261,6 +278,12 @@ export default function LandingPage() {
       <Suspense fallback={null}>
         <FlowWave />
       </Suspense>
+      {/* One hairline across the top, in the emerald the overture and the live
+          state already use, so the colour keeps meaning "this is running".
+          Reduced motion gets no spine at all rather than a jumping one. */}
+      {reduce ? null : (
+        <motion.div className="rc-spine" style={{ scaleX: spine }} aria-hidden />
+      )}
       <header className="rc-nav" data-stuck={stuck}>
         <div className="rc-wrap rc-nav-in">
           <span className="rc-mark">
@@ -290,7 +313,10 @@ export default function LandingPage() {
 
       <main>
         <section className="rc-hero" ref={heroRef}>
-          <div className="rc-wrap">
+          <motion.div
+            className="rc-wrap"
+            style={reduce ? undefined : { y: heroLift, opacity: heroFade }}
+          >
             <motion.div
               initial={reduce ? false : "hidden"}
               animate="shown"
@@ -319,7 +345,7 @@ export default function LandingPage() {
                 Scroll — the engine is running below
               </motion.p>
             </motion.div>
-          </div>
+          </motion.div>
         </section>
 
         {/* Everything past the hero sits on a veil (see .rc-below): the field
@@ -392,11 +418,16 @@ export default function LandingPage() {
 
         <section className="rc-section">
           <div className="rc-wrap">
-            <h2>Most shops guess. Guessing is what costs you.</h2>
-            <p className="rc-section-lead">
-              Pay over the market and the margin is gone before the device reaches the
-              shelf. Pay under and the customer walks to whoever quoted them properly.
-            </p>
+            <div className="rc-cost-grid">
+              <div>
+                <h2>Most shops guess. Guessing is what costs you.</h2>
+                <p className="rc-section-lead">
+                  Pay over the market and the margin is gone before the device reaches the
+                  shelf. Pay under and the customer walks to whoever quoted them properly.
+                </p>
+              </div>
+              <MarginDrift />
+            </div>
             <div className="rc-points">
               <div className="rc-point">
                 <h3>Nothing quietly goes stale</h3>

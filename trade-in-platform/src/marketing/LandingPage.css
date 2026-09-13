@@ -779,3 +779,101 @@ html.rc-dark body {
   color: var(--rc-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* ——— Scroll spine ———
+   One hairline, fixed to the top, scaled by read position. Transform-only so
+   it never costs a layout, and transform-origin left so it grows the way the
+   page is read. */
+.rc-spine {
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 2px;
+  z-index: 90;
+  background: var(--rc-mat);
+  transform-origin: 0% 50%;
+  will-change: transform;
+  pointer-events: none;
+}
+
+/* ——— The cost of guessing ———
+   Headline left, the same claim as a picture on the right. The right column
+   was empty, and this section's argument is a quantity. */
+.rc-cost-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.85fr);
+  gap: clamp(28px, 5vw, 76px);
+  align-items: center;
+}
+
+.rc-drift {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.rc-drift-cap {
+  margin: 0;
+  font-size: 13px;
+  color: var(--rc-muted);
+}
+
+.rc-drift-plot {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(0, 1fr));
+  gap: clamp(6px, 0.9vw, 12px);
+  height: clamp(150px, 19vw, 224px);
+  align-items: end;
+  padding: 16px;
+  border: 1px solid var(--rc-edge);
+  border-radius: 12px;
+  background: var(--rc-glass);
+}
+
+.rc-drift-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  height: 100%;
+  align-items: end;
+}
+
+/* The track is full height and the fill inside it is what animates, so the
+   plot never reflows as the bars grow. */
+.rc-drift-bar {
+  display: block;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+}
+
+.rc-drift-bar i {
+  display: block;
+  width: 100%;
+  border-radius: 2px 2px 0 0;
+  will-change: height;
+}
+
+.rc-drift-bar--priced i { background: var(--rc-mat); }
+.rc-drift-bar--guessed i { background: rgba(242, 248, 245, 0.26); }
+
+.rc-drift-key {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--rc-muted);
+}
+
+.rc-drift-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+.rc-drift-swatch--priced { background: var(--rc-mat); }
+.rc-drift-swatch--guessed { background: rgba(242, 248, 245, 0.26); margin-left: 10px; }
+
+@media (max-width: 860px) {
+  .rc-cost-grid { grid-template-columns: minmax(0, 1fr); }
+}
