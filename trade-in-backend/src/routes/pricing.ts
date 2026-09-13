@@ -140,6 +140,18 @@ pricingRouter.get("/freshness", (_req, res) => {
   const catalogue = db.prepare("SELECT COUNT(*) AS n FROM devices WHERE enabled = 1").get() as {
     n: number;
   };
+  /**
+   * How many devices the weekly GoRecell sync can actually visit.
+   *
+   * That sync iterates the gorecell_product_map settings rows, so with none of
+   * them it finishes in seconds having refreshed nothing, and reports success
+   * while doing it. Without this number the only visible symptom is low
+   * coverage, which looks like a scraping problem rather than a missing
+   * mapping — two very different fixes.
+   */
+  const mapped = db
+    .prepare("SELECT COUNT(*) AS n FROM settings WHERE key LIKE 'gorecell_product_map:%'")
+    .get() as { n: number };
   db.close();
 
   const now = Date.now();
@@ -163,7 +175,11 @@ pricingRouter.get("/freshness", (_req, res) => {
   res.json({
     sources,
     stale: sources.filter((s) => s.state !== "ok").map((s) => s.label),
-    coverage: { devices_with_live_prices: covered.n, devices_in_catalogue: catalogue.n },
+    coverage: {
+      devices_with_live_prices: covered.n,
+      devices_in_catalogue: catalogue.n,
+      devices_mapped_for_sync: mapped.n,
+    },
   });
 });
 
