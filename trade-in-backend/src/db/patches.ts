@@ -1,5 +1,5 @@
 import type { Database } from "better-sqlite3";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { ensureSaasSchema } from "../services/tenancy.js";
 
@@ -202,6 +202,64 @@ export function applySchemaPatches(db: Database): void {
 
   repointStalePlaceholderImages(db);
   dedupeScrapedPrices(db);
+  seedGorecellProductMap(db);
+}
+
+/**
+ * Give the weekly GoRecell sync something to visit.
+ *
+ * The sync iterates gorecell_product_map rows in settings — one per device,
+ * mapping our id to GoRecell's product id. Those rows were built by an import
+ * script run against a database by hand, which happened on a laptop and never
+ * on the deployment. So the deployment had a 416-device catalogue, a weekly
+ * sync that finished in fifteen seconds having visited nothing, and live
+ * prices for twelve devices. Nothing was failing; there was simply nothing to
+ * do, and the job said so by saying nothing.
+ *
+ * The map now ships with the code, and this seeds it on boot when the table
+ * has none. Only ids that exist in this database's devices table are written,
+ * so a mapping for a model this deployment does not carry cannot leave the
+ * sync chasing a device that is not there. It never overwrites: a deployment
+ * that has its own map keeps it.
+ */
+function seedGorecellProductMap(db: Database): void {
+  const existing = (
+    db.prepare("SELECT COUNT(*) AS n FROM settings WHERE key LIKE 'gorecell_product_map:%'").get() as {
+      n: number;
+    }
+  ).n;
+  if (existing > 0) return;
+
+  const file = [
+    path.resolve(import.meta.dirname, "../../config/gorecell-product-map.json"),
+    path.resolve(import.meta.dirname, "../../../config/gorecell-product-map.json"),
+  ].find((c) => existsSync(c));
+  if (!file) return;
+
+  let map: Record<string, string>;
+  try {
+    map = JSON.parse(readFileSync(file, "utf8")) as Record<string, string>;
+  } catch (err) {
+    console.warn("[pricing] could not read gorecell-product-map.json:", err);
+    return;
+  }
+
+  const known = new Set(
+    (db.prepare("SELECT id FROM devices").all() as Array<{ id: string }>).map((r) => r.id),
+  );
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+  );
+  let seeded = 0;
+  const run = db.transaction(() => {
+    for (const [deviceId, productId] of Object.entries(map)) {
+      if (!known.has(deviceId) || !productId) continue;
+      insert.run(`gorecell_product_map:${deviceId}`, String(productId));
+      seeded++;
+    }
+  });
+  run();
+  console.log(`[pricing] seeded GoRecell product map for ${seeded} of ${Object.keys(map).length} devices`);
 }
 
 /**
