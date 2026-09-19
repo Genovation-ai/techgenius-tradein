@@ -20,6 +20,8 @@ import { mapOfferToTwenty } from "../lib/twenty";
 import { deviceImage } from "../data/deviceImages";
 import { deviceImageBundles } from "../data/deviceImageBundles";
 import { deviceImgSrc, payoutLabel, stageLabel, stageTone } from "../admin/api";
+import { estimatedYear, newestFirst, orderBrands } from "../lib/deviceOrder";
+import { colorsFor, FALLBACK_COLORS } from "../lib/deviceColors";
 import type { DeviceModel } from "../data/catalog";
 
 function fullValuation(over: Partial<ValuationAnswers> = {}): ValuationAnswers {
@@ -509,5 +511,63 @@ describe("the admin never shows a customer a raw column value", () => {
   it("falls back to a readable stage name, never the id", () => {
     expect(stageLabel("payout_processing")).toBe("Payout Processing");
     expect(stageLabel("something_new")).toBe("Unknown");
+  });
+});
+
+describe("the model list reads newest first, the way a shop lists them", () => {
+  const d = (name: string, basePrice = 0) => ({ name, basePrice });
+
+  it("puts Apple first and All brands is not a brand", () => {
+    expect(orderBrands(["Samsung", "Google", "Apple", "LG"])).toEqual(["Apple", "Google", "LG", "Samsung"]);
+  });
+
+  it("orders iPhones by generation, not by the alphabet", () => {
+    const names = newestFirst([d("iPhone 11"), d("iPhone 15 Pro Max"), d("iPhone 17"), d("iPhone 15")]).map((x) => x.name);
+    expect(names[0]).toBe("iPhone 17");
+    expect(names[names.length - 1]).toBe("iPhone 11");
+  });
+
+  it("does not let a Galaxy A71 outrank a Galaxy S25 because 71 > 25", () => {
+    // A71 shipped in 2020, S25 in 2025. A bare number compare had the A71 on top.
+    expect(estimatedYear("Galaxy A71")).toBe(2020);
+    expect(estimatedYear("Galaxy S25 Ultra")).toBe(2025);
+    const names = newestFirst([d("Galaxy A71", 120), d("Galaxy S25 Ultra", 900), d("Galaxy S10", 90)]).map((x) => x.name);
+    expect(names).toEqual(["Galaxy S25 Ultra", "Galaxy A71", "Galaxy S10"]);
+  });
+
+  it("places the 2022 iPhone SE among 2022 phones, not beside the iPhone 16", () => {
+    const names = newestFirst([d("iPhone SE (3rd gen)", 150), d("iPhone 16", 600), d("iPhone 14", 300), d("iPhone 15", 450)]).map((x) => x.name);
+    expect(names).toEqual(["iPhone 16", "iPhone 15", "iPhone 14", "iPhone SE (3rd gen)"]);
+  });
+
+  it("breaks a tie within a generation by price, so Pro Max leads base", () => {
+    const names = newestFirst([d("iPhone 16", 600), d("iPhone 16 Pro Max", 900), d("iPhone 16 Pro", 800)]).map((x) => x.name);
+    expect(names).toEqual(["iPhone 16 Pro Max", "iPhone 16 Pro", "iPhone 16"]);
+  });
+});
+
+describe("colours are the model's own, not a generic dozen", () => {
+  it("gives a Pro its Pro palette and the base model its own", () => {
+    expect(colorsFor("iPhone 16 Pro")).toContain("Desert Titanium");
+    expect(colorsFor("iPhone 16 Pro")).not.toContain("Ultramarine");
+    expect(colorsFor("iPhone 16")).toContain("Ultramarine");
+    expect(colorsFor("iPhone 16")).not.toContain("Desert Titanium");
+  });
+
+  it("knows Samsung and Google by family", () => {
+    expect(colorsFor("Galaxy S25 Ultra")).toContain("Titanium Silverblue");
+    expect(colorsFor("Pixel 9 Pro")).toContain("Rose Quartz");
+    expect(colorsFor("Galaxy S10e")).toContain("Canary Yellow");
+  });
+
+  it("always leaves room for the finish nobody listed", () => {
+    expect(colorsFor("iPhone 15")).toContain("Other");
+    expect(colorsFor("Some Unknown Handset")).toContain("Other");
+  });
+
+  it("falls back to a short neutral set, never the old twelve", () => {
+    const c = colorsFor("Some Unknown Handset");
+    expect(c.length).toBeLessThanOrEqual(FALLBACK_COLORS.length + 1);
+    expect(c).not.toContain("Purple");
   });
 });

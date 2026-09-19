@@ -37,24 +37,22 @@ widgetRouter.get("/template", (req, res) => {
 });
 
 /**
- * Colours the widget offers. The column is free text, so this is what keeps a
- * crafted request from writing arbitrary strings into a field the shop reads
- * off a packing bench. Kept in step with DEVICE_COLORS in the widget.
+ * A colour is accepted when it looks like a colour name and nothing else.
+ *
+ * The widget now offers each model its own launch palette — Cosmic Orange,
+ * Titanium Silverblue, Sorta Seafoam — and an allow-list of twelve would have
+ * dropped every one of them to null. Mirroring the whole palette here would
+ * mean two lists drifting apart. So the rule is the shape: letters, spaces,
+ * hyphens and parentheses, forty characters at most. That admits every name a
+ * manufacturer has used and nothing that could be markup or a script on the
+ * page where staff read it.
  */
-const ALLOWED_COLORS = new Set([
-  "Black",
-  "White",
-  "Silver",
-  "Grey",
-  "Gold",
-  "Blue",
-  "Green",
-  "Red",
-  "Purple",
-  "Pink",
-  "Yellow",
-  "Other",
-]);
+const COLOR_SHAPE = /^[A-Za-z][A-Za-z \-()]{0,39}$/;
+
+function cleanColor(raw: unknown): string | null {
+  const v = String(raw ?? "").trim();
+  return v && COLOR_SHAPE.test(v) ? v : null;
+}
 
 function defaultStoreId(db: Database, orgId: string): string {
   const stores = listOrgStores(db, orgId, true);
@@ -300,9 +298,7 @@ widgetRouter.post("/submit", (req, res) => {
       // Whatever the browser sends is untrusted text on a page staff will read.
       // Only the colours the widget actually offers are accepted; anything else
       // is dropped rather than stored, since it is optional and decorative.
-      color: ALLOWED_COLORS.has(String(item.color || "").trim())
-        ? String(item.color).trim()
-        : null,
+      color: cleanColor(item.color),
       condition_grade: grade,
       quoted_price: quote.quotedPrice,
       battery_health: item.battery_health ?? null,

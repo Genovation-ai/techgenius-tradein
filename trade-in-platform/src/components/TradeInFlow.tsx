@@ -8,6 +8,7 @@ import {
   type ConditionGrade,
   type DeviceCategory,
   type DeviceModel,
+  type Brand,
 } from "../data/catalog";
 import { useCatalog } from "../hooks/useCatalog";
 import { useWidgetTemplate } from "../hooks/useWidgetTemplate";
@@ -99,12 +100,29 @@ function resetDeviceFields(prev: TradeInState): TradeInState {
 export function TradeInFlow() {
   const reduceMotion = useReducedMotion();
   const [state, setState] = useState<TradeInState>(initialTradeInState);
+  /* Whether the brand filter is still the one we picked, rather than one the
+     customer chose. Lets the first brand become the opening view once brands
+     have loaded, without ever overriding a tap. */
+  const brandAuto = useRef(true);
   const [quotedPrice, setQuotedPrice] = useState<number | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   // The server decides whether a promo code counts; the widget only reports it.
   const [promoApplied, setPromoApplied] = useState(false);
 
   const catalog = useCatalog(state.category, state.brandFilter, state.modelQuery);
+
+  /* Open on one brand rather than on everything. "All brands" listed a
+     Motorola beside a Galaxy beside an iPhone with nothing in common, and a
+     customer's own phone was somewhere in the hundred and forty. The brands
+     arrive ordered with Apple first, so the opening view is Apple's models,
+     newest at the top — the screen most people are looking for. A customer
+     who taps a different brand, or "All brands", is never overridden. */
+  useEffect(() => {
+    if (state.step !== "device" || !brandAuto.current) return;
+    if (state.brandFilter !== "All" || catalog.brands.length === 0) return;
+    brandAuto.current = false;
+    setState((s) => ({ ...s, brandFilter: catalog.brands[0] as Brand }));
+  }, [state.step, state.brandFilter, catalog.brands]);
   const template = useWidgetTemplate();
 
   // One "started" event per mount, so the host page can measure how many people
@@ -527,7 +545,8 @@ export function TradeInFlow() {
         >
       {state.step === "category" && (
         <CategoryStep
-          onSelect={(category: DeviceCategory) =>
+          onSelect={(category: DeviceCategory) => {
+            brandAuto.current = true;
             patch({
               category,
               brand: null,
@@ -535,8 +554,8 @@ export function TradeInFlow() {
               device: null,
               modelQuery: "",
               step: "device",
-            })
-          }
+            });
+          }}
         />
       )}
 
@@ -550,7 +569,11 @@ export function TradeInFlow() {
           loading={catalog.loading}
           error={catalog.error}
           apiOnline={catalog.apiOnline}
-          onBrandFilter={(brandFilter) => patch({ brandFilter })}
+          onBrandFilter={(brandFilter) => {
+            // A tap is a choice; from here on the filter is the customer's.
+            brandAuto.current = false;
+            patch({ brandFilter });
+          }}
           onQuery={(modelQuery) => patch({ modelQuery })}
           onSelect={(device: DeviceModel) => {
             emitWidgetEvent("techgenius:device_selected", {

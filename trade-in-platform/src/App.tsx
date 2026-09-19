@@ -22,24 +22,26 @@ export default function App() {
 
       <main className="main">
         <div className="container trade-page">
-          <div className="trade-intro">
-            <span className="brand-line">Trade-in</span>
+          {/* One line, not a banner. The old intro — an eyebrow, a heading, a
+              sentence of pitch and a row of links — was 206px tall and pushed
+              the category grid to 559px on a phone, so the first thing a
+              customer saw was text about selling rather than the thing to tap.
+              The widget's own heading asks the question; this only names the
+              shop. The dev links moved to the foot, where they were never the
+              customer's business anyway. */}
+          <div className="trade-intro trade-intro--slim">
             <h1>Sell your device for cash</h1>
-            <p>
-              Pick your model, answer a few condition questions, and get a clear offer from Tech
-              Genius — mail it in or drop by the shop.
-            </p>
-            <p className="embed-banner">
-              Live on{" "}
-              <a href="https://shoptechgenius.ca/pages/sell-my-device" target="_blank" rel="noreferrer">
-                shoptechgenius.ca
-              </a>
-              {" · "}
-              <a href="/admin">Admin</a>
-            </p>
           </div>
           <TradeInFlow />
           <TrackOffer />
+          <p className="embed-banner">
+            Live on{" "}
+            <a href="https://shoptechgenius.ca/pages/sell-my-device" target="_blank" rel="noreferrer">
+              shoptechgenius.ca
+            </a>
+            {" · "}
+            <a href="/admin">Admin</a>
+          </p>
         </div>
       </main>
 

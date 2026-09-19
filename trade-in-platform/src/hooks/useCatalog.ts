@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { newestFirst, orderBrands } from "../lib/deviceOrder";
 import {
   brands as staticBrands,
   categories as staticCategories,
@@ -83,18 +84,26 @@ export function useCatalog(category: DeviceCategory | null, brandFilter: Brand |
   }, [category, brandFilter, query]);
 
   const availableBrands = useMemo(() => {
-    if (apiOnline && brands.length) {
-      return brands.map((b) => b.name).filter(Boolean);
-    }
-    return staticBrands.filter((b) => b !== "Other");
+    const names =
+      apiOnline && brands.length
+        ? brands.map((b) => b.name).filter(Boolean)
+        : staticBrands.filter((b) => b !== "Other");
+    return orderBrands(names);
   }, [apiOnline, brands]);
+
+  // Newest at the top, whichever source the list came from. The API returns
+  // rows in id order, which put an iPhone 11 above an iPhone 15.
+  const orderedDevices = useMemo(
+    () => newestFirst(apiOnline === false ? fallbackDevices : devices),
+    [apiOnline, fallbackDevices, devices],
+  );
 
   return {
     apiOnline,
     categories: staticCategories,
     brands: availableBrands,
     brandRows: brands,
-    devices: apiOnline === false ? fallbackDevices : devices,
+    devices: orderedDevices,
     loading: apiOnline !== false && loading,
     error,
     brandNameFromId,

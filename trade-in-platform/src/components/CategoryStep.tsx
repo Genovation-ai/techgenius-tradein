@@ -11,10 +11,9 @@ export function CategoryStep({ onSelect }: Props) {
   return (
     <section className="flow-panel">
       <header className="flow-header">
+        {/* The heading is the whole instruction. The sentence under it
+            restated the heading and cost a line above the fold. */}
         <h1>What are you selling?</h1>
-        <p className="flow-lead">
-          Choose a category to see matching devices we buy.
-        </p>
       </header>
       <div className="device-grid device-grid--cats">
         {categories.map((c) => (

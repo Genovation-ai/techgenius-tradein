@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import type { Carrier, DeviceCategory, DeviceModel } from "../data/catalog";
 import { carriers } from "../data/catalog";
-import { DEVICE_COLORS, specKind, specLabel, specQuestionLabel } from "../lib/tradeInTypes";
+import { specKind, specLabel, specQuestionLabel } from "../lib/tradeInTypes";
+import { colorsFor } from "../lib/deviceColors";
 import "./FormSteps.css";
 
 interface Props {
@@ -166,7 +167,8 @@ export function DetailsStep({
         </h2>
         <p className="field-hint">Helps us match your device to your offer when it arrives.</p>
         <div className="chip-row">
-          {DEVICE_COLORS.map((c) => (
+          {/* The model's own launch palette, not a generic dozen. */}
+          {colorsFor(device.name).map((c) => (
             <button
               key={c}
               type="button"

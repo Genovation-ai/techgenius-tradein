@@ -124,15 +124,6 @@ export function DevicePickStep({
       </label>
 
       <div className="brand-chip-row" role="tablist" aria-label="Filter by brand">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={brandFilter === "All"}
-          className={`chip ${brandFilter === "All" ? "chip--on" : ""}`}
-          onClick={() => onBrandFilter("All")}
-        >
-          All brands
-        </button>
         {brands.map((b) => (
           <button
             key={b}
@@ -148,6 +139,18 @@ export function DevicePickStep({
             {b}
           </button>
         ))}
+        {/* Last, not first. "All brands" is the way out of a filter, not the
+            place to start; leading with it was why the first screen mixed a
+            Motorola, a Galaxy and an iPhone with nothing in common. */}
+        <button
+          type="button"
+          role="tab"
+          aria-selected={brandFilter === "All"}
+          className={`chip ${brandFilter === "All" ? "chip--on" : ""}`}
+          onClick={() => onBrandFilter("All")}
+        >
+          All brands
+        </button>
       </div>
 
       {loading ? <p className="field-hint">Loading devices…</p> : null}

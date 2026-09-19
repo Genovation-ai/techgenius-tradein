@@ -346,29 +346,3 @@ export function specQuestionLabel(values: string[], category?: string | null): s
 }
 
 
-/**
- * Colours a customer can pick from.
- *
- * Deliberately generic rather than per-model. The catalogue's upstream source
- * carries no colour data at all, so a per-device list would have to be invented,
- * and an invented list is worse than none — it would offer finishes a model was
- * never sold in. These are the shades a person recognises on their own desk;
- * anything unusual goes under "Other" and gets confirmed when the device lands.
- *
- * It is never required and never changes the price. Its job is to help the shop
- * match the parcel on the bench to the offer on the screen.
- */
-export const DEVICE_COLORS = [
-  "Black",
-  "White",
-  "Silver",
-  "Grey",
-  "Gold",
-  "Blue",
-  "Green",
-  "Red",
-  "Purple",
-  "Pink",
-  "Yellow",
-  "Other",
-] as const;
