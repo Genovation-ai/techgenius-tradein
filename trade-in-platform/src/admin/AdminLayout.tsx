@@ -45,6 +45,7 @@ const nav: NavGroup[] = [
     label: "Operations",
     items: [
       { to: "/admin/offers", icon: <NavOffers />, text: "Offer Management", cap: "offers:read" },
+      { to: "/admin/repairs", icon: <NavOffers />, text: "Repairs", cap: "offers:read" },
       { to: "/admin/leads", icon: <NavOffers />, text: "Follow-ups", cap: "offers:read" },
       { to: "/admin/shipping", icon: <NavShip />, text: "Shipping", cap: "shipping:write" },
       { to: "/admin/payouts", icon: <NavPayout />, text: "Payouts", cap: "payouts:read" },

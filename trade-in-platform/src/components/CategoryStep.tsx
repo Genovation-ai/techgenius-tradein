@@ -5,15 +5,17 @@ import "./ChoiceGrid.css";
 
 interface Props {
   onSelect: (category: DeviceCategory) => void;
+  /** The repair flow asks the same question with different words. */
+  heading?: string;
 }
 
-export function CategoryStep({ onSelect }: Props) {
+export function CategoryStep({ onSelect, heading = "What are you selling?" }: Props) {
   return (
     <section className="flow-panel">
       <header className="flow-header">
         {/* The heading is the whole instruction. The sentence under it
             restated the heading and cost a line above the fold. */}
-        <h1>What are you selling?</h1>
+        <h1>{heading}</h1>
       </header>
       <div className="device-grid device-grid--cats">
         {categories.map((c) => (

@@ -29,6 +29,40 @@ CREATE TABLE IF NOT EXISTS devices (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+-- Repairs: the second pipeline. A repair is priced from a part cost, not from
+-- what other buyers pay, so it has its own price table and its own bookings,
+-- and shares the catalogue, the customers and the org scoping with trade-ins.
+CREATE TABLE IF NOT EXISTS repair_parts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  org_id TEXT,
+  device_id TEXT NOT NULL,
+  problem TEXT NOT NULL,
+  part_cost REAL,            -- what the part costs the shop (Mobile Centrics or China)
+  override_price REAL,       -- a hand-set customer price that ignores the formula
+  updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(org_id, device_id, problem)
+);
+
+CREATE TABLE IF NOT EXISTS repairs (
+  id TEXT PRIMARY KEY,
+  org_id TEXT,
+  store_id TEXT,
+  customer_id TEXT REFERENCES customers(id),
+  device_id TEXT,
+  device_name TEXT NOT NULL,
+  problem TEXT NOT NULL,
+  problem_label TEXT,
+  quoted_price REAL,
+  price_source TEXT,          -- 'override' | 'formula' | 'quote' (no price on file)
+  fulfilment TEXT DEFAULT 'drop-off',
+  status TEXT DEFAULT 'booked',
+  notes TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_repairs_status ON repairs(status, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_repairs_org ON repairs(org_id, created_at DESC);
+
 -- Condition groups
 CREATE TABLE IF NOT EXISTS condition_groups (
   id TEXT PRIMARY KEY,

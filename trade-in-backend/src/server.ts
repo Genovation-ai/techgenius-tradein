@@ -6,6 +6,7 @@ import { hydrateCatalogIfFresh } from "./db/hydrate.js";
 import { apiKeyAuth } from "./middleware/auth.js";
 import { catalogRouter } from "./routes/catalog.js";
 import { offersRouter } from "./routes/offers.js";
+import { repairPublicRouter, repairsRouter } from "./routes/repairs.js";
 import { customersRouter } from "./routes/customers.js";
 import { inventoryRouter } from "./routes/inventory.js";
 import { pricingRouter } from "./routes/pricing.js";
@@ -220,6 +221,8 @@ app.use("/api/cron", cronRouter);
 
 // Protected endpoints (admin panel / integrations)
 app.use("/api/offers", apiKeyAuth, offersRouter);
+app.use("/api/repair", repairPublicRouter);
+app.use("/api/repairs", apiKeyAuth, repairsRouter);
 app.use("/api/customers", apiKeyAuth, customersRouter);
 app.use("/api/inventory", apiKeyAuth, inventoryRouter);
 app.use("/api/pricing", apiKeyAuth, requireCapability("pricing:read"), pricingRouter);

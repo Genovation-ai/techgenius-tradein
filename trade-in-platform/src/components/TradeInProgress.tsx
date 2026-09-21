@@ -6,12 +6,24 @@ import "./TradeInProgress.css";
 interface Props {
   step: TradeInStep;
   onBack?: () => void;
+  /**
+   * A different journey on the same rail. The repair flow has its own steps
+   * and names; passing them here keeps one progress bar for both rather than
+   * a second component that drifts from the first.
+   */
+  overrideOrder?: string[];
+  overrideLabels?: Record<string, string>;
+  overrideCurrent?: string;
 }
 
-export function TradeInProgress({ step, onBack }: Props) {
+export function TradeInProgress({ step, onBack, overrideOrder, overrideLabels, overrideCurrent }: Props) {
   const branding = useOrgBranding();
-  const visible = stepOrder.filter((s) => s !== "done");
-  const idx = visible.indexOf(step === "done" ? "checkout" : step);
+  const order: string[] = overrideOrder ?? stepOrder;
+  const labels: Record<string, string> = overrideLabels ?? stepLabels;
+  const current: string = overrideCurrent ?? step;
+  const visible = order.filter((s) => s !== "done");
+  const last = visible[visible.length - 1];
+  const idx = visible.indexOf(current === "done" ? last : current);
 
   return (
     <div className="tip-bar">
@@ -42,7 +54,7 @@ export function TradeInProgress({ step, onBack }: Props) {
           return (
             <li key={s} className={`tip-step tip-step--${state}`}>
               <span className="tip-dot" aria-hidden />
-              <span className="tip-label">{stepLabels[s]}</span>
+              <span className="tip-label">{labels[s]}</span>
             </li>
           );
         })}

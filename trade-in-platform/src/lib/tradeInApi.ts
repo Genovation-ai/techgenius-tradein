@@ -441,3 +441,41 @@ export async function ensureDeviceFromName(opts: {
     }),
   });
 }
+
+/* ——— Repairs ——— */
+
+export interface RepairProblem {
+  id: string;
+  label: string;
+}
+
+export interface RepairQuoteResponse {
+  device_id: string;
+  device_name: string;
+  problem: string;
+  problem_label: string;
+  price: number | null;
+  price_source: "override" | "formula" | "quote";
+  needs_quote: boolean;
+}
+
+export async function fetchRepairProblems(): Promise<RepairProblem[]> {
+  return fetchJson<RepairProblem[]>("/api/repair/problems");
+}
+
+export async function fetchRepairQuote(device_id: string, problem: string): Promise<RepairQuoteResponse> {
+  return fetchJson<RepairQuoteResponse>("/api/repair/quote", {
+    method: "POST",
+    body: JSON.stringify({ device_id, problem }),
+  });
+}
+
+export async function bookRepair(body: {
+  contact: { first_name: string; last_name?: string; email?: string; phone?: string };
+  device_id: string;
+  problem: string;
+  fulfilment: "drop-off" | "mail-in";
+  notes?: string;
+}): Promise<{ id: string; quoted_price: number | null; needs_quote: boolean; fulfilment: string }> {
+  return fetchJson("/api/repair/book", { method: "POST", body: JSON.stringify(body) });
+}

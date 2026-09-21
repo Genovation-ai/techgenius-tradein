@@ -1371,3 +1371,22 @@ textarea.admin-input:focus {
   color: var(--tg-muted);
   font-variant-numeric: tabular-nums;
 }
+
+/* A quiet second line under a cell or a form heading. */
+.admin-sub {
+  font-size: 0.8rem;
+  color: var(--tg-muted);
+  margin: 0.15rem 0 0;
+}
+
+/* The steps list sets display: grid, which beats the browser's rule for the
+   hidden attribute — so the disclosure rendered open on every page while its
+   toggle read "+". The attribute has to win. */
+.admin-how-steps[hidden] {
+  display: none;
+}
+
+/* Editable list: a switched-off row stays visible but reads as off. */
+.admin-table--edit td { vertical-align: middle; }
+.admin-table--edit tr.is-off td:nth-child(2) input { color: var(--tg-muted); text-decoration: line-through; }
+.admin-table--edit .admin-input { width: 100%; }

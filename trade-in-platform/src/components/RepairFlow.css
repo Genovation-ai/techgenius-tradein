@@ -1,0 +1,43 @@
+/* Problems: one tap each, generous targets, no icons to decode. */
+.repair-problems {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.6rem;
+}
+
+.repair-problem {
+  min-height: 56px;
+  padding: 0.85rem 1rem;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.12s var(--ease);
+}
+.repair-problem:hover { border-color: var(--line-strong); }
+.repair-problem:active { transform: scale(0.985); }
+.repair-problem.is-on { border-color: var(--mint-dim); background: var(--fog); }
+.repair-problem:disabled { opacity: 0.6; cursor: wait; }
+
+/* The price: the loudest thing on the step, by size alone. */
+.repair-price-card {
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--fog);
+  margin-bottom: 1rem;
+}
+.repair-price-device { margin: 0 0 0.35rem; color: var(--ink-soft); }
+.repair-price-amount {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 7vw, 3.4rem);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.repair-price-note { margin: 0.75rem 0 0; color: var(--ink-soft); line-height: 1.5; }
+
+.flow-error { color: var(--danger); margin: 0 0 0.75rem; }

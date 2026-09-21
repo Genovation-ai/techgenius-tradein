@@ -10,6 +10,7 @@ import { LoginPage } from "./admin/LoginPage.tsx";
 import { SignupPage } from "./admin/SignupPage.tsx";
 import { DashboardPage } from "./admin/pages/DashboardPage.tsx";
 import { OffersPage } from "./admin/pages/OffersPage.tsx";
+import { RepairsPage } from "./admin/pages/RepairsPage";
 import { LeadsPage } from "./admin/pages/LeadsPage.tsx";
 import { CatalogPage } from "./admin/pages/CatalogPage.tsx";
 import { PricingPage } from "./admin/pages/PricingPage.tsx";
@@ -53,6 +54,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
           <Route path="offers" element={<OffersPage />} />
+          <Route path="repairs" element={<RepairsPage />} />
           <Route path="leads" element={<LeadsPage />} />
           <Route path="offers/:id" element={<OfferDetailPage />} />
           <Route path="catalog" element={<CatalogPage />} />
