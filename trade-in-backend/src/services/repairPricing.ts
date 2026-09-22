@@ -146,10 +146,18 @@ export function setRepairSettings(db: Database, orgId: string | null, s: Partial
 
 export interface RepairQuote {
   price: number | null;
-  source: "override" | "formula" | "quote";
+  /**
+   * override — a hand-set price for this repair
+   * formula  — the shop's own part cost through markup and labour
+   * market   — a published part price (iFixit, converted at the Bank of
+   *            Canada rate) through markup and labour; the shop set nothing
+   * quote    — nothing on file anywhere; the shop will price it by hand
+   */
+  source: "override" | "formula" | "market" | "quote";
   partCost: number | null;
   markupPercent: number;
   labourFee: number;
+  market?: { partCostCad: number; productTitle: string; sourceUrl: string; scrapedAt: string } | null;
 }
 
 export function quoteRepair(db: Database, orgId: string | null, deviceId: string, problem: RepairProblem): RepairQuote {
@@ -169,6 +177,28 @@ export function quoteRepair(db: Database, orgId: string | null, deviceId: string
   if (row?.part_cost != null && row.part_cost > 0) {
     const price = row.part_cost * (1 + settings.markupPercent / 100) + settings.labourFee;
     return { price: Math.round(price), source: "formula", partCost: row.part_cost, ...settings };
+  }
+
+  // Nothing set by the shop: a published part price, if one was read for this
+  // exact model and part. It goes through the same markup and labour, and the
+  // quote says where the part cost came from, so it is never mistaken for a
+  // figure the shop chose.
+  const mkt = db
+    .prepare(
+      "SELECT price_cad, product_title, source_url, scraped_at FROM repair_market_prices WHERE device_id = ? AND problem = ? ORDER BY scraped_at DESC LIMIT 1",
+    )
+    .get(deviceId, problem) as
+    | { price_cad: number; product_title: string; source_url: string; scraped_at: string }
+    | undefined;
+  if (mkt && mkt.price_cad > 0) {
+    const price = mkt.price_cad * (1 + settings.markupPercent / 100) + settings.labourFee;
+    return {
+      price: Math.round(price),
+      source: "market",
+      partCost: mkt.price_cad,
+      ...settings,
+      market: { partCostCad: mkt.price_cad, productTitle: mkt.product_title, sourceUrl: mkt.source_url, scrapedAt: mkt.scraped_at },
+    };
   }
   return { price: null, source: "quote", partCost: null, ...settings };
 }

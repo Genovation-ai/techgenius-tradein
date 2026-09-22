@@ -230,6 +230,9 @@ export function RepairFlow() {
                     <p className="repair-price-note">
                       Parts and labour included. If we open it up and find something else, we'll call before
                       doing more.
+                      {quote.price_source === "market" && quote.market
+                        ? ` Part priced from a current published listing (${quote.market.read_on}); we'll confirm it when we see the device.`
+                        : ""}
                     </p>
                   </>
                 )}

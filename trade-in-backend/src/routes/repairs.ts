@@ -79,6 +79,9 @@ repairPublicRouter.post("/quote", (req, res) => {
       // "quote" means the shop will price it by hand; the booking still goes
       // through, and the customer is told that rather than shown a number.
       needs_quote: q.source === "quote",
+      // When the part cost came from a published listing rather than the
+      // shop, the customer gets to know that — and when it was read.
+      market: q.market ? { product: q.market.productTitle, read_on: q.market.scrapedAt.slice(0, 10) } : null,
     });
   } finally {
     db.close();
@@ -218,7 +221,15 @@ repairsRouter.get("/pricing", requireCapability("pricing:read"), (req, res) => {
           ORDER BY d.name, p.problem`,
       )
       .all(orgId);
-    res.json({ settings, parts, problems: getProblems(db, orgId, true) });
+    const market = db
+      .prepare(
+        `SELECT m.device_id, d.name AS device_name, m.problem, m.product_title, m.price, m.currency,
+                m.price_cad, m.fx_rate, m.source_url, m.scraped_at
+           FROM repair_market_prices m LEFT JOIN devices d ON d.id = m.device_id
+          ORDER BY d.name, m.problem`,
+      )
+      .all();
+    res.json({ settings, parts, problems: getProblems(db, orgId, true), market });
   } finally {
     db.close();
   }
@@ -272,4 +283,24 @@ repairsRouter.put("/pricing/problems", requireCapability("pricing:write"), (req,
   } finally {
     db.close();
   }
+});
+
+/**
+ * Refresh the published part prices. Long-running — hundreds of devices at a
+ * polite pace — so it answers at once and works on; the Pricing tab shows the
+ * new rows when it is done. Anything hostile to the source (a tight loop, a
+ * burst) is refused by the same lock the weekly job uses.
+ */
+let marketSyncRunning = false;
+repairsRouter.post("/pricing/market/refresh", requireCapability("pricing:write"), (_req, res) => {
+  if (marketSyncRunning) return res.status(409).json({ error: "A refresh is already running" });
+  marketSyncRunning = true;
+  res.status(202).json({ ok: true, started: true });
+  void import("../services/repairMarket.js")
+    .then(({ syncRepairMarketPrices }) => syncRepairMarketPrices({ delayMs: 350 }))
+    .then((r) => console.log("[repair-market] refresh done:", JSON.stringify({ devices: r.devices, found: r.found, fx: r.fx })))
+    .catch((e) => console.warn("[repair-market] refresh failed:", e))
+    .finally(() => {
+      marketSyncRunning = false;
+    });
 });

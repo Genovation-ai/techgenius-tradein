@@ -36,6 +36,18 @@ type Part = {
   part_cost: number | null;
   override_price: number | null;
 };
+type Market = {
+  device_id: string;
+  device_name: string | null;
+  problem: string;
+  product_title: string;
+  price: number;
+  currency: string;
+  price_cad: number;
+  fx_rate: number;
+  source_url: string;
+  scraped_at: string;
+};
 
 const STAGE_TONE: Record<string, string> = {
   booked: "neutral",
@@ -303,6 +315,8 @@ function RepairPricing() {
   const [markup, setMarkup] = useState("10");
   const [labour, setLabour] = useState("100");
   const [parts, setParts] = useState<Part[]>([]);
+  const [market, setMarket] = useState<Market[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [deviceId, setDeviceId] = useState("");
   const [problem, setProblem] = useState("screen");
@@ -311,12 +325,16 @@ function RepairPricing() {
   const [msg, setMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const d = await adminFetch<{ settings: { markupPercent: number; labourFee: number }; parts: Part[]; problems: Problem[] }>(
-      "/api/repairs/pricing",
-    );
+    const d = await adminFetch<{
+      settings: { markupPercent: number; labourFee: number };
+      parts: Part[];
+      problems: Problem[];
+      market: Market[];
+    }>("/api/repairs/pricing");
     setMarkup(String(d.settings.markupPercent));
     setLabour(String(d.settings.labourFee));
     setParts(d.parts);
+    setMarket(d.market || []);
     setProblems(d.problems);
   }, []);
   useEffect(() => {
@@ -347,6 +365,32 @@ function RepairPricing() {
     setOverride("");
     void load();
   };
+
+  const refreshMarket = async () => {
+    setRefreshing(true);
+    try {
+      await adminFetch("/api/repairs/pricing/market/refresh", { method: "POST" });
+      setMsg("Reading published part prices — a few minutes. Reload this tab when it's done.");
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // One row per device and part, whether the shop set a cost, a price was
+  // published, or both — so the table is the whole picture, not just the
+  // rows someone typed.
+  const rows = (() => {
+    const key = (d: string, p: string) => `${d}:${p}`;
+    const map = new Map<string, { device_id: string; device_name: string | null; problem: string; part?: Part; mkt?: Market }>();
+    for (const p of parts) map.set(key(p.device_id, p.problem), { device_id: p.device_id, device_name: p.device_name, problem: p.problem, part: p });
+    for (const m of market) {
+      const k = key(m.device_id, m.problem);
+      const ex = map.get(k);
+      if (ex) ex.mkt = m;
+      else map.set(k, { device_id: m.device_id, device_name: m.device_name, problem: m.problem, mkt: m });
+    }
+    return [...map.values()].sort((a, b) => (a.device_name || a.device_id).localeCompare(b.device_name || b.device_id) || a.problem.localeCompare(b.problem));
+  })();
 
   const preview = (() => {
     const pc = Number(partCost);
@@ -409,38 +453,67 @@ function RepairPricing() {
       </div>
 
       <div className="admin-table-wrap" style={{ gridColumn: "1 / -1" }}>
+        <div className="admin-toolbar" style={{ justifyContent: "space-between" }}>
+          <p className="admin-sub" style={{ margin: 0 }}>
+            <strong>Market part price</strong> is what the part sells for at a published source, converted to CAD at the
+            Bank of Canada rate on the day it was read. It is used only when you have not set your own cost.
+            {market.length ? ` ${market.length} prices on file.` : " None on file yet."}
+          </p>
+          <button type="button" className="admin-btn admin-btn--ghost" disabled={refreshing} onClick={() => void refreshMarket()}>
+            {refreshing ? "Starting…" : "Refresh published prices"}
+          </button>
+        </div>
         <table className="admin-table">
           <thead>
             <tr>
               <th>Device</th>
               <th>Problem</th>
-              <th>Part cost</th>
+              <th>Your part cost</th>
+              <th>Market part price</th>
               <th>Override</th>
               <th>Customer price</th>
             </tr>
           </thead>
           <tbody>
-            {parts.length === 0 ? (
+            {rows.length === 0 ? (
               <tr>
-                <td colSpan={5}>
-                  <div className="admin-empty">No part costs yet — add one above and that repair gets a price.</div>
+                <td colSpan={6}>
+                  <div className="admin-empty">No part costs yet — add one above, or refresh published prices to fill the market column.</div>
                 </td>
               </tr>
             ) : (
-              parts.map((p) => {
+              rows.map((r) => {
+                const cost = r.part?.part_cost ?? r.mkt?.price_cad ?? null;
                 const price =
-                  p.override_price != null
-                    ? p.override_price
-                    : p.part_cost != null
-                      ? Math.round(p.part_cost * (1 + Number(markup) / 100) + Number(labour))
+                  r.part?.override_price != null
+                    ? r.part.override_price
+                    : cost != null
+                      ? Math.round(cost * (1 + Number(markup) / 100) + Number(labour))
                       : null;
+                const via = r.part?.override_price != null ? "override" : r.part?.part_cost != null ? "your cost" : r.mkt ? "market" : null;
                 return (
-                  <tr key={`${p.device_id}:${p.problem}`}>
-                    <td>{p.device_name || p.device_id}</td>
-                    <td>{problems.find((x) => x.id === p.problem)?.label || p.problem}</td>
-                    <td>{p.part_cost != null ? `$${p.part_cost}` : "—"}</td>
-                    <td>{p.override_price != null ? `$${p.override_price}` : "—"}</td>
-                    <td>{price != null ? `$${price}` : "—"}</td>
+                  <tr key={`${r.device_id}:${r.problem}`}>
+                    <td>{r.device_name || r.device_id}</td>
+                    <td>{problems.find((x) => x.id === r.problem)?.label || r.problem}</td>
+                    <td>{r.part?.part_cost != null ? `$${r.part.part_cost}` : "—"}</td>
+                    <td>
+                      {r.mkt ? (
+                        <>
+                          ${r.mkt.price_cad.toFixed(2)}
+                          <div className="admin-sub">
+                            <a href={r.mkt.source_url} target="_blank" rel="noreferrer">{r.mkt.product_title.slice(0, 40)}</a>
+                            {" · "}{r.mkt.price} {r.mkt.currency} × {r.mkt.fx_rate} · {r.mkt.scraped_at.slice(0, 10)}
+                          </div>
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
+                    <td>{r.part?.override_price != null ? `$${r.part.override_price}` : "—"}</td>
+                    <td>
+                      {price != null ? `$${price}` : "—"}
+                      {via ? <div className="admin-sub">{via}</div> : null}
+                    </td>
                   </tr>
                 );
               })

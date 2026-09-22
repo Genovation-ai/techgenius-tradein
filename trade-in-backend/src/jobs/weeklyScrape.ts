@@ -45,6 +45,7 @@ let running = false;
 export async function runWeeklyPriceRefresh(): Promise<{
   catalog: Awaited<ReturnType<typeof syncGorecellCatalogPrices>>;
   competitors?: unknown;
+  repairMarket?: unknown;
 }> {
   if (running) {
     throw new Error("Weekly price refresh already running");
@@ -77,7 +78,18 @@ export async function runWeeklyPriceRefresh(): Promise<{
         timeoutMs: 300_000,
       });
     }
-    return { catalog, competitors };
+    // Repair part prices refresh on the same weekly cadence, after the
+    // trade-in work, and a failure here must not mark the whole run failed.
+    let repairMarket: unknown;
+    try {
+      const { syncRepairMarketPrices } = await import("../services/repairMarket.js");
+      const r = await syncRepairMarketPrices({ delayMs: 350 });
+      repairMarket = { devices: r.devices, found: r.found, fx: r.fx };
+      console.log(`[weekly-scrape] repair parts: ${r.found} prices across ${r.devices} devices`);
+    } catch (e) {
+      console.warn("[weekly-scrape] repair part refresh failed:", e);
+    }
+    return { catalog, competitors, repairMarket };
   } finally {
     running = false;
   }

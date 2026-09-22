@@ -43,6 +43,24 @@ CREATE TABLE IF NOT EXISTS repair_parts (
   UNIQUE(org_id, device_id, problem)
 );
 
+-- Market part prices: what a part actually sells for, from a published source,
+-- with the source, the currency, the rate used and when it was read. Never a
+-- guess: a device with no matching product on the source has no row.
+CREATE TABLE IF NOT EXISTS repair_market_prices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  source TEXT NOT NULL,           -- 'ifixit'
+  device_id TEXT NOT NULL,
+  problem TEXT NOT NULL,          -- screen | battery | charging_port | back_glass | rear_camera
+  product_title TEXT NOT NULL,
+  price REAL NOT NULL,
+  currency TEXT NOT NULL,
+  price_cad REAL NOT NULL,
+  fx_rate REAL NOT NULL,
+  source_url TEXT NOT NULL,
+  scraped_at TEXT NOT NULL,
+  UNIQUE(source, device_id, problem)
+);
+
 CREATE TABLE IF NOT EXISTS repairs (
   id TEXT PRIMARY KEY,
   org_id TEXT,

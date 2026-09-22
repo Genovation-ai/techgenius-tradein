@@ -455,8 +455,9 @@ export interface RepairQuoteResponse {
   problem: string;
   problem_label: string;
   price: number | null;
-  price_source: "override" | "formula" | "quote";
+  price_source: "override" | "formula" | "market" | "quote";
   needs_quote: boolean;
+  market?: { product: string; read_on: string } | null;
 }
 
 export async function fetchRepairProblems(): Promise<RepairProblem[]> {
