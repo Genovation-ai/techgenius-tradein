@@ -8,7 +8,7 @@ import { notifyOfferStatusChange, recordOfferNotification } from "../services/no
 import { CUSTOMER_JOURNEY, customerStatus, journeyIndex } from "../services/customerStatus.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 import { ensureDeviceFromName, looksLikeProductName } from "../services/deviceBootstrap.js";
-import { DEFAULT_ORG_ID, getOrgBySlug, listOrgStores } from "../services/tenancy.js";
+import { DEFAULT_ORG_ID, getOrgById, getOrgBySlug, listOrgStores } from "../services/tenancy.js";
 import { getWidgetTemplate, orgWidgetTemplate, WIDGET_TEMPLATES } from "../services/widgetTemplate.js";
 import type { Database } from "better-sqlite3";
 
@@ -124,8 +124,10 @@ widgetRouter.post("/lead", (req, res) => {
     let orgId = DEFAULT_ORG_ID;
     const slug = String(body.org || req.headers["x-org-slug"] || "").trim();
     if (slug) {
-      const hit = slug.startsWith("org-") ? null : getOrgBySlug(db, slug);
-      orgId = hit?.id || (slug.startsWith("org-") ? slug : DEFAULT_ORG_ID);
+      // An id must exist to be used; a bare "org-…" string from the request
+      // is not a tenant.
+      const hit = slug.startsWith("org-") ? getOrgById(db, slug) : getOrgBySlug(db, slug);
+      orgId = hit?.id || DEFAULT_ORG_ID;
     }
 
     const existing = email
@@ -321,11 +323,10 @@ widgetRouter.post("/submit", (req, res) => {
   ).trim();
   let orgId = DEFAULT_ORG_ID;
   if (orgHint) {
-    if (orgHint.startsWith("org-")) orgId = orgHint;
-    else {
-      const hit = getOrgBySlug(db, orgHint);
-      if (hit) orgId = hit.id;
-    }
+    // Verified either way. Trusting any "org-…" string here let a submission
+    // file an offer and a customer under a tenant it merely named.
+    const hit = orgHint.startsWith("org-") ? getOrgById(db, orgHint) : getOrgBySlug(db, orgHint);
+    if (hit) orgId = hit.id;
   }
   const storeId = (req.body as { store_id?: string })?.store_id || defaultStoreId(db, orgId);
 

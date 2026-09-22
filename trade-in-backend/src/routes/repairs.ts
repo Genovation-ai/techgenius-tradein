@@ -1,9 +1,10 @@
 import { Router, type Request } from "express";
+import type { Database } from "better-sqlite3";
 import { nanoid } from "nanoid";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
 import { orgFilter, orgIdOf } from "../middleware/orgScope.js";
-import { DEFAULT_ORG_ID, getOrgBySlug } from "../services/tenancy.js";
+import { DEFAULT_ORG_ID, getOrgById, getOrgBySlug } from "../services/tenancy.js";
 import {
   REPAIR_STAGES,
   getProblems,
@@ -27,7 +28,15 @@ import {
 export const repairPublicRouter = Router();
 export const repairsRouter = Router();
 
-function resolveOrg(req: Request): string {
+/**
+ * Which tenant a public request belongs to.
+ *
+ * The widget sends the shop's slug or id. An id is verified to exist before it
+ * is used: the first version trusted any string beginning "org-", which let a
+ * request write a customer and a booking under any tenant it cared to name.
+ * A hint that names nothing falls to the default org, never to the string.
+ */
+function resolveOrg(db: Database, req: Request): string {
   const hint = String(
     (req.body as { org?: string })?.org ||
       (req.query as { org?: string })?.org ||
@@ -36,13 +45,8 @@ function resolveOrg(req: Request): string {
       "",
   ).trim();
   if (!hint) return DEFAULT_ORG_ID;
-  if (hint.startsWith("org-")) return hint;
-  const db = getDb();
-  try {
-    return getOrgBySlug(db, hint)?.id ?? DEFAULT_ORG_ID;
-  } finally {
-    db.close();
-  }
+  const org = hint.startsWith("org-") ? getOrgById(db, hint) : getOrgBySlug(db, hint);
+  return org?.id ?? DEFAULT_ORG_ID;
 }
 
 /* ——— public ——— */
@@ -50,7 +54,7 @@ function resolveOrg(req: Request): string {
 repairPublicRouter.get("/problems", (req, res) => {
   const db = getDb();
   try {
-    res.json(getProblems(db, resolveOrg(req)).map(({ id, label }) => ({ id, label })));
+    res.json(getProblems(db, resolveOrg(db, req)).map(({ id, label }) => ({ id, label })));
   } finally {
     db.close();
   }
@@ -60,7 +64,7 @@ repairPublicRouter.post("/quote", (req, res) => {
   const { device_id, problem } = (req.body || {}) as { device_id?: string; problem?: string };
   const db = getDb();
   try {
-    const orgId = resolveOrg(req);
+    const orgId = resolveOrg(db, req);
     if (!device_id || !isRepairProblem(db, orgId, problem)) {
       return res.status(400).json({ error: "device_id and a known problem are required" });
     }
@@ -100,7 +104,7 @@ repairPublicRouter.post("/book", (req, res) => {
   const c = body.contact || {};
   const db = getDb();
   try {
-    const orgId = resolveOrg(req);
+    const orgId = resolveOrg(db, req);
     if (!c.first_name || !(c.email || c.phone) || !body.device_id || !isRepairProblem(db, orgId, body.problem)) {
       return res
         .status(400)

@@ -105,7 +105,14 @@ async function getJson<T>(url: string): Promise<T | null> {
  * a slug present there is priced in CAD on its en-ca page, which is the
  * store's own Canadian price and needs no conversion.
  */
-export async function loadProductIndex(): Promise<{ all: Set<string>; ca: Set<string> } | null> {
+export interface ProductIndex {
+  all: Set<string>;
+  ca: Set<string>;
+  /** all ∪ ca, built once — the matcher runs ~1,400 times a run over 84k slugs. */
+  every: string[];
+}
+
+export async function loadProductIndex(): Promise<ProductIndex | null> {
   const all = new Set<string>();
   const ca = new Set<string>();
   const files = ["products", "products_2", "products_3", "products_4", "products_en-ca"];
@@ -117,7 +124,7 @@ export async function loadProductIndex(): Promise<{ all: Set<string>; ca: Set<st
     }
   }
   if (all.size < 1000) return null; // the sitemap did not come back whole; do not run on a partial list
-  return { all, ca };
+  return { all, ca, every: [...new Set([...all, ...ca])] };
 }
 
 export async function usdToCad(): Promise<{ rate: number; date: string } | null> {
@@ -140,15 +147,12 @@ interface Found {
 const VARIANT = /^(pro|plus|max|mini|ultra|fe|xl|a|e|lite|edge|fold|flip)(-|$)/;
 
 /** Slugs in the index that are this exact model and this part. */
-function candidateSlugs(index: { all: Set<string>; ca: Set<string> }, deviceName: string, problem: string): string[] {
+function candidateSlugs(index: ProductIndex, deviceName: string, problem: string): string[] {
   const spec = MARKET_PARTS[problem];
   const out: string[] = [];
-  // A product can be in either sitemap or both; a Canadian-only listing is
-  // still a listing.
-  const every = new Set<string>([...index.all, ...index.ca]);
   for (const base of slugFor(deviceName)) {
     const prefix = base + "-";
-    for (const slug of every) {
+    for (const slug of index.every) {
       if (!slug.startsWith(prefix)) continue;
       const rest = slug.slice(prefix.length);
       // "iphone-15-pro-screen" must not serve "iphone 15": the token after the
@@ -164,7 +168,7 @@ function candidateSlugs(index: { all: Set<string>; ca: Set<string> }, deviceName
 }
 
 async function findPart(
-  index: { all: Set<string>; ca: Set<string> },
+  index: ProductIndex,
   deviceName: string,
   problem: string,
 ): Promise<Found | null> {
