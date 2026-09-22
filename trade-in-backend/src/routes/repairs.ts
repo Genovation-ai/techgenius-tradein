@@ -304,3 +304,56 @@ repairsRouter.post("/pricing/market/refresh", requireCapability("pricing:write")
       marketSyncRunning = false;
     });
 });
+
+/**
+ * Bulk part costs, pasted from the shop's supplier.
+ *
+ * The devices no public source lists are exactly the ones MobileSentrix
+ * prices behind a wholesale login the shop has and this system does not. So
+ * the shop brings the numbers: lines of `device, problem, cost`, where the
+ * device is our id or the name as the catalogue shows it. Every line is
+ * checked against the catalogue and the problem list; a line that names
+ * nothing we have is reported back, not silently dropped or guessed at.
+ */
+repairsRouter.post("/pricing/parts/import", requireCapability("pricing:write"), (req, res) => {
+  const text = String((req.body as { csv?: string })?.csv || "");
+  if (!text.trim()) return res.status(400).json({ error: "Send csv text: device, problem, part_cost per line" });
+  const db = getDb();
+  try {
+    const orgId = orgIdOf(req);
+    const devices = db.prepare("SELECT id, name FROM devices").all() as Array<{ id: string; name: string }>;
+    const byId = new Map(devices.map((d) => [d.id, d.id]));
+    const byName = new Map(devices.map((d) => [d.name.toLowerCase().trim(), d.id]));
+    const problems = getProblems(db, orgId, true);
+    const byLabel = new Map(problems.map((p) => [p.label.toLowerCase().trim(), p.id]));
+    const byPid = new Set(problems.map((p) => p.id));
+    const upsert = db.prepare(
+      `INSERT INTO repair_parts (org_id, device_id, problem, part_cost, updated_at)
+       VALUES (?, ?, ?, ?, datetime('now'))
+       ON CONFLICT(org_id, device_id, problem) DO UPDATE SET part_cost = excluded.part_cost, updated_at = datetime('now')`,
+    );
+    const rejected: Array<{ line: number; text: string; why: string }> = [];
+    let imported = 0;
+    const lines = text.split(/\r?\n/);
+    db.transaction(() => {
+      lines.forEach((raw, i) => {
+        const line = raw.trim();
+        if (!line || /^(device|model)\b/i.test(line)) return; // blank or a header
+        const cells = line.split(/,|\t/).map((c) => c.trim().replace(/^"|"$/g, ""));
+        if (cells.length < 3) return void rejected.push({ line: i + 1, text: line, why: "needs device, problem, cost" });
+        const [dev, prob, costRaw] = cells;
+        const deviceId = byId.get(dev) ?? byName.get(dev.toLowerCase());
+        if (!deviceId) return void rejected.push({ line: i + 1, text: line, why: `no device called "${dev}"` });
+        const problem = byPid.has(prob.toLowerCase().replace(/\s+/g, "_")) ? prob.toLowerCase().replace(/\s+/g, "_") : byLabel.get(prob.toLowerCase());
+        if (!problem) return void rejected.push({ line: i + 1, text: line, why: `no problem called "${prob}"` });
+        const cost = Number(costRaw.replace(/[$,]/g, ""));
+        if (!Number.isFinite(cost) || cost <= 0) return void rejected.push({ line: i + 1, text: line, why: `"${costRaw}" is not a cost` });
+        upsert.run(orgId, deviceId, problem, cost);
+        imported++;
+      });
+    })();
+    res.json({ ok: true, imported, rejected });
+  } finally {
+    db.close();
+  }
+});

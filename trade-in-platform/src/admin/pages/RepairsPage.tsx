@@ -323,6 +323,8 @@ function RepairPricing() {
   const [partCost, setPartCost] = useState("");
   const [override, setOverride] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const [csv, setCsv] = useState("");
+  const [rejected, setRejected] = useState<Array<{ line: number; text: string; why: string }>>([]);
 
   const load = useCallback(async () => {
     const d = await adminFetch<{
@@ -363,6 +365,18 @@ function RepairPricing() {
     setMsg(r.quote.price != null ? `Saved — customers will be quoted $${r.quote.price}.` : "Saved.");
     setPartCost("");
     setOverride("");
+    void load();
+  };
+
+  const importCsv = async () => {
+    if (!csv.trim()) return;
+    const r = await adminFetch<{ imported: number; rejected: Array<{ line: number; text: string; why: string }> }>(
+      "/api/repairs/pricing/parts/import",
+      { method: "POST", body: JSON.stringify({ csv }) },
+    );
+    setRejected(r.rejected);
+    setMsg(`${r.imported} part cost${r.imported === 1 ? "" : "s"} imported${r.rejected.length ? `, ${r.rejected.length} line${r.rejected.length === 1 ? "" : "s"} skipped — see below` : ""}.`);
+    if (!r.rejected.length) setCsv("");
     void load();
   };
 
@@ -450,6 +464,37 @@ function RepairPricing() {
           Save part cost
         </button>
         {msg ? <p className="admin-ok">{msg}</p> : null}
+      </div>
+
+      <div className="admin-pricing-form" style={{ gridColumn: "1 / -1" }}>
+        <h2>Paste your supplier's prices</h2>
+        <p className="admin-sub">
+          One repair per line: <code>device, problem, cost</code>. Use the device name as it appears in the catalogue
+          (or its id) and the problem as it appears on your customers' list. A line that doesn't match anything is
+          reported back, never guessed at. Example: <code>iPhone 15, Cracked or broken screen, 84.50</code>
+        </p>
+        <textarea
+          className="admin-input"
+          rows={5}
+          value={csv}
+          onChange={(e) => setCsv(e.target.value)}
+          placeholder={"iPhone 15, Cracked or broken screen, 84.50\nGalaxy S23, Battery drains fast or won't hold charge, 22.00"}
+          style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: "0.85rem" }}
+        />
+        <div className="admin-inline-actions" style={{ marginTop: "0.5rem" }}>
+          <button type="button" className="admin-btn" onClick={() => void importCsv()} disabled={!csv.trim()}>
+            Import part costs
+          </button>
+        </div>
+        {rejected.length ? (
+          <ul className="admin-sub" style={{ marginTop: "0.6rem", paddingLeft: "1.1rem" }}>
+            {rejected.slice(0, 12).map((r) => (
+              <li key={r.line}>
+                Line {r.line}: {r.why} — <code>{r.text.slice(0, 60)}</code>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
 
       <div className="admin-table-wrap" style={{ gridColumn: "1 / -1" }}>

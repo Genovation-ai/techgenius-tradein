@@ -26,16 +26,16 @@ const UA = { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Appl
 // is allowed — iFixit names the part itself "Screen … Replacement Kit".
 const ACCESSORY = /\b(adhesive|gasket|strips?|tools?|template|screws?|cable|flex|bracket|sim|tray|foam|tape|protector|case|holder|clip|magnet)\b/i;
 
-// The store's product slugs, by part. Built from the model rather than found
-// by search: iFixit's search returns its informational Item wikis, which carry
-// no price, and its top hit for "iPhone 15 screen" is the 15 Pro's. A slug
-// names the exact model, so a 404 is a miss and a 200 is the right part.
-export const MARKET_PARTS: Record<string, { slugs: string[]; titleMust: RegExp }> = {
-  screen: { slugs: ["{m}-screen", "{m}-lcd-screen", "{m}-oled-screen"], titleMust: /\bscreen\b|\bdisplay\b|\blcd\b|\boled\b/i },
-  battery: { slugs: ["{m}-battery", "{m}-replacement-battery"], titleMust: /\bbattery\b/i },
-  charging_port: { slugs: ["{m}-charging-port", "{m}-lightning-connector", "{m}-usb-c-port", "{m}-charging-assembly"], titleMust: /\b(charging|lightning|usb-c|port|connector)\b/i },
-  back_glass: { slugs: ["{m}-back-glass", "{m}-rear-glass", "{m}-back-cover", "{m}-rear-cover"], titleMust: /\b(back|rear) (glass|cover|panel)\b/i },
-  rear_camera: { slugs: ["{m}-rear-camera", "{m}-back-camera", "{m}-main-camera"], titleMust: /\b(rear|back|main|wide) camera\b/i },
+// What a product slug must contain to be this part. Matched against the
+// store's own list of every product it sells (its sitemap), not guessed:
+// "google-pixel-4a-battery-genuine" and "galaxy-a51-screen" are real slugs
+// no pattern would have produced.
+export const MARKET_PARTS: Record<string, { slugHas: RegExp; titleMust: RegExp }> = {
+  screen: { slugHas: /-(screen|display|lcd|oled)\b/, titleMust: /\bscreen\b|\bdisplay\b|\blcd\b|\boled\b/i },
+  battery: { slugHas: /-battery\b/, titleMust: /\bbattery\b/i },
+  charging_port: { slugHas: /-(charging-port|charging-assembly|lightning-connector|usb-c-port|charge-port)\b/, titleMust: /\b(charging|lightning|usb-c|port|connector)\b/i },
+  back_glass: { slugHas: /-(back-glass|rear-glass|back-cover|rear-cover|back-panel)\b/, titleMust: /\b(back|rear) (glass|cover|panel)\b/i },
+  rear_camera: { slugHas: /-(rear-camera|back-camera|main-camera)\b/, titleMust: /\b(rear|back|main|wide) camera\b/i },
 };
 
 function norm(s: string): string {
@@ -60,7 +60,10 @@ function modelKey(deviceName: string): string {
 
 /** "ipad air 2" -> "ipad-air-2"; Google's store slugs keep the brand. */
 function slugFor(deviceName: string): string[] {
-  const k = modelKey(deviceName).replace(/\s+/g, "-");
+  let k = modelKey(deviceName).replace(/\s+/g, "-");
+  // The store files the iPhone SE by the year it shipped, not its generation.
+  // These are facts about the product, not guesses.
+  k = k.replace(/^iphone-se-3rd-gen$/, "iphone-se-2022").replace(/^iphone-se-2nd-gen$/, "iphone-se-2020").replace(/^iphone-se-1st-gen$/, "iphone-se");
   const out = [k];
   if (/^pixel\b/.test(k)) out.push("google-" + k);
   if (/^galaxy\b/.test(k)) out.push("samsung-" + k);
@@ -95,6 +98,28 @@ async function getJson<T>(url: string): Promise<T | null> {
   }
 }
 
+/**
+ * Every product the store sells, by slug, read from its sitemap. Loaded once
+ * per run and matched locally, so the run makes one request per real product
+ * rather than several guesses per device. The Canadian sitemap is read too:
+ * a slug present there is priced in CAD on its en-ca page, which is the
+ * store's own Canadian price and needs no conversion.
+ */
+export async function loadProductIndex(): Promise<{ all: Set<string>; ca: Set<string> } | null> {
+  const all = new Set<string>();
+  const ca = new Set<string>();
+  const files = ["products", "products_2", "products_3", "products_4", "products_en-ca"];
+  for (const f of files) {
+    const xml = await getText(`https://www.ifixit.com/sitemap/${f}.xml`);
+    if (!xml || xml.status !== 200) continue;
+    for (const m of xml.body.matchAll(/<loc>https:\/\/www\.ifixit\.com\/(en-ca\/)?products\/([^<]+)<\/loc>/g)) {
+      (m[1] ? ca : all).add(m[2]);
+    }
+  }
+  if (all.size < 1000) return null; // the sitemap did not come back whole; do not run on a partial list
+  return { all, ca };
+}
+
 export async function usdToCad(): Promise<{ rate: number; date: string } | null> {
   const d = await getJson<{ observations: Array<{ d: string; FXUSDCAD: { v: string } }> }>(
     "https://www.bankofcanada.ca/valet/observations/FXUSDCAD/json?recent=1",
@@ -112,35 +137,62 @@ interface Found {
   currency: string;
 }
 
-async function findPart(deviceName: string, problem: string): Promise<Found | null> {
+const VARIANT = /^(pro|plus|max|mini|ultra|fe|xl|a|e|lite|edge|fold|flip)(-|$)/;
+
+/** Slugs in the index that are this exact model and this part. */
+function candidateSlugs(index: { all: Set<string>; ca: Set<string> }, deviceName: string, problem: string): string[] {
+  const spec = MARKET_PARTS[problem];
+  const out: string[] = [];
+  // A product can be in either sitemap or both; a Canadian-only listing is
+  // still a listing.
+  const every = new Set<string>([...index.all, ...index.ca]);
+  for (const base of slugFor(deviceName)) {
+    const prefix = base + "-";
+    for (const slug of every) {
+      if (!slug.startsWith(prefix)) continue;
+      const rest = slug.slice(prefix.length);
+      // "iphone-15-pro-screen" must not serve "iphone 15": the token after the
+      // model may not be a variant word. A model code (a1566) or a year is fine.
+      if (VARIANT.test(rest)) continue;
+      if (!spec.slugHas.test(slug) || ACCESSORY.test(slug.replace(/-/g, " "))) continue;
+      out.push(slug);
+    }
+  }
+  // Prefer the plain part over kits and bundles, and the Canadian listing over
+  // the converted one, then shorter slugs (the base product) first.
+  return out.sort((a, b) => Number(index.ca.has(b)) - Number(index.ca.has(a)) || a.length - b.length);
+}
+
+async function findPart(
+  index: { all: Set<string>; ca: Set<string> },
+  deviceName: string,
+  problem: string,
+): Promise<Found | null> {
   const spec = MARKET_PARTS[problem];
   if (!spec) return null;
-  for (const base of slugFor(deviceName)) {
-    for (const pattern of spec.slugs) {
-      const slug = pattern.replace("{m}", base);
-      const page = await getText(`https://www.ifixit.com/products/${slug}`);
-      if (!page || page.status !== 200 || !page.body) continue;
-      const blocks = page.body.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g) || [];
-      for (const b of blocks) {
-        try {
-          const d = JSON.parse(b.replace(/^<script[^>]*>/, "").replace(/<\/script>$/, "")) as {
-            "@type"?: string;
-            name?: string;
-            offers?: { price?: string | number; priceCurrency?: string } | Array<{ price?: string | number; priceCurrency?: string }>;
-          };
-          if (d["@type"] !== "Product" && d["@type"] !== "ProductGroup") continue;
-          const name = d.name || "";
-          // The slug named the model; the product name must agree, and must be
-          // the part rather than a kit of tools that mentions it.
-          if (!modelMatches(deviceName, name) || !spec.titleMust.test(name) || ACCESSORY.test(name)) continue;
-          const off = Array.isArray(d.offers) ? d.offers[0] : d.offers;
-          const price = Number(off?.price);
-          if (Number.isFinite(price) && price > 0) {
-            return { title: name, url: `https://www.ifixit.com/products/${slug}`, price, currency: off?.priceCurrency || "USD" };
-          }
-        } catch {
-          /* not this block */
+  for (const slug of candidateSlugs(index, deviceName, problem).slice(0, 4)) {
+    const inCa = index.ca.has(slug);
+    const url = `https://www.ifixit.com/${inCa ? "en-ca/" : ""}products/${slug}`;
+    const page = await getText(url);
+    if (!page || page.status !== 200 || !page.body) continue;
+    const blocks = page.body.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g) || [];
+    for (const b of blocks) {
+      try {
+        const d = JSON.parse(b.replace(/^<script[^>]*>/, "").replace(/<\/script>$/, "")) as {
+          "@type"?: string;
+          name?: string;
+          offers?: { price?: string | number; priceCurrency?: string } | Array<{ price?: string | number; priceCurrency?: string }>;
+        };
+        if (d["@type"] !== "Product" && d["@type"] !== "ProductGroup") continue;
+        const name = d.name || "";
+        if (!modelMatches(deviceName, name) || !spec.titleMust.test(name) || ACCESSORY.test(name)) continue;
+        const off = Array.isArray(d.offers) ? d.offers[0] : d.offers;
+        const price = Number(off?.price);
+        if (Number.isFinite(price) && price > 0) {
+          return { title: name, url, price, currency: off?.priceCurrency || (inCa ? "CAD" : "USD") };
         }
+      } catch {
+        /* not this block */
       }
     }
   }
@@ -166,6 +218,8 @@ export async function syncRepairMarketPrices(opts: {
 } = {}): Promise<MarketSyncResult> {
   const fx = await usdToCad();
   if (!fx) return { devices: 0, looked: 0, found: 0, fx: null, errors: ["No FX rate from the Bank of Canada; nothing written"] };
+  const index = await loadProductIndex();
+  if (!index) return { devices: 0, looked: 0, found: 0, fx, errors: ["Could not read the store's product list; nothing written"] };
 
   const db = getDb();
   const cats = opts.categories ?? ["smartphone", "tablet"];
@@ -193,10 +247,13 @@ export async function syncRepairMarketPrices(opts: {
     for (const problem of Object.keys(MARKET_PARTS)) {
       looked++;
       try {
-        const part = await findPart(dev.name, problem);
+        const part = await findPart(index, dev.name, problem);
         if (part) {
-          const cad = part.currency === "CAD" ? part.price : part.price * fx.rate;
-          upsert.run(dev.id, problem, part.title, part.price, part.currency, Math.round(cad * 100) / 100, fx.rate, part.url, now);
+          // A Canadian listing is already in CAD and the rate recorded is 1;
+          // a US one is converted at today's Bank of Canada rate.
+          const native = part.currency === "CAD";
+          const cad = native ? part.price : part.price * fx.rate;
+          upsert.run(dev.id, problem, part.title, part.price, part.currency, Math.round(cad * 100) / 100, native ? 1 : fx.rate, part.url, now);
           found++;
           foundHere++;
         }
