@@ -125,9 +125,39 @@
 
 .brand-chip-row {
   display: flex;
-  flex-wrap: wrap;
   gap: 0.4rem;
   margin-bottom: 0.25rem;
+}
+
+/* On a phone the thirteen brands wrapped to four rows and, with the heading
+   and the search box above them, pushed the first device to 821px on an 844px
+   screen — a customer saw no devices at all. One scrolling row instead: the
+   brand you want is almost always in the first three, and the rest are a
+   swipe away rather than a screenful. */
+@media (max-width: 720px) {
+  .brand-chip-row {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 0.15rem;
+  }
+
+  .brand-chip-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .brand-chip-row .chip {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
+}
+
+@media (min-width: 721px) {
+  .brand-chip-row {
+    flex-wrap: wrap;
+  }
 }
 
 /* Brand chips carried a device photograph shrunk to 18x22 as a stand-in for a

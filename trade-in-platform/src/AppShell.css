@@ -120,30 +120,3 @@
   margin: 0;
 }
 
-/* Sell / Repair. Two large targets, one clearly chosen, above either flow. */
-.mode-switch {
-  display: inline-flex;
-  gap: 4px;
-  padding: 4px;
-  margin: 0 0 1rem;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--fog);
-}
-.mode-switch button {
-  min-height: 44px;
-  padding: 0 1.4rem;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--ink-soft);
-  font-weight: 650;
-  cursor: pointer;
-  transition: background 0.18s var(--ease), color 0.18s var(--ease);
-}
-.mode-switch button.is-on {
-  background: var(--paper);
-  color: var(--ink);
-  box-shadow: var(--shadow);
-}
-.mode-switch button:focus-visible { outline: 2px solid var(--mint-dim); outline-offset: 2px; }

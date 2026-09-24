@@ -181,6 +181,7 @@ export function RepairFlow() {
                 setBrandFilter(b);
               }}
               onQuery={setQuery}
+              mode="repair"
               onSelect={(d) => {
                 setDevice(d);
                 setStep("problem");

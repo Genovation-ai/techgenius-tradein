@@ -1,6 +1,7 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { TradeInFlow } from "./components/TradeInFlow";
+import { RepairFlow } from "./components/RepairFlow";
 import { TrackOffer } from "./components/TrackOffer";
 import { WidgetErrorBoundary } from "./components/WidgetErrorBoundary";
 import { resetApiBase } from "./lib/tradeInApi";
@@ -16,8 +17,21 @@ const MOUNT_ID = "tg-trade-in-root";
  * The host page configures the backend, so one built file works everywhere:
  *   <div id="tg-trade-in-root"
  *        data-api="https://api.techgenius.ca"
- *        data-org="tech-genius"></div>
+ *        data-org="tech-genius"
+ *        data-mode="both"></div>
+ *
+ * data-mode picks what the block offers:
+ *   both    sell and repair, with a switch between them (default)
+ *   sell    trade-in only — what every existing embed did before repairs
+ *   repair  repair only, for a shop that wants it on its own page
+ *
+ * The default is "both" rather than "sell" on purpose: repairs existed for a
+ * week in the admin and on the preview page while every live embed still
+ * mounted the trade-in alone, so nobody visiting the shop could book one. An
+ * embed that already says data-mode="sell" is unaffected.
  */
+type Mode = "sell" | "repair";
+
 let root: Root | null = null;
 
 /**
@@ -39,6 +53,65 @@ function ensureFont() {
   document.head.appendChild(link);
 }
 
+/**
+ * Sell and repair in one block.
+ *
+ * The switch is only drawn when the host asked for both; a single-purpose
+ * embed shows its one flow with no chrome above it. #repair in the host page's
+ * URL opens on repairs, so a shop can link straight to it from its own menu.
+ */
+function Widget({ offer }: { offer: "both" | Mode }) {
+  const initial: Mode =
+    offer === "repair" || (offer === "both" && window.location.hash === "#repair") ? "repair" : "sell";
+  const [mode, setMode] = useState<Mode>(initial);
+
+  useEffect(() => {
+    if (offer !== "both") return;
+    const onHash = () => setMode(window.location.hash === "#repair" ? "repair" : "sell");
+    window.addEventListener("hashchange", onHash);
+    return () => window.removeEventListener("hashchange", onHash);
+  }, [offer]);
+
+  const choose = (m: Mode) => {
+    setMode(m);
+    // Replace rather than push: the switch is not a page the back button
+    // should have to walk through on the shop's own site.
+    window.history.replaceState(null, "", m === "repair" ? "#repair" : window.location.pathname + window.location.search);
+  };
+
+  return (
+    <>
+      {offer === "both" ? (
+        <div className="mode-switch" role="tablist" aria-label="Sell or repair">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "sell"}
+            className={mode === "sell" ? "is-on" : ""}
+            onClick={() => choose("sell")}
+          >
+            Sell
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={mode === "repair"}
+            className={mode === "repair" ? "is-on" : ""}
+            onClick={() => choose("repair")}
+          >
+            Repair
+          </button>
+        </div>
+      ) : null}
+
+      {mode === "repair" ? <RepairFlow /> : <TradeInFlow />}
+      {/* Tracking is for trade-in offers; a repair has its own id and the
+          shop calls about it. */}
+      {mode === "sell" ? <TrackOffer /> : null}
+    </>
+  );
+}
+
 function mount() {
   ensureFont();
   const el = document.getElementById(MOUNT_ID);
@@ -56,6 +129,9 @@ function mount() {
     resetApiBase();
   }
 
+  const asked = (el.getAttribute("data-mode") || "both").trim().toLowerCase();
+  const offer: "both" | Mode = asked === "sell" || asked === "repair" ? asked : "both";
+
   // Framer previews re-run this on every edit; reuse the root so React does not
   // warn about mounting twice into the same container.
   root ??= createRoot(el);
@@ -63,8 +139,7 @@ function mount() {
     <StrictMode>
       <div className="tg-trade-in-host" data-platform="techgenius">
         <WidgetErrorBoundary>
-          <TradeInFlow />
-          <TrackOffer />
+          <Widget offer={offer} />
         </WidgetErrorBoundary>
       </div>
     </StrictMode>,

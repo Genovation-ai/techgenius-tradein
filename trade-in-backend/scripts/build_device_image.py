@@ -293,18 +293,12 @@ def draw_silhouette(name: str, brand: str, size=(300, 420), *,
             radius=6, fill=(*accent_rgb, 255),
         )
 
-    # Model name — the part that has to survive being shrunk into a grid tile.
-    title = (name or "Device").strip()
-    font = _fit_font(draw, title, width - 28, 23)
-    tw = draw.textbbox((0, 0), title, font=font)
-    draw.text(((width - (tw[2] - tw[0])) / 2, label_top + 6), title,
-              fill=(248, 250, 253, 255), font=font)
-
-    badge = "Photo coming soon"
-    small = load_font(11, bold=False)
-    bw = draw.textbbox((0, 0), badge, font=small)
-    draw.text(((width - (bw[2] - bw[0])) / 2, label_top + 34), badge,
-              fill=(178, 188, 204, 235), font=small)
+    # No caption, no badge. The card already prints the model name directly
+    # under the tile, so a name burned into the picture says it twice — and
+    # says it in a bar that covers the device. "New device · image built" and
+    # "Photo coming soon" are worse than redundant: they are our internal
+    # vocabulary telling a customer the picture is not real, on the screen
+    # where they are choosing which phone is theirs.
 
     return img.convert("RGB")
 
@@ -322,20 +316,12 @@ def adapt_base(base: Path, name: str, brand: str, size=(300, 420)) -> Image.Imag
     oy = 28
     canvas.alpha_composite(tinted, (ox, oy))
 
-    draw = ImageDraw.Draw(canvas)
-    font = load_font(20 if len(name) < 20 else 16)
-    small = load_font(12)
-    title = name.strip()
-    tw = draw.textbbox((0, 0), title, font=font)
-    draw.rounded_rectangle(
-        [18, size[1] - 62, size[0] - 18, size[1] - 14],
-        radius=14,
-        fill=(0, 0, 0, 150),
-    )
-    draw.text(((size[0] - (tw[2] - tw[0])) / 2, size[1] - 54), title, fill=(255, 255, 255, 255), font=font)
-    badge = "New device · image built"
-    bw = draw.textbbox((0, 0), badge, font=small)
-    draw.text(((size[0] - (bw[2] - bw[0])) / 2, size[1] - 32), badge, fill=(*accent, 255), font=small)
+    # No caption, no badge. The card already prints the model name directly
+    # under the tile, so a name burned into the picture says it twice — and
+    # says it in a bar that covers the device. "New device · image built" and
+    # "Photo coming soon" are worse than redundant: they are our internal
+    # vocabulary telling a customer the picture is not real, on the screen
+    # where they are choosing which phone is theirs.
     return canvas.convert("RGB")
 
 

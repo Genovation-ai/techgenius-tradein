@@ -22,6 +22,14 @@ interface Props {
   onBrandFilter: (b: Brand | "All") => void;
   onQuery: (q: string) => void;
   onSelect: (device: DeviceModel) => void;
+  /**
+   * Which journey this picker is serving. The grid, the search and the
+   * ordering are the same either way; what a device is worth is not. The
+   * price on a card is the trade-in payout, which is the wrong number to put
+   * in front of someone choosing a phone to have repaired — it is what we
+   * would pay to buy it from them.
+   */
+  mode?: "sell" | "repair";
 }
 
 /** After category: search OR browse image devices — mirrors GoRecell/UniverCell */
@@ -37,6 +45,7 @@ export function DevicePickStep({
   onBrandFilter,
   onQuery,
   onSelect,
+  mode = "sell",
 }: Props) {
   const deferredQuery = useDeferredValue(query);
   const catLabel = categories.find((c) => c.id === category)?.label ?? "devices";
@@ -105,15 +114,22 @@ export function DevicePickStep({
   return (
     <section className="flow-panel">
       <header className="flow-header">
-        <h1>Search or select your {catLabel.toLowerCase()}</h1>
-        <p className="flow-lead">
-          Type a model name or tap a device photo — powered by Tech Genius catalog
-          {apiOnline === false ? " (offline fallback)" : ""}.
-        </p>
+        <h1>
+          {mode === "repair"
+            ? `Which ${catLabel.toLowerCase()} needs fixing?`
+            : `Search or select your ${catLabel.toLowerCase()}`}
+        </h1>
+        {/* The search box below says what to do, and on a phone this sentence
+            was two of the lines that pushed every device past the fold. It
+            stays only when the catalogue is offline, where it explains why the
+            list is short. */}
+        {apiOnline === false ? (
+          <p className="flow-lead">Showing a saved copy of the catalogue — search still works.</p>
+        ) : null}
       </header>
 
-      <label className="field">
-        <span>Search your model here…</span>
+      <label className="field field--search">
+        <span className="sr-only">Search your model</span>
         <input
           value={query}
           onChange={(e) => onQuery(e.target.value)}
@@ -215,11 +231,13 @@ export function DevicePickStep({
                 })()}
               </span>
               <span className="device-card-name">{device.name}</span>
-              <span className="device-card-price">
-                {device.basePrice > 0
-                  ? `Up to $${device.basePrice.toLocaleString()} CAD`
-                  : "Get instant quote"}
-              </span>
+              {mode === "repair" ? null : (
+                <span className="device-card-price">
+                  {device.basePrice > 0
+                    ? `Up to $${device.basePrice.toLocaleString()} CAD`
+                    : "Get instant quote"}
+                </span>
+              )}
             </button>
           ))}
         </div>
