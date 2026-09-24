@@ -165,7 +165,34 @@ const embedDir = firstExisting(
   path.resolve(HERE, "../../framer-deliverable"),
 );
 if (embedDir) {
-  app.use("/embed", express.static(embedDir, { maxAge: "1h" }));
+  /**
+   * The embed must not be an hour behind the deployment.
+   *
+   * tg-trade-in.js has a fixed name — the shop pastes that URL into its site
+   * once and never touches it again — so a long max-age means a browser keeps
+   * running whatever it downloaded last. Repairs shipped and the shop's own
+   * page carried on serving the previous bundle, with no way to tell it not
+   * to short of the visitor clearing their cache.
+   *
+   * no-cache does not mean "do not store": it means revalidate before use.
+   * The file is still cached, and an unchanged one comes back as a 304 with
+   * no body, so the cost is one conditional request while a deploy reaches
+   * every visitor on their next page load. The hashed assets under the admin
+   * app keep their long cache; this applies only to the two entry files a
+   * host page references by name.
+   */
+  app.use(
+    "/embed",
+    express.static(embedDir, {
+      etag: true,
+      lastModified: true,
+      setHeaders: (res, filePath) => {
+        if (/\.(js|css)$/.test(filePath)) {
+          res.setHeader("Cache-Control", "no-cache, must-revalidate");
+        }
+      },
+    }),
+  );
 } else {
   console.warn("[static] embed bundle not found — /embed will 404");
 }
