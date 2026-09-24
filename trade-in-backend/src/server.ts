@@ -90,6 +90,12 @@ const PUBLIC_CORS_PATHS = [
   "/api/catalog",
   "/api/quote",
   "/api/widget",
+  // The repair flow's public half: the problem list, a price, a booking and
+  // the tracker. Missing here, an embedded widget could browse devices and
+  // then showed an empty "what's wrong with it" list, because the browser
+  // discarded a response carrying no CORS header. The admin half lives under
+  // /api/repairs, which this prefix does not match, and stays restricted.
+  "/api/repair",
   "/api/saas/widget-config",
   "/api/saas/signup",
   "/api/saas/slug-available",
