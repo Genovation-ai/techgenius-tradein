@@ -127,6 +127,21 @@ describe("findListings", () => {
     expect(mac.some((s) => s.includes("panel-only"))).toBe(false);
   });
 
+  it("takes the main rear camera, not a secondary sensor", () => {
+    // "the back camera" means the one people take photos with. A macro or
+    // depth sensor is a few dollars against fifty, so quoting one undercharges
+    // for the repair that was actually booked.
+    const cams = [
+      "back-camera-for-samsung-galaxy-a12-a125-2020",
+      "back-camera-macro-for-samsung-galaxy-a12-a125-2020",
+      "back-camera-depth-for-samsung-galaxy-a12-a125-2020",
+      "back-camera-ultra-wide-for-samsung-galaxy-a12-a125-2020",
+    ];
+    expect(findListings(cams, "Galaxy A12", "samsung-smartphone", "rear_camera")).toEqual([
+      "back-camera-for-samsung-galaxy-a12-a125-2020",
+    ]);
+  });
+
   it("returns nothing for a part type it does not know", () => {
     expect(findListings(SLUGS, "iPhone 15", "apple-smartphone", "water_damage")).toEqual([]);
   });

@@ -70,8 +70,11 @@ export const SENTRIX_PARTS: Record<string, { must: RegExp; not: RegExp; floor: n
     floor: 2,
   },
   rear_camera: {
+    // A phone has several rear cameras and a customer reporting "the back
+    // camera" means the main one. Quoting a macro or depth sensor — a few
+    // dollars against fifty — would undercharge for the repair they booked.
     must: /(rear|back)-camera/,
-    not: new RegExp(`(lens|glass|cover|${TRIM})`),
+    not: new RegExp(`(macro|ultra-?wide|depth|telephoto|front|lens|glass|cover|${TRIM})`),
     floor: 1,
   },
 };
