@@ -46,6 +46,7 @@ export async function runWeeklyPriceRefresh(): Promise<{
   catalog: Awaited<ReturnType<typeof syncGorecellCatalogPrices>>;
   competitors?: unknown;
   repairMarket?: unknown;
+  sentrix?: unknown;
 }> {
   if (running) {
     throw new Error("Weekly price refresh already running");
@@ -81,6 +82,18 @@ export async function runWeeklyPriceRefresh(): Promise<{
     // Repair part prices refresh on the same weekly cadence, after the
     // trade-in work, and a failure here must not mark the whole run failed.
     let repairMarket: unknown;
+    let sentrix: unknown;
+    // The Canadian supplier first: its prices need no conversion and it covers
+    // the categories iFixit does not stock. Each source is tried on its own so
+    // one being down does not cost us the other's prices.
+    try {
+      const { syncSentrixPrices } = await import("../services/repairMarketSentrix.js");
+      const r = await syncSentrixPrices({});
+      sentrix = { devices: r.devices, priced: r.priced, pairs: r.pairs };
+      console.log(`[weekly-scrape] mobilesentrix: ${r.priced} prices across ${r.devices} devices`);
+    } catch (e) {
+      console.warn("[weekly-scrape] mobilesentrix refresh failed:", e);
+    }
     try {
       const { syncRepairMarketPrices } = await import("../services/repairMarket.js");
       const r = await syncRepairMarketPrices({ delayMs: 350 });
@@ -89,7 +102,7 @@ export async function runWeeklyPriceRefresh(): Promise<{
     } catch (e) {
       console.warn("[weekly-scrape] repair part refresh failed:", e);
     }
-    return { catalog, competitors, repairMarket };
+    return { catalog, competitors, repairMarket, sentrix };
   } finally {
     running = false;
   }

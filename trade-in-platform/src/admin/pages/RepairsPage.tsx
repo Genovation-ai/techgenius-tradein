@@ -47,6 +47,16 @@ type Market = {
   fx_rate: number;
   source_url: string;
   scraped_at: string;
+  source: string;
+  vendor_label: string;
+  in_stock: boolean | null;
+  alternatives: number | null;
+};
+
+type Coverage = {
+  by_source: Array<{ source: string; vendor_label: string; prices: number; devices: number }>;
+  devices_priced: number;
+  devices_total: number;
 };
 
 const STAGE_TONE: Record<string, string> = {
@@ -316,6 +326,7 @@ function RepairPricing() {
   const [labour, setLabour] = useState("100");
   const [parts, setParts] = useState<Part[]>([]);
   const [market, setMarket] = useState<Market[]>([]);
+  const [coverage, setCoverage] = useState<Coverage | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [deviceId, setDeviceId] = useState("");
@@ -332,11 +343,13 @@ function RepairPricing() {
       parts: Part[];
       problems: Problem[];
       market: Market[];
+      coverage?: Coverage;
     }>("/api/repairs/pricing");
     setMarkup(String(d.settings.markupPercent));
     setLabour(String(d.settings.labourFee));
     setParts(d.parts);
     setMarket(d.market || []);
+    setCoverage(d.coverage ?? null);
     setProblems(d.problems);
   }, []);
   useEffect(() => {
@@ -500,9 +513,15 @@ function RepairPricing() {
       <div className="admin-table-wrap" style={{ gridColumn: "1 / -1" }}>
         <div className="admin-toolbar" style={{ justifyContent: "space-between" }}>
           <p className="admin-sub" style={{ margin: 0 }}>
-            <strong>Market part price</strong> is what the part sells for at a published source, converted to CAD at the
-            Bank of Canada rate on the day it was read. It is used only when you have not set your own cost.
-            {market.length ? ` ${market.length} prices on file.` : " None on file yet."}
+            <strong>Market part price</strong> is what the part sells for at a supplier who publishes it.
+            MobileSentrix Canada quotes in CAD, so nothing is converted; iFixit quotes in USD and is converted at
+            the Bank of Canada rate on the day it was read. Used only when you have not set your own cost.
+            {coverage
+              ? ` ${coverage.devices_priced} of ${coverage.devices_total} devices priced — ` +
+                coverage.by_source.map((c) => `${c.vendor_label}: ${c.prices} across ${c.devices}`).join(", ") + "."
+              : market.length
+                ? ` ${market.length} prices on file.`
+                : " None on file yet."}
           </p>
           <button type="button" className="admin-btn admin-btn--ghost" disabled={refreshing} onClick={() => void refreshMarket()}>
             {refreshing ? "Starting…" : "Refresh published prices"}
@@ -547,7 +566,12 @@ function RepairPricing() {
                           ${r.mkt.price_cad.toFixed(2)}
                           <div className="admin-sub">
                             <a href={r.mkt.source_url} target="_blank" rel="noreferrer">{r.mkt.product_title.slice(0, 40)}</a>
-                            {" · "}{r.mkt.price} {r.mkt.currency} × {r.mkt.fx_rate} · {r.mkt.scraped_at.slice(0, 10)}
+                            {" · "}{r.mkt.vendor_label}
+                            {/* Only say "converted" when something was. */}
+                            {r.mkt.fx_rate !== 1 ? ` · ${r.mkt.price} ${r.mkt.currency} × ${r.mkt.fx_rate}` : ""}
+                            {r.mkt.in_stock === false ? " · out of stock" : ""}
+                            {r.mkt.alternatives && r.mkt.alternatives > 1 ? ` · ${r.mkt.alternatives} grades listed` : ""}
+                            {" · "}{r.mkt.scraped_at.slice(0, 10)}
                           </div>
                         </>
                       ) : (

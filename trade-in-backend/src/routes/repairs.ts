@@ -14,6 +14,7 @@ import {
   quoteRepair,
   setProblems,
   setRepairSettings,
+  vendorLabel,
 } from "../services/repairPricing.js";
 
 /**
@@ -84,8 +85,30 @@ repairPublicRouter.post("/quote", (req, res) => {
       // through, and the customer is told that rather than shown a number.
       needs_quote: q.source === "quote",
       // When the part cost came from a published listing rather than the
-      // shop, the customer gets to know that — and when it was read.
-      market: q.market ? { product: q.market.productTitle, read_on: q.market.scrapedAt.slice(0, 10) } : null,
+      // shop, the customer gets to know exactly where the number came from:
+      // which supplier, which product, what it was listed at, and when it was
+      // read. A price nobody can trace is indistinguishable from a guess.
+      market: q.market
+        ? {
+            product: q.market.productTitle,
+            read_on: q.market.scrapedAt.slice(0, 10),
+            vendor: q.market.vendorLabel,
+            url: q.market.sourceUrl,
+            part_cost_cad: q.market.partCostCad,
+            listed_price: q.market.listedPrice,
+            listed_currency: q.market.listedCurrency,
+            // Only meaningful when the listing was not already in CAD.
+            fx_rate: q.market.fxRate === 1 ? null : q.market.fxRate,
+            in_stock: q.market.inStock,
+            alternatives: q.market.alternatives,
+          }
+        : null,
+      // The arithmetic behind the number, so the price is checkable rather
+      // than merely asserted.
+      breakdown:
+        q.price != null && q.partCost != null
+          ? { part_cost: q.partCost, markup_percent: q.markupPercent, labour_fee: q.labourFee }
+          : null,
     });
   } finally {
     db.close();
@@ -225,15 +248,55 @@ repairsRouter.get("/pricing", requireCapability("pricing:read"), (req, res) => {
           ORDER BY d.name, p.problem`,
       )
       .all(orgId);
-    const market = db
+    // The same provenance the customer is shown, so the shop can answer a
+    // question about a price without leaving the admin: which supplier, which
+    // product, in stock or not, and how many grades were on offer.
+    const market = (
+      db
+        .prepare(
+          `SELECT m.source, m.device_id, d.name AS device_name, m.problem, m.product_title, m.price, m.currency,
+                  m.price_cad, m.fx_rate, m.source_url, m.scraped_at, m.in_stock, m.alternatives
+             FROM repair_market_prices m LEFT JOIN devices d ON d.id = m.device_id
+            WHERE m.price_cad > 0
+            ORDER BY d.name, m.problem, (m.fx_rate = 1) DESC`,
+        )
+        .all() as Array<Record<string, unknown> & { source: string; in_stock: number | null }>
+    ).map((r) => ({
+      ...r,
+      vendor_label: vendorLabel(r.source),
+      in_stock: r.in_stock == null ? null : r.in_stock === 1,
+    }));
+    // How much of the catalogue is actually priced, per source. Without this
+    // the only way to know coverage is to click every device.
+    const coverage = db
       .prepare(
-        `SELECT m.device_id, d.name AS device_name, m.problem, m.product_title, m.price, m.currency,
-                m.price_cad, m.fx_rate, m.source_url, m.scraped_at
-           FROM repair_market_prices m LEFT JOIN devices d ON d.id = m.device_id
-          ORDER BY d.name, m.problem`,
+        `SELECT m.source, COUNT(*) AS prices, COUNT(DISTINCT m.device_id) AS devices
+           FROM repair_market_prices m
+           JOIN devices d ON d.id = m.device_id AND d.enabled = 1
+          WHERE m.price_cad > 0
+          GROUP BY m.source`,
       )
-      .all();
-    res.json({ settings, parts, problems: getProblems(db, orgId, true), market });
+      .all() as Array<{ source: string; prices: number; devices: number }>;
+    const totalDevices = (db.prepare("SELECT COUNT(*) AS n FROM devices WHERE enabled = 1").get() as { n: number }).n;
+    const pricedDevices = (
+      db
+        .prepare(
+          `SELECT COUNT(DISTINCT m.device_id) AS n FROM repair_market_prices m
+             JOIN devices d ON d.id = m.device_id AND d.enabled = 1 WHERE m.price_cad > 0`,
+        )
+        .get() as { n: number }
+    ).n;
+    res.json({
+      settings,
+      parts,
+      problems: getProblems(db, orgId, true),
+      market,
+      coverage: {
+        by_source: coverage.map((c) => ({ ...c, vendor_label: vendorLabel(c.source) })),
+        devices_priced: pricedDevices,
+        devices_total: totalDevices,
+      },
+    });
   } finally {
     db.close();
   }
@@ -300,21 +363,36 @@ repairsRouter.post("/pricing/market/refresh", requireCapability("pricing:write")
   if (marketSyncRunning) return res.status(409).json({ error: "A refresh is already running" });
   marketSyncRunning = true;
   res.status(202).json({ ok: true, started: true });
-  void import("../services/repairMarket.js")
-    .then(({ syncRepairMarketPrices }) => syncRepairMarketPrices({ delayMs: 350 }))
-    .then((r) => console.log("[repair-market] refresh done:", JSON.stringify({ devices: r.devices, found: r.found, fx: r.fx })))
-    .catch((e) => console.warn("[repair-market] refresh failed:", e))
-    .finally(() => {
-      marketSyncRunning = false;
-    });
+  // Both suppliers, the Canadian one first. MobileSentrix quotes in CAD and
+  // covers the laptops, watches, consoles and Samsung models iFixit does not
+  // stock, so it does the bulk of the work; iFixit then fills what it can of
+  // the remainder. A failure in one does not stop the other.
+  void (async () => {
+    try {
+      const { syncSentrixPrices } = await import("../services/repairMarketSentrix.js");
+      const r = await syncSentrixPrices({});
+      console.log("[repair-market] mobilesentrix:", JSON.stringify({ devices: r.devices, priced: r.priced, pairs: r.pairs }));
+    } catch (e) {
+      console.warn("[repair-market] mobilesentrix failed:", e);
+    }
+    try {
+      const { syncRepairMarketPrices } = await import("../services/repairMarket.js");
+      const r = await syncRepairMarketPrices({ delayMs: 350 });
+      console.log("[repair-market] ifixit:", JSON.stringify({ devices: r.devices, found: r.found, fx: r.fx }));
+    } catch (e) {
+      console.warn("[repair-market] ifixit failed:", e);
+    }
+    marketSyncRunning = false;
+  })();
 });
 
 /**
  * Bulk part costs, pasted from the shop's supplier.
  *
- * The devices no public source lists are exactly the ones MobileSentrix
- * prices behind a wholesale login the shop has and this system does not. So
- * the shop brings the numbers: lines of `device, problem, cost`, where the
+ * The market sync reads MobileSentrix's published Canadian prices, but a
+ * published price is list price: the shop's own negotiated cost is lower, and
+ * for the devices no supplier lists publicly there is no figure at all. Either
+ * way the shop brings the numbers: lines of `device, problem, cost`, where the
  * device is our id or the name as the catalogue shows it. Every line is
  * checked against the catalogue and the problem list; a line that names
  * nothing we have is reported back, not silently dropped or guessed at.

@@ -231,10 +231,57 @@ export function RepairFlow() {
                     <p className="repair-price-note">
                       Parts and labour included. If we open it up and find something else, we'll call before
                       doing more.
-                      {quote.price_source === "market" && quote.market
-                        ? ` Part priced from a current published listing (${quote.market.read_on}); we'll confirm it when we see the device.`
-                        : ""}
                     </p>
+                    {quote.price_source === "market" && quote.market ? (
+                      // Where the number came from, in full. A price the
+                      // customer can go and check is a different thing from a
+                      // price they are simply asked to believe — and the shop
+                      // gets the same receipt when someone questions a quote.
+                      <details className="repair-source">
+                        <summary>How we worked this out</summary>
+                        <dl className="repair-source-rows">
+                          <div>
+                            <dt>Part</dt>
+                            <dd>
+                              <a href={quote.market.url} target="_blank" rel="noopener noreferrer">
+                                {quote.market.product}
+                              </a>
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Supplier</dt>
+                            <dd>
+                              {quote.market.vendor}
+                              {quote.market.in_stock === false ? " · out of stock when read" : ""}
+                            </dd>
+                          </div>
+                          <div>
+                            <dt>Part cost</dt>
+                            <dd>
+                              ${quote.market.part_cost_cad.toFixed(2)} CAD
+                              {quote.market.fx_rate
+                                ? ` (listed ${quote.market.listed_price.toFixed(2)} ${quote.market.listed_currency}, converted at ${quote.market.fx_rate.toFixed(4)})`
+                                : ""}
+                            </dd>
+                          </div>
+                          {quote.breakdown ? (
+                            <div>
+                              <dt>Then</dt>
+                              <dd>
+                                + {quote.breakdown.markup_percent}% markup + ${quote.breakdown.labour_fee} labour
+                              </dd>
+                            </div>
+                          ) : null}
+                          <div>
+                            <dt>Price read</dt>
+                            <dd>{quote.market.read_on}</dd>
+                          </div>
+                        </dl>
+                        <p className="repair-source-foot">
+                          Supplier list price, read on the date above. We'll confirm it when we see the device.
+                        </p>
+                      </details>
+                    ) : null}
                   </>
                 )}
               </div>

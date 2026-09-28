@@ -5,6 +5,17 @@ import { ensureSaasSchema } from "../services/tenancy.js";
 
 /** Additive schema patches for existing DBs (CREATE IF NOT EXISTS / ALTER safe). */
 export function applySchemaPatches(db: Database): void {
+  // Provenance the repair quote shows the customer: whether the supplier had
+  // the part in stock when it was read, and how many grades were listed for
+  // it. Added after the fact, so existing rows keep working without them.
+  const marketCols = new Set(
+    (db.prepare("PRAGMA table_info(repair_market_prices)").all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  if (marketCols.size) {
+    if (!marketCols.has("in_stock")) db.exec("ALTER TABLE repair_market_prices ADD COLUMN in_stock INTEGER");
+    if (!marketCols.has("alternatives")) db.exec("ALTER TABLE repair_market_prices ADD COLUMN alternatives INTEGER");
+  }
+
   const offerCols = new Set(
     (db.prepare("PRAGMA table_info(offers)").all() as Array<{ name: string }>).map((c) => c.name),
   );

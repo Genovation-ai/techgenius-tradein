@@ -157,7 +157,41 @@ export interface RepairQuote {
   partCost: number | null;
   markupPercent: number;
   labourFee: number;
-  market?: { partCostCad: number; productTitle: string; sourceUrl: string; scrapedAt: string } | null;
+  market?: MarketProvenance | null;
+}
+
+/**
+ * Where a market part cost came from, in enough detail that the shop — and the
+ * customer — can go and check it. A price with no traceable source is a guess
+ * wearing a number, so nothing here is optional.
+ */
+export interface MarketProvenance {
+  partCostCad: number;
+  productTitle: string;
+  sourceUrl: string;
+  scrapedAt: string;
+  /** The vendor key stored on the row: "mobilesentrix" | "ifixit". */
+  vendor: string;
+  /** What to show a person: "MobileSentrix Canada", "iFixit". */
+  vendorLabel: string;
+  /** The listed price and its currency, before any conversion. */
+  listedPrice: number;
+  listedCurrency: string;
+  /** 1 when the listing was already in CAD; otherwise the rate used. */
+  fxRate: number;
+  /** Whether the supplier had it in stock when the price was read. */
+  inStock: boolean | null;
+  /** How many grades of this part the supplier listed for this device. */
+  alternatives: number | null;
+}
+
+const VENDOR_LABELS: Record<string, string> = {
+  mobilesentrix: "MobileSentrix Canada",
+  ifixit: "iFixit",
+};
+
+export function vendorLabel(vendor: string): string {
+  return VENDOR_LABELS[vendor] ?? vendor;
 }
 
 export function quoteRepair(db: Database, orgId: string | null, deviceId: string, problem: RepairProblem): RepairQuote {
@@ -183,12 +217,31 @@ export function quoteRepair(db: Database, orgId: string | null, deviceId: string
   // exact model and part. It goes through the same markup and labour, and the
   // quote says where the part cost came from, so it is never mistaken for a
   // figure the shop chose.
+  //
+  // A listing already priced in CAD is preferred over one converted from USD:
+  // it is the Canadian price a Canadian shop actually pays, and no exchange
+  // rate can drift underneath it. Within that, the most recent reading wins.
   const mkt = db
     .prepare(
-      "SELECT price_cad, product_title, source_url, scraped_at FROM repair_market_prices WHERE device_id = ? AND problem = ? ORDER BY scraped_at DESC LIMIT 1",
+      `SELECT source, price_cad, product_title, source_url, scraped_at, price, currency, fx_rate, in_stock, alternatives
+         FROM repair_market_prices
+        WHERE device_id = ? AND problem = ? AND price_cad > 0
+        ORDER BY (fx_rate = 1) DESC, scraped_at DESC
+        LIMIT 1`,
     )
     .get(deviceId, problem) as
-    | { price_cad: number; product_title: string; source_url: string; scraped_at: string }
+    | {
+        source: string;
+        price_cad: number;
+        product_title: string;
+        source_url: string;
+        scraped_at: string;
+        price: number;
+        currency: string;
+        fx_rate: number;
+        in_stock: number | null;
+        alternatives: number | null;
+      }
     | undefined;
   if (mkt && mkt.price_cad > 0) {
     const price = mkt.price_cad * (1 + settings.markupPercent / 100) + settings.labourFee;
@@ -197,7 +250,19 @@ export function quoteRepair(db: Database, orgId: string | null, deviceId: string
       source: "market",
       partCost: mkt.price_cad,
       ...settings,
-      market: { partCostCad: mkt.price_cad, productTitle: mkt.product_title, sourceUrl: mkt.source_url, scrapedAt: mkt.scraped_at },
+      market: {
+        partCostCad: mkt.price_cad,
+        productTitle: mkt.product_title,
+        sourceUrl: mkt.source_url,
+        scrapedAt: mkt.scraped_at,
+        vendor: mkt.source,
+        vendorLabel: vendorLabel(mkt.source),
+        listedPrice: mkt.price,
+        listedCurrency: mkt.currency,
+        fxRate: mkt.fx_rate,
+        inStock: mkt.in_stock == null ? null : mkt.in_stock === 1,
+        alternatives: mkt.alternatives ?? null,
+      },
     };
   }
   return { price: null, source: "quote", partCost: null, ...settings };

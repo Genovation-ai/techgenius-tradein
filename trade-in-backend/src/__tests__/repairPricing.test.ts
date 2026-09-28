@@ -13,7 +13,8 @@ function fresh() {
     CREATE TABLE repair_parts (id INTEGER PRIMARY KEY, org_id TEXT, device_id TEXT, problem TEXT,
       part_cost REAL, override_price REAL, updated_at TEXT, UNIQUE(org_id, device_id, problem));
     CREATE TABLE repair_market_prices (id INTEGER PRIMARY KEY, source TEXT, device_id TEXT, problem TEXT,
-      product_title TEXT, price REAL, currency TEXT, price_cad REAL, fx_rate REAL, source_url TEXT, scraped_at TEXT);
+      product_title TEXT, price REAL, currency TEXT, price_cad REAL, fx_rate REAL, source_url TEXT, scraped_at TEXT,
+      in_stock INTEGER, alternatives INTEGER);
   `);
   return db;
 }
@@ -57,6 +58,50 @@ describe("repair pricing never invents a number", () => {
     expect(q.source).toBe("market");
     expect(q.price).toBe(239); // 126 * 1.10 + 100 = 238.6
     expect(q.market?.productTitle).toBe("iPhone 15 Screen");
+  });
+
+  it("carries where the price came from, in enough detail to check it", () => {
+    const db = fresh();
+    db.prepare(
+      `INSERT INTO repair_market_prices (source, device_id, problem, product_title, price, currency, price_cad, fx_rate, source_url, scraped_at, in_stock, alternatives)
+       VALUES ('mobilesentrix','iphone-15','screen','OLED Assembly For iPhone 15',57.67,'CAD',57.67,1,'https://www.mobilesentrix.ca/x','2026-09-25T00:00:00Z',1,8)`,
+    ).run();
+    const q = quoteRepair(db, null, "iphone-15", "screen");
+    expect(q.market?.vendor).toBe("mobilesentrix");
+    expect(q.market?.vendorLabel).toBe("MobileSentrix Canada");
+    expect(q.market?.sourceUrl).toBe("https://www.mobilesentrix.ca/x");
+    expect(q.market?.listedCurrency).toBe("CAD");
+    expect(q.market?.fxRate).toBe(1);
+    expect(q.market?.inStock).toBe(true);
+    expect(q.market?.alternatives).toBe(8);
+  });
+
+  it("prefers a price already in CAD over one converted from USD", () => {
+    // The Canadian listing is what a Canadian shop actually pays, and no
+    // exchange rate can drift underneath it — even when the USD row is newer.
+    const db = fresh();
+    db.prepare(
+      `INSERT INTO repair_market_prices (source, device_id, problem, product_title, price, currency, price_cad, fx_rate, source_url, scraped_at)
+       VALUES ('mobilesentrix','iphone-15','screen','CAD part',57.67,'CAD',57.67,1,'https://ca','2026-09-01T00:00:00Z')`,
+    ).run();
+    db.prepare(
+      `INSERT INTO repair_market_prices (source, device_id, problem, product_title, price, currency, price_cad, fx_rate, source_url, scraped_at)
+       VALUES ('ifixit','iphone-15','screen','USD part',89.99,'USD',126.00,1.4002,'https://us','2026-09-25T00:00:00Z')`,
+    ).run();
+    const q = quoteRepair(db, null, "iphone-15", "screen");
+    expect(q.market?.productTitle).toBe("CAD part");
+    expect(q.partCost).toBe(57.67);
+  });
+
+  it("ignores a market row with no usable price", () => {
+    const db = fresh();
+    db.prepare(
+      `INSERT INTO repair_market_prices (source, device_id, problem, product_title, price, currency, price_cad, fx_rate, source_url, scraped_at)
+       VALUES ('mobilesentrix','iphone-15','screen','broken',0,'CAD',0,1,'https://x','2026-09-25T00:00:00Z')`,
+    ).run();
+    const q = quoteRepair(db, null, "iphone-15", "screen");
+    expect(q.source).toBe("quote");
+    expect(q.price).toBeNull();
   });
 
   it("the shop's own cost beats the market price", () => {

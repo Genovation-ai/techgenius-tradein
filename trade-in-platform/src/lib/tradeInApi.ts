@@ -457,7 +457,25 @@ export interface RepairQuoteResponse {
   price: number | null;
   price_source: "override" | "formula" | "market" | "quote";
   needs_quote: boolean;
-  market?: { product: string; read_on: string } | null;
+  /**
+   * Where a market-derived part cost came from. Present only when the price
+   * was built from a published supplier listing rather than set by the shop.
+   */
+  market?: {
+    product: string;
+    read_on: string;
+    vendor: string;
+    url: string;
+    part_cost_cad: number;
+    listed_price: number;
+    listed_currency: string;
+    /** null when the listing was already in CAD and nothing was converted. */
+    fx_rate: number | null;
+    in_stock: boolean | null;
+    alternatives: number | null;
+  } | null;
+  /** The arithmetic behind the number, when there is one to show. */
+  breakdown?: { part_cost: number; markup_percent: number; labour_fee: number } | null;
 }
 
 export async function fetchRepairProblems(): Promise<RepairProblem[]> {
