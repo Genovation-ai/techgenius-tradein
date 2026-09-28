@@ -95,10 +95,10 @@ export async function runWeeklyPriceRefresh(): Promise<{
       console.warn("[weekly-scrape] mobilesentrix refresh failed:", e);
     }
     try {
-      const { syncRepairMarketPrices } = await import("../services/repairMarket.js");
-      const r = await syncRepairMarketPrices({ delayMs: 350 });
-      repairMarket = { devices: r.devices, found: r.found, fx: r.fx };
-      console.log(`[weekly-scrape] repair parts: ${r.found} prices across ${r.devices} devices`);
+      const { syncIfixitParts } = await import("../services/repairMarketIfixit.js");
+      const r = await syncIfixitParts({ onlyMissing: true });
+      repairMarket = { devices: r.devices, resolved: r.resolved, priced: r.priced };
+      console.log(`[weekly-scrape] ifixit: ${r.priced} prices across ${r.devicesPriced} devices it could fill`);
     } catch (e) {
       console.warn("[weekly-scrape] repair part refresh failed:", e);
     }

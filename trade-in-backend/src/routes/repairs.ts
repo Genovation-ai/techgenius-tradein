@@ -376,9 +376,11 @@ repairsRouter.post("/pricing/market/refresh", requireCapability("pricing:write")
       console.warn("[repair-market] mobilesentrix failed:", e);
     }
     try {
-      const { syncRepairMarketPrices } = await import("../services/repairMarket.js");
-      const r = await syncRepairMarketPrices({ delayMs: 350 });
-      console.log("[repair-market] ifixit:", JSON.stringify({ devices: r.devices, found: r.found, fx: r.fx }));
+      const { syncIfixitParts } = await import("../services/repairMarketIfixit.js");
+      // Only the devices still without a price: the supplier the shop buys
+      // from is the better number wherever it has one.
+      const r = await syncIfixitParts({ onlyMissing: true });
+      console.log("[repair-market] ifixit:", JSON.stringify({ looked: r.devices, resolved: r.resolved, priced: r.priced }));
     } catch (e) {
       console.warn("[repair-market] ifixit failed:", e);
     }

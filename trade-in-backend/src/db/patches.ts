@@ -214,6 +214,7 @@ export function applySchemaPatches(db: Database): void {
   repointStalePlaceholderImages(db);
   dedupeScrapedPrices(db);
   seedGorecellProductMap(db);
+  seedRepairMarketPrices(db);
 }
 
 /**
@@ -376,4 +377,76 @@ function repointStalePlaceholderImages(db: Database): void {
   });
   apply();
   if (moved) console.log(`[images] repointed ${moved} device(s) from a plate to a real photo`);
+}
+
+/**
+ * Give repair pricing something to quote from on the first boot after deploy.
+ *
+ * The weekly sync refreshes these in place, but it only runs once a week, and
+ * triggering it by hand needs a credential the machine that scraped these does
+ * not have. So the first load ships in the repository, exactly as the GoRecell
+ * product map does, and the weekly job takes over from there.
+ *
+ * Rows are upserted rather than ignored: shipping a newer scrape should update
+ * a stale price, not sit behind it. A device we do not carry is skipped, and a
+ * price the shop has since overridden is untouched — overrides live in
+ * repair_parts and win over anything here.
+ */
+function seedRepairMarketPrices(db: Database): void {
+  const file = [
+    path.resolve(import.meta.dirname, "../../config/repair-market-prices.json"),
+    path.resolve(import.meta.dirname, "../../../config/repair-market-prices.json"),
+  ].find((c) => existsSync(c));
+  if (!file) return;
+
+  interface Row {
+    source: string;
+    device_id: string;
+    problem: string;
+    product_title: string;
+    price: number;
+    currency: string;
+    price_cad: number;
+    fx_rate: number;
+    source_url: string;
+    scraped_at: string;
+    in_stock?: number;
+    alternatives?: number;
+  }
+
+  let rows: Row[];
+  try {
+    rows = JSON.parse(readFileSync(file, "utf8")) as Row[];
+  } catch (err) {
+    console.warn("[repair-market] could not read repair-market-prices.json:", err);
+    return;
+  }
+  if (!Array.isArray(rows) || rows.length === 0) return;
+
+  const known = new Set((db.prepare("SELECT id FROM devices").all() as Array<{ id: string }>).map((r) => r.id));
+  const upsert = db.prepare(
+    `INSERT INTO repair_market_prices
+       (source, device_id, problem, product_title, price, currency, price_cad, fx_rate, source_url, scraped_at, in_stock, alternatives)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     ON CONFLICT(source, device_id, problem) DO UPDATE SET
+       product_title = excluded.product_title, price = excluded.price, currency = excluded.currency,
+       price_cad = excluded.price_cad, fx_rate = excluded.fx_rate, source_url = excluded.source_url,
+       scraped_at = excluded.scraped_at, in_stock = excluded.in_stock, alternatives = excluded.alternatives
+     WHERE excluded.scraped_at >= repair_market_prices.scraped_at`,
+  );
+
+  let seeded = 0;
+  let skipped = 0;
+  const run = db.transaction(() => {
+    for (const r of rows) {
+      if (!known.has(r.device_id) || !(r.price_cad > 0)) { skipped++; continue; }
+      upsert.run(
+        r.source, r.device_id, r.problem, r.product_title, r.price, r.currency,
+        r.price_cad, r.fx_rate, r.source_url, r.scraped_at, r.in_stock ?? null, r.alternatives ?? null,
+      );
+      seeded++;
+    }
+  });
+  run();
+  console.log(`[repair-market] seeded ${seeded} part prices (${skipped} skipped) from repair-market-prices.json`);
 }
