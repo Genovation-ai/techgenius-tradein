@@ -197,16 +197,33 @@ export async function syncIfixitParts(opts: {
   const onlyMissing = opts.onlyMissing ?? true;
   const db = getDb();
   try {
+    // The problems iFixit can answer at all. A device is worth visiting if any
+    // one of them is still unpriced — checking "has no price of any kind" would
+    // skip a phone whose battery is priced and whose screen is not, which is
+    // most of them once the Canadian supplier has had its turn.
+    const fillable = [...new Set(Object.values(TAG_TO_PROBLEM))];
     const devices = db
       .prepare(
         onlyMissing
           ? `SELECT d.id, d.name FROM devices d
               WHERE d.enabled = 1
-                AND NOT EXISTS (SELECT 1 FROM repair_market_prices m WHERE m.device_id = d.id AND m.price_cad > 0)
+                AND EXISTS (
+                  SELECT 1 FROM (SELECT value AS problem FROM json_each(?)) p
+                   WHERE NOT EXISTS (
+                     SELECT 1 FROM repair_market_prices m
+                      WHERE m.device_id = d.id AND m.problem = p.problem AND m.price_cad > 0
+                   )
+                )
               ORDER BY d.name`
           : `SELECT d.id, d.name FROM devices d WHERE d.enabled = 1 ORDER BY d.name`,
       )
-      .all() as Array<{ id: string; name: string }>;
+      .all(...(onlyMissing ? [JSON.stringify(fillable)] : [])) as Array<{ id: string; name: string }>;
+
+    // A part already priced — by the Canadian supplier, or by an earlier run —
+    // is left alone rather than re-read.
+    const alreadyPriced = db.prepare(
+      "SELECT 1 FROM repair_market_prices WHERE device_id = ? AND problem = ? AND price_cad > 0 LIMIT 1",
+    );
 
     const upsert = db.prepare(
       `INSERT INTO repair_market_prices
@@ -233,6 +250,7 @@ export async function syncIfixitParts(opts: {
         resolved++;
 
         for (const shelf of await partShelves(wiki)) {
+          if (onlyMissing && alreadyPriced.get(dev.id, shelf.problem)) continue;
           await new Promise((r) => setTimeout(r, delay));
           const slugs = slugsIn(await getText(shelf.url));
           if (!slugs.length) continue;

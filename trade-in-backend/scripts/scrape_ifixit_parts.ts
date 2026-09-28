@@ -45,15 +45,19 @@ async function getText(url: string): Promise<string> {
 
 async function main() {
   const existing: Row[] = fs.existsSync(OUT) ? (JSON.parse(fs.readFileSync(OUT, "utf8")) as Row[]) : [];
-  const covered = new Set(existing.map((r) => r.device_id));
-  console.log(`already priced: ${covered.size} devices, ${existing.length} rows`);
+  // Per device AND part. A phone whose battery is priced and whose screen is
+  // not is still worth visiting — skipping it because it has "a price" is how
+  // most of the catalogue would stay half-filled.
+  const priced = new Set(existing.map((r) => `${r.device_id}|${r.problem}`));
+  const devicesSeen = new Set(existing.map((r) => r.device_id));
+  console.log(`already priced: ${existing.length} rows across ${devicesSeen.size} devices`);
 
   const res = await fetch(`${API}/api/catalog/devices?limit=2000`);
   const payload = (await res.json()) as { devices?: unknown } | unknown[];
   const devices = ((Array.isArray(payload) ? payload : payload.devices) as Array<{
     id: string; name: string; enabled?: number | boolean;
-  }>).filter((d) => d.enabled !== 0 && d.enabled !== false && !covered.has(d.id));
-  console.log(`devices to try at iFixit: ${devices.length}\n`);
+  }>).filter((d) => d.enabled !== 0 && d.enabled !== false);
+  console.log(`devices in catalogue: ${devices.length}\n`);
 
   const rows: Row[] = [];
   const now = new Date().toISOString();
@@ -66,6 +70,7 @@ async function main() {
     if (!wiki) continue;
     resolved++;
     for (const shelf of await partShelves(wiki)) {
+      if (priced.has(`${dev.id}|${shelf.problem}`)) continue;
       await new Promise((r) => setTimeout(r, DELAY));
       const slugs = slugsIn(await getText(shelf.url));
       for (const slug of slugs.slice(0, 3)) {
@@ -74,6 +79,7 @@ async function main() {
         if (!p || p.currency !== "CAD") continue;
         if (!isThePart(shelf.problem, p.title)) continue;
         if (!isPlausiblePrice(shelf.problem, p.price)) continue;
+        priced.add(`${dev.id}|${shelf.problem}`);
         rows.push({
           source: IFIXIT_SOURCE, device_id: dev.id, problem: shelf.problem, product_title: p.title,
           price: p.price, currency: p.currency, price_cad: Math.round(p.price * 100) / 100, fx_rate: 1,
