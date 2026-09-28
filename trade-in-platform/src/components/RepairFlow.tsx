@@ -255,15 +255,20 @@ export function RepairFlow() {
                               {quote.market.in_stock === false ? " · out of stock when read" : ""}
                             </dd>
                           </div>
-                          <div>
-                            <dt>Part cost</dt>
-                            <dd>
-                              ${quote.market.part_cost_cad.toFixed(2)} CAD
-                              {quote.market.fx_rate
-                                ? ` (listed ${quote.market.listed_price.toFixed(2)} ${quote.market.listed_currency}, converted at ${quote.market.fx_rate.toFixed(4)})`
-                                : ""}
-                            </dd>
-                          </div>
+                          {/* Sent only when the shop publishes what it paid;
+                              with that off the rows above still say where the
+                              price came from. */}
+                          {quote.market.part_cost_cad != null ? (
+                            <div>
+                              <dt>Part cost</dt>
+                              <dd>
+                                ${quote.market.part_cost_cad.toFixed(2)} CAD
+                                {quote.market.fx_rate != null && quote.market.listed_price != null
+                                  ? ` (listed ${quote.market.listed_price.toFixed(2)} ${quote.market.listed_currency ?? ""}, converted at ${quote.market.fx_rate.toFixed(4)})`
+                                  : ""}
+                              </dd>
+                            </div>
+                          ) : null}
                           {quote.breakdown ? (
                             <div>
                               <dt>Then</dt>

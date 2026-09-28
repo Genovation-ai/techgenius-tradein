@@ -466,13 +466,19 @@ export interface RepairQuoteResponse {
     read_on: string;
     vendor: string;
     url: string;
-    part_cost_cad: number;
-    listed_price: number;
-    listed_currency: string;
-    /** null when the listing was already in CAD and nothing was converted. */
-    fx_rate: number | null;
     in_stock: boolean | null;
     alternatives: number | null;
+    /**
+     * The cost figures are sent only when the shop has chosen to publish what
+     * it paid and what it added. Optional on purpose: with the setting off the
+     * price is still traceable — supplier, product, date — and the margin
+     * stays the shop's own business.
+     */
+    part_cost_cad?: number;
+    listed_price?: number;
+    listed_currency?: string;
+    /** null when the listing was already in CAD and nothing was converted. */
+    fx_rate?: number | null;
   } | null;
   /** The arithmetic behind the number, when there is one to show. */
   breakdown?: { part_cost: number; markup_percent: number; labour_fee: number } | null;
