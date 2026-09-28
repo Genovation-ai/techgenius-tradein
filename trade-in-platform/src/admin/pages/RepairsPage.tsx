@@ -53,6 +53,15 @@ type Market = {
   alternatives: number | null;
 };
 
+type MarketStatus = {
+  running: boolean;
+  started_at: string | null;
+  finished_at: string | null;
+  progress: { done: number; total: number } | null;
+  result: Record<string, { priced?: number; devices?: number }> | null;
+  errors?: string[];
+};
+
 type Coverage = {
   by_source: Array<{ source: string; vendor_label: string; prices: number; devices: number }>;
   devices_priced: number;
@@ -329,6 +338,7 @@ function RepairPricing() {
   const [market, setMarket] = useState<Market[]>([]);
   const [coverage, setCoverage] = useState<Coverage | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncNote, setSyncNote] = useState<string | null>(null);
   const [problems, setProblems] = useState<Problem[]>([]);
   const [deviceId, setDeviceId] = useState("");
   const [problem, setProblem] = useState("screen");
@@ -395,15 +405,57 @@ function RepairPricing() {
     void load();
   };
 
+  /**
+   * Start a refresh and then say where it has got to.
+   *
+   * The run reads a few thousand supplier pages at a deliberately polite pace
+   * and takes the better part of an hour, so "reload when it's done" left the
+   * shop with no way to know when that was — or whether a run the supplier
+   * throttled had quietly achieved nothing.
+   */
   const refreshMarket = async () => {
     setRefreshing(true);
     try {
       await adminFetch("/api/repairs/pricing/market/refresh", { method: "POST" });
-      setMsg("Reading published part prices — a few minutes. Reload this tab when it's done.");
-    } finally {
+      setSyncNote("Started. This reads a few thousand supplier pages slowly enough not to be blocked, so it takes about an hour. You can leave this tab.");
+    } catch (e) {
+      setSyncNote(e instanceof Error ? e.message : "Could not start the refresh");
       setRefreshing(false);
     }
   };
+
+  // Poll while a run is going, and once after it finishes to report what it did.
+  useEffect(() => {
+    let stop = false;
+    const tick = async () => {
+      try {
+        const st = await adminFetch<MarketStatus>("/api/repairs/pricing/market/status");
+        if (stop) return;
+        setRefreshing(st.running);
+        if (st.running) {
+          const p = st.progress;
+          setSyncNote(p ? `Reading part prices — ${p.done} of ${p.total} checked.` : "Reading part prices…");
+        } else if (st.finished_at) {
+          const parts = Object.entries(st.result || {}).map(
+            ([src, v]) => `${src}: ${(v as { priced?: number }).priced ?? 0} prices`,
+          );
+          setSyncNote(
+            (parts.length ? `Done — ${parts.join(", ")}.` : "Done.") +
+              (st.errors?.length ? ` ${st.errors[0]}` : ""),
+          );
+          void load();
+        }
+      } catch {
+        /* the tab still works without a status */
+      }
+    };
+    void tick();
+    const id = window.setInterval(tick, 15000);
+    return () => {
+      stop = true;
+      window.clearInterval(id);
+    };
+  }, [load]);
 
   // One row per device and part, whether the shop set a cost, a price was
   // published, or both — so the table is the whole picture, not just the
@@ -601,9 +653,10 @@ function RepairPricing() {
                 : " None on file yet."}
           </p>
           <button type="button" className="admin-btn admin-btn--ghost" disabled={refreshing} onClick={() => void refreshMarket()}>
-            {refreshing ? "Starting…" : "Refresh published prices"}
+            {refreshing ? "Reading…" : "Refresh published prices"}
           </button>
         </div>
+        {syncNote ? <p className="admin-sub" style={{ margin: "0 0 0.6rem" }}>{syncNote}</p> : null}
         <table className="admin-table">
           <thead>
             <tr>

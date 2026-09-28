@@ -369,10 +369,41 @@ repairsRouter.put("/pricing/problems", requireCapability("pricing:write"), (req,
  * new rows when it is done. Anything hostile to the source (a tight loop, a
  * burst) is refused by the same lock the weekly job uses.
  */
+/**
+ * What the last refresh did, so the tab can say so.
+ *
+ * The run reads a few thousand pages at a deliberately polite pace and takes
+ * the better part of an hour. Firing it and telling the shop to "reload when
+ * it's done" gave them no way to know when that was, or whether it had
+ * achieved anything — and a run the supplier throttled looks, from outside,
+ * exactly like a run that finished.
+ */
+interface MarketSyncState {
+  running: boolean;
+  startedAt: string | null;
+  finishedAt: string | null;
+  progress: { done: number; total: number } | null;
+  result: Record<string, unknown> | null;
+  errors: string[];
+}
+const marketSync: MarketSyncState = {
+  running: false,
+  startedAt: null,
+  finishedAt: null,
+  progress: null,
+  result: null,
+  errors: [],
+};
 let marketSyncRunning = false;
 repairsRouter.post("/pricing/market/refresh", requireCapability("pricing:write"), (_req, res) => {
   if (marketSyncRunning) return res.status(409).json({ error: "A refresh is already running" });
   marketSyncRunning = true;
+  marketSync.running = true;
+  marketSync.startedAt = new Date().toISOString();
+  marketSync.finishedAt = null;
+  marketSync.progress = null;
+  marketSync.result = null;
+  marketSync.errors = [];
   res.status(202).json({ ok: true, started: true });
   // Both suppliers, the Canadian one first. MobileSentrix quotes in CAD and
   // covers the laptops, watches, consoles and Samsung models iFixit does not
@@ -381,22 +412,46 @@ repairsRouter.post("/pricing/market/refresh", requireCapability("pricing:write")
   void (async () => {
     try {
       const { syncSentrixPrices } = await import("../services/repairMarketSentrix.js");
-      const r = await syncSentrixPrices({});
+      const r = await syncSentrixPrices({ onProgress: (p) => { marketSync.progress = { done: p.done, total: p.total }; } });
+      marketSync.result = { ...(marketSync.result || {}), mobilesentrix: { priced: r.priced, devices: r.devices, pairs: r.pairs, rejected: r.rejected } };
+      marketSync.errors.push(...r.errors);
       console.log("[repair-market] mobilesentrix:", JSON.stringify({ devices: r.devices, priced: r.priced, pairs: r.pairs }));
     } catch (e) {
+      marketSync.errors.push(`MobileSentrix: ${e instanceof Error ? e.message : String(e)}`);
       console.warn("[repair-market] mobilesentrix failed:", e);
     }
     try {
       const { syncIfixitParts } = await import("../services/repairMarketIfixit.js");
       // Only the devices still without a price: the supplier the shop buys
       // from is the better number wherever it has one.
-      const r = await syncIfixitParts({ onlyMissing: true });
+      const r = await syncIfixitParts({
+        onlyMissing: true,
+        onProgress: (p) => { marketSync.progress = { done: p.done, total: p.total }; },
+      });
+      marketSync.result = { ...(marketSync.result || {}), ifixit: { priced: r.priced, devices: r.devicesPriced, looked: r.devices } };
+      marketSync.errors.push(...r.errors);
       console.log("[repair-market] ifixit:", JSON.stringify({ looked: r.devices, resolved: r.resolved, priced: r.priced }));
     } catch (e) {
+      marketSync.errors.push(`iFixit: ${e instanceof Error ? e.message : String(e)}`);
       console.warn("[repair-market] ifixit failed:", e);
     }
+    marketSync.running = false;
+    marketSync.finishedAt = new Date().toISOString();
+    marketSync.progress = null;
     marketSyncRunning = false;
   })();
+});
+
+/** Where the refresh has got to, so the tab can show it rather than guess. */
+repairsRouter.get("/pricing/market/status", requireCapability("pricing:read"), (_req, res) => {
+  res.json({
+    running: marketSync.running,
+    started_at: marketSync.startedAt,
+    finished_at: marketSync.finishedAt,
+    progress: marketSync.progress,
+    result: marketSync.result,
+    errors: marketSync.errors.slice(0, 5),
+  });
 });
 
 /**
