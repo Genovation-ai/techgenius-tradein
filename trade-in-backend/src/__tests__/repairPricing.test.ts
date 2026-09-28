@@ -143,3 +143,50 @@ describe("what customers are offered is the shop's list", () => {
     expect(setProblems(db, null, [{ id: "x", label: "Fine", enabled: false }])).toBeNull();
   });
 });
+
+describe("the shop's margin is its own to disclose", () => {
+  function seeded() {
+    const db = fresh();
+    db.prepare(
+      `INSERT INTO repair_market_prices (source, device_id, problem, product_title, price, currency, price_cad, fx_rate, source_url, scraped_at, in_stock, alternatives)
+       VALUES ('mobilesentrix','iphone-15','screen','OLED Assembly For iPhone 15',57.67,'CAD',57.67,1,'https://www.mobilesentrix.ca/x','2026-09-28T00:00:00Z',1,8)`,
+    ).run();
+    return db;
+  }
+
+  it("keeps the cost breakdown off unless the shop turns it on", () => {
+    // "Part cost $57.67, plus 10%, plus $100 labour" tells a customer the shop
+    // keeps a hundred dollars on the job.
+    expect(quoteRepair(seeded(), null, "iphone-15", "screen").showCostBreakdown).toBe(false);
+  });
+
+  it("still carries what makes the price checkable", () => {
+    // Traceability is the point; the margin is not part of it.
+    const q = quoteRepair(seeded(), null, "iphone-15", "screen");
+    expect(q.market?.vendorLabel).toBe("MobileSentrix Canada");
+    expect(q.market?.sourceUrl).toBeTruthy();
+    expect(q.market?.scrapedAt).toBeTruthy();
+  });
+
+  it("turns on when the shop says so", () => {
+    const db = seeded();
+    setRepairSettings(db, null, { showCostBreakdown: true });
+    expect(quoteRepair(db, null, "iphone-15", "screen").showCostBreakdown).toBe(true);
+  });
+
+  it("can be turned back off", () => {
+    const db = seeded();
+    setRepairSettings(db, null, { showCostBreakdown: true });
+    setRepairSettings(db, null, { showCostBreakdown: false });
+    expect(quoteRepair(db, null, "iphone-15", "screen").showCostBreakdown).toBe(false);
+  });
+
+  it("does not disturb the markup and labour when it is saved", () => {
+    const db = seeded();
+    setRepairSettings(db, null, { markupPercent: 15, labourFee: 120 });
+    setRepairSettings(db, null, { showCostBreakdown: true });
+    const q = quoteRepair(db, null, "iphone-15", "screen");
+    expect(q.markupPercent).toBe(15);
+    expect(q.labourFee).toBe(120);
+  });
+});

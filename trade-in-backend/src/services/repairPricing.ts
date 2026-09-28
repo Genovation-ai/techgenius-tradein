@@ -113,9 +113,22 @@ export function problemLabel(db: Database, orgId: string | null, id: string): st
 export interface RepairPricingSettings {
   markupPercent: number;
   labourFee: number;
+  /**
+   * Whether the customer is shown the part cost and the markup applied to it,
+   * as well as which supplier and product the price came from.
+   *
+   * Off by default, and deliberately. "Part cost $57.67, plus 10%, plus $100
+   * labour" tells a customer the shop keeps a hundred dollars on the job, and
+   * that is the shop's business to disclose or not — not a side effect of
+   * wanting the price to be traceable. With it off the customer still sees the
+   * supplier, the product and the date it was read, which is what makes a
+   * price checkable; the arithmetic stays in the admin, where it is always
+   * visible.
+   */
+  showCostBreakdown: boolean;
 }
 
-const DEFAULTS: RepairPricingSettings = { markupPercent: 10, labourFee: 100 };
+const DEFAULTS: RepairPricingSettings = { markupPercent: 10, labourFee: 100, showCostBreakdown: false };
 
 function settingKey(orgId: string | null, key: string): string {
   return orgId ? `repair:${orgId}:${key}` : `repair:${key}`;
@@ -129,9 +142,17 @@ export function getRepairSettings(db: Database, orgId: string | null): RepairPri
     }
     return null;
   };
+  const flag = (key: string): boolean | null => {
+    for (const k of [settingKey(orgId, key), settingKey(null, key)]) {
+      const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(k) as { value: string } | undefined;
+      if (row) return row.value === "1" || row.value.toLowerCase() === "true";
+    }
+    return null;
+  };
   return {
     markupPercent: read("markup_percent") ?? DEFAULTS.markupPercent,
     labourFee: read("labour_fee") ?? DEFAULTS.labourFee,
+    showCostBreakdown: flag("show_cost_breakdown") ?? DEFAULTS.showCostBreakdown,
   };
 }
 
@@ -142,6 +163,7 @@ export function setRepairSettings(db: Database, orgId: string | null, s: Partial
   );
   if (s.markupPercent != null) up.run(settingKey(orgId, "markup_percent"), String(s.markupPercent));
   if (s.labourFee != null) up.run(settingKey(orgId, "labour_fee"), String(s.labourFee));
+  if (s.showCostBreakdown != null) up.run(settingKey(orgId, "show_cost_breakdown"), s.showCostBreakdown ? "1" : "0");
 }
 
 export interface RepairQuote {
@@ -158,6 +180,8 @@ export interface RepairQuote {
   markupPercent: number;
   labourFee: number;
   market?: MarketProvenance | null;
+  /** Mirrors the setting, so the route can decide what to publish. */
+  showCostBreakdown: boolean;
 }
 
 /**
