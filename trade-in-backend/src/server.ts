@@ -3,6 +3,7 @@ import cors from "cors";
 import { getDb, migrate } from "./db/migrate.js";
 import { seedCatalog } from "./db/seed.js";
 import { hydrateCatalogIfFresh } from "./db/hydrate.js";
+import { seedRepairMarketPrices } from "./db/patches.js";
 import { apiKeyAuth } from "./middleware/auth.js";
 import { catalogRouter } from "./routes/catalog.js";
 import { offersRouter } from "./routes/offers.js";
@@ -39,7 +40,12 @@ seedCatalog();
   // before serving, so a fresh deploy is a working shop rather than a quiet
   // fraction of one. No-ops once any offer exists.
   const boot = getDb();
-  try { hydrateCatalogIfFresh(boot); } finally { boot.close(); }
+  try {
+    hydrateCatalogIfFresh(boot);
+    // After hydration, never before: these rows are keyed to device ids that
+    // only exist once the snapshot is in.
+    seedRepairMarketPrices(boot);
+  } finally { boot.close(); }
 }
 seedAdminUser();
 seedStaffRoles();

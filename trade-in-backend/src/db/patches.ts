@@ -214,7 +214,6 @@ export function applySchemaPatches(db: Database): void {
   repointStalePlaceholderImages(db);
   dedupeScrapedPrices(db);
   seedGorecellProductMap(db);
-  seedRepairMarketPrices(db);
 }
 
 /**
@@ -391,8 +390,13 @@ function repointStalePlaceholderImages(db: Database): void {
  * a stale price, not sit behind it. A device we do not carry is skipped, and a
  * price the shop has since overridden is untouched — overrides live in
  * repair_parts and win over anything here.
+ *
+ * Called after the catalogue is hydrated, not from applySchemaPatches. A fresh
+ * volume has ~63 devices at migrate time and the real ~416 only once the
+ * snapshot is loaded, so seeding any earlier skipped every row for a device
+ * that was about to exist — which on a new deployment was all of them.
  */
-function seedRepairMarketPrices(db: Database): void {
+export function seedRepairMarketPrices(db: Database): void {
   const file = [
     path.resolve(import.meta.dirname, "../../config/repair-market-prices.json"),
     path.resolve(import.meta.dirname, "../../../config/repair-market-prices.json"),
