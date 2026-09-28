@@ -40,56 +40,6 @@
 }
 .repair-price-note { margin: 0.75rem 0 0; color: var(--ink-soft); line-height: 1.5; }
 
-/*
- * The receipt behind the price. Folded away by default — most customers want
- * the number, not the arithmetic — but one tap from it, because a price nobody
- * can check is the same as a price we made up.
- */
-.repair-source {
-  margin: 0.9rem 0 0;
-  border-top: 1px solid var(--line);
-  padding-top: 0.75rem;
-  font-size: 0.9rem;
-}
-.repair-source > summary {
-  cursor: pointer;
-  color: var(--ink-soft);
-  font-weight: 600;
-  list-style: none;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  /* A comfortable tap target on a phone without pushing the price down. */
-  padding: 0.3rem 0;
-  min-height: 2rem;
-}
-.repair-source > summary::-webkit-details-marker { display: none; }
-.repair-source > summary::before {
-  content: "+";
-  font-weight: 700;
-  width: 1rem;
-  text-align: center;
-  color: var(--mint-dim);
-}
-.repair-source[open] > summary::before { content: "\2212"; }
-.repair-source > summary:focus-visible { outline: 2px solid var(--mint-dim); outline-offset: 2px; border-radius: 4px; }
-
-.repair-source-rows { margin: 0.5rem 0 0; display: grid; gap: 0.5rem; }
-.repair-source-rows > div {
-  display: grid;
-  grid-template-columns: 6.5rem 1fr;
-  gap: 0.6rem;
-  align-items: baseline;
-}
-.repair-source-rows dt { margin: 0; color: var(--ink-soft); }
-.repair-source-rows dd { margin: 0; overflow-wrap: anywhere; }
-.repair-source-rows a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-.repair-source-foot { margin: 0.7rem 0 0; color: var(--ink-soft); font-size: 0.85rem; line-height: 1.45; }
-
-/* On a narrow phone the two columns stop earning their keep. */
-@media (max-width: 420px) {
-  .repair-source-rows > div { grid-template-columns: 1fr; gap: 0.1rem; }
-  .repair-source-rows dt { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
 }
 
 .flow-error { color: var(--danger); margin: 0 0 0.75rem; }

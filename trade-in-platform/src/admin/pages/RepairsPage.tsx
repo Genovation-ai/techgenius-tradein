@@ -333,7 +333,6 @@ function CustomerView() {
 function RepairPricing() {
   const [markup, setMarkup] = useState("10");
   const [labour, setLabour] = useState("100");
-  const [showCost, setShowCost] = useState(false);
   const [parts, setParts] = useState<Part[]>([]);
   const [market, setMarket] = useState<Market[]>([]);
   const [coverage, setCoverage] = useState<Coverage | null>(null);
@@ -350,7 +349,7 @@ function RepairPricing() {
 
   const load = useCallback(async () => {
     const d = await adminFetch<{
-      settings: { markupPercent: number; labourFee: number; showCostBreakdown?: boolean };
+      settings: { markupPercent: number; labourFee: number };
       parts: Part[];
       problems: Problem[];
       market: Market[];
@@ -358,7 +357,6 @@ function RepairPricing() {
     }>("/api/repairs/pricing");
     setMarkup(String(d.settings.markupPercent));
     setLabour(String(d.settings.labourFee));
-    setShowCost(Boolean(d.settings.showCostBreakdown));
     setParts(d.parts);
     setMarket(d.market || []);
     setCoverage(d.coverage ?? null);
@@ -371,7 +369,7 @@ function RepairPricing() {
   const saveSettings = async () => {
     await adminFetch("/api/repairs/pricing/settings", {
       method: "PUT",
-      body: JSON.stringify({ markup_percent: Number(markup), labour_fee: Number(labour), show_cost_breakdown: showCost }),
+      body: JSON.stringify({ markup_percent: Number(markup), labour_fee: Number(labour) }),
     });
     setMsg("Saved. Applies to the next quote.");
   };
@@ -526,17 +524,6 @@ function RepairPricing() {
         <label>
           Labour per repair (CAD)
           <input type="number" step="1" value={labour} onChange={(e) => setLabour(e.target.value)} />
-        </label>
-        <label className="admin-check">
-          <input type="checkbox" checked={showCost} onChange={(e) => setShowCost(e.target.checked)} />
-          <span>
-            Show customers the part cost and your markup
-            <span className="admin-sub" style={{ display: "block", fontWeight: 400 }}>
-              Off by default. Customers always see which supplier and product the price came from and when it was
-              read — that is what lets them check it. Turning this on also shows what the part cost you and what
-              you added, which tells them what you keep on the job.
-            </span>
-          </span>
         </label>
         {margins ? (
           <div className="admin-margin-panel">

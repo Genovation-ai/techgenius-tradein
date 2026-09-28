@@ -84,37 +84,10 @@ repairPublicRouter.post("/quote", (req, res) => {
       // "quote" means the shop will price it by hand; the booking still goes
       // through, and the customer is told that rather than shown a number.
       needs_quote: q.source === "quote",
-      // When the part cost came from a published listing rather than the
-      // shop, the customer gets to know exactly where the number came from:
-      // which supplier, which product, what it was listed at, and when it was
-      // read. A price nobody can trace is indistinguishable from a guess.
-      // What makes the price checkable — which supplier, which product, when —
-      // always goes out. What the shop paid and what it added does not, unless
-      // the shop has chosen to publish it: that is its margin, and disclosing
-      // it is a business decision, not a side effect of being traceable.
-      market: q.market
-        ? {
-            product: q.market.productTitle,
-            read_on: q.market.scrapedAt.slice(0, 10),
-            vendor: q.market.vendorLabel,
-            url: q.market.sourceUrl,
-            in_stock: q.market.inStock,
-            alternatives: q.market.alternatives,
-            ...(q.showCostBreakdown
-              ? {
-                  part_cost_cad: q.market.partCostCad,
-                  listed_price: q.market.listedPrice,
-                  listed_currency: q.market.listedCurrency,
-                  // Only meaningful when the listing was not already in CAD.
-                  fx_rate: q.market.fxRate === 1 ? null : q.market.fxRate,
-                }
-              : {}),
-          }
-        : null,
-      breakdown:
-        q.showCostBreakdown && q.price != null && q.partCost != null
-          ? { part_cost: q.partCost, markup_percent: q.markupPercent, labour_fee: q.labourFee }
-          : null,
+      // The customer is shown the price and nothing behind it. Which supplier
+      // the part came from, what it cost and what was added are the shop's own
+      // numbers; they live in the admin, beside the markup and labour that
+      // produced them.
     });
   } finally {
     db.close();
@@ -309,17 +282,12 @@ repairsRouter.get("/pricing", requireCapability("pricing:read"), (req, res) => {
 });
 
 repairsRouter.put("/pricing/settings", requireCapability("pricing:write"), (req, res) => {
-  const { markup_percent, labour_fee, show_cost_breakdown } = (req.body || {}) as {
-    markup_percent?: number;
-    labour_fee?: number;
-    show_cost_breakdown?: boolean;
-  };
+  const { markup_percent, labour_fee } = (req.body || {}) as { markup_percent?: number; labour_fee?: number };
   const db = getDb();
   try {
     setRepairSettings(db, orgIdOf(req), {
       markupPercent: markup_percent != null && Number.isFinite(Number(markup_percent)) ? Number(markup_percent) : undefined,
       labourFee: labour_fee != null && Number.isFinite(Number(labour_fee)) ? Number(labour_fee) : undefined,
-      showCostBreakdown: show_cost_breakdown == null ? undefined : Boolean(show_cost_breakdown),
     });
     res.json({ ok: true, settings: getRepairSettings(db, orgIdOf(req)) });
   } finally {
