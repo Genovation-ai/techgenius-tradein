@@ -419,6 +419,40 @@ function RepairPricing() {
     return [...map.values()].sort((a, b) => (a.device_name || a.device_id).localeCompare(b.device_name || b.device_id) || a.problem.localeCompare(b.problem));
   })();
 
+  /**
+   * What the shop keeps on each repair, at the markup and labour currently in
+   * the boxes — recomputed as they are typed, so the lever shows its own
+   * effect before it is saved.
+   *
+   * Deliberately "over parts", not "profit": the part cost is a real invoice
+   * and the labour fee is the shop's own time, which this system has no way to
+   * cost. Calling it profit would overstate it by whatever the bench costs.
+   */
+  const margins = (() => {
+    const mk = Number(markup) || 0;
+    const lb = Number(labour) || 0;
+    const rows_ = rows
+      .map((r) => {
+        const cost = r.part?.part_cost ?? r.mkt?.price_cad ?? null;
+        if (cost == null) return null;
+        const price = r.part?.override_price != null ? r.part.override_price : Math.round(cost * (1 + mk / 100) + lb);
+        return { cost, price, margin: price - cost };
+      })
+      .filter((x): x is { cost: number; price: number; margin: number } => x !== null);
+    if (!rows_.length) return null;
+    const total = rows_.reduce((a, r) => a + r.margin, 0);
+    const avg = total / rows_.length;
+    const avgPct = (rows_.reduce((a, r) => a + r.margin / r.price, 0) / rows_.length) * 100;
+    const sorted = [...rows_].sort((a, b) => a.margin - b.margin);
+    return {
+      n: rows_.length,
+      avg,
+      avgPct,
+      low: sorted[0],
+      high: sorted[sorted.length - 1],
+    };
+  })();
+
   const preview = (() => {
     const pc = Number(partCost);
     if (override) return `$${Number(override)} (override)`;
@@ -439,6 +473,36 @@ function RepairPricing() {
           Labour per repair (CAD)
           <input type="number" step="1" value={labour} onChange={(e) => setLabour(e.target.value)} />
         </label>
+        {margins ? (
+          <div className="admin-margin-panel">
+            <p className="admin-margin-lead">
+              At <strong>{Number(markup) || 0}%</strong> markup and <strong>${Number(labour) || 0}</strong> labour,
+              across the {margins.n} repairs you have a part cost for:
+            </p>
+            <div className="admin-margin-figures">
+              <div>
+                <span className="admin-margin-value">${margins.avg.toFixed(0)}</span>
+                <span className="admin-margin-label">kept per repair, on average</span>
+              </div>
+              <div>
+                <span className="admin-margin-value">{margins.avgPct.toFixed(0)}%</span>
+                <span className="admin-margin-label">of the price, on average</span>
+              </div>
+              <div>
+                <span className="admin-margin-value">${margins.low.margin.toFixed(0)}</span>
+                <span className="admin-margin-label">thinnest repair (${margins.low.price} price)</span>
+              </div>
+              <div>
+                <span className="admin-margin-value">${margins.high.margin.toFixed(0)}</span>
+                <span className="admin-margin-label">fattest repair (${margins.high.price} price)</span>
+              </div>
+            </div>
+            <p className="admin-sub" style={{ margin: "0.6rem 0 0" }}>
+              This is what's left after the part, so it still has to cover the bench time, the bay and the
+              warranty. Change either box above and these move before you save.
+            </p>
+          </div>
+        ) : null}
         <button type="button" className="admin-btn" onClick={() => void saveSettings()}>
           Save
         </button>
@@ -536,12 +600,13 @@ function RepairPricing() {
               <th>Market part price</th>
               <th>Override</th>
               <th>Customer price</th>
+              <th>You keep</th>
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={7}>
                   <div className="admin-empty">No part costs yet — add one above, or refresh published prices to fill the market column.</div>
                 </td>
               </tr>
@@ -582,6 +647,18 @@ function RepairPricing() {
                     <td>
                       {price != null ? `$${price}` : "—"}
                       {via ? <div className="admin-sub">{via}</div> : null}
+                    </td>
+                    <td>
+                      {/* What is left after the part. Not profit: the bench
+                          time this still has to cover is not costed here. */}
+                      {price != null && cost != null ? (
+                        <>
+                          ${(price - cost).toFixed(0)}
+                          <div className="admin-sub">{Math.round(((price - cost) / price) * 100)}% of the price</div>
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                   </tr>
                 );

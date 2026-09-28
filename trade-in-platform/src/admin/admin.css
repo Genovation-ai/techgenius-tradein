@@ -1390,3 +1390,39 @@ textarea.admin-input:focus {
 .admin-table--edit td { vertical-align: middle; }
 .admin-table--edit tr.is-off td:nth-child(2) input { color: var(--tg-muted); text-decoration: line-through; }
 .admin-table--edit .admin-input { width: 100%; }
+
+/*
+ * What the shop keeps, beside the lever that sets it.
+ *
+ * The markup box on its own is a number with no consequence attached; the
+ * owner has to do the arithmetic in his head across a few hundred repairs to
+ * know whether ten per cent is enough. These figures move as he types, so the
+ * lever and its effect are in the same glance.
+ */
+.admin-margin-panel {
+  margin: 0.25rem 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--admin-line, #e2e5ea);
+  border-left: 3px solid var(--admin-accent, #1f9d76);
+  border-radius: 8px;
+  background: var(--admin-fog, #f7f8fa);
+}
+.admin-margin-lead { margin: 0 0 0.7rem; font-size: 0.9rem; color: var(--admin-ink-soft, #5a6472); }
+.admin-margin-figures {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: 0.9rem 1.1rem;
+}
+.admin-margin-figures > div { display: flex; flex-direction: column; gap: 0.15rem; }
+.admin-margin-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.admin-margin-label { font-size: 0.78rem; color: var(--admin-ink-soft, #5a6472); line-height: 1.35; }
+
+@media (max-width: 520px) {
+  .admin-margin-figures { grid-template-columns: repeat(2, 1fr); }
+  .admin-margin-value { font-size: 1.25rem; }
+}
