@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   applyStoreCreditBoost,
@@ -42,6 +43,10 @@ import "./TradeInFlow.css";
 // Template skins keyed on data-template — imported here so both the app entry
 // and the Shopify/Framer embed bundle always ship them with the widget.
 import "../templates.css";
+
+/** The conditions offered, in the order the card list shows them. */
+const ALL_GRADES: ConditionGrade[] = ["flawless", "good", "average", "fair", "defective"];
+
 
 /**
  * How much of the top of the viewport the shop's own header is covering.
@@ -238,6 +243,71 @@ export function TradeInFlow() {
       void refreshQuote();
     }
   }, [state.step, refreshQuote]);
+
+  /**
+   * A price against every condition, before one is chosen.
+   *
+   * The condition step asked the customer to commit to a description of their
+   * device and then click through to find out what it was worth — so deciding
+   * between "good" and "average" meant picking one, reading the number, going
+   * back, and picking the other. GoRecell puts the figures beside the choices,
+   * and the shop asked for the same, because the number is what people are
+   * choosing on.
+   *
+   * These are the server's own quotes, one request per grade, not the
+   * catalogue's price matrix interpolated locally. The rule that the customer
+   * only ever sees a number the server produced is what keeps the price on the
+   * condition card and the price on the offer step the same number.
+   */
+  const [gradePrices, setGradePrices] = useState<Partial<Record<ConditionGrade, number | null>>>({});
+  const [gradePricesLoading, setGradePricesLoading] = useState(false);
+
+  const quoteKey = [
+    state.device?.id,
+    state.storage,
+    state.memory,
+    state.carrier,
+    state.valuation.batteryHealth,
+    state.contact.promoCode,
+  ].join("|");
+
+  useEffect(() => {
+    if (state.step !== "grade" || !state.device || !state.storage || catalog.apiOnline === false) return;
+    let cancelled = false;
+    const device = state.device;
+    const storage = state.storage;
+    setGradePricesLoading(true);
+    void (async () => {
+      const results = await Promise.all(
+        ALL_GRADES.map(async (g) => {
+          try {
+            const res = await fetchQuote({
+              device_id: device.id,
+              storage,
+              memory: state.memory,
+              condition_grade: g,
+              carrier: state.carrier,
+              battery_health: state.valuation.batteryHealth,
+              promo_code: state.contact.promoCode,
+            });
+            return [g, res.quoted_price] as const;
+          } catch {
+            // One grade failing is not a reason to hide the other four; that
+            // card simply shows no number.
+            return [g, null] as const;
+          }
+        }),
+      );
+      if (cancelled) return;
+      setGradePrices(Object.fromEntries(results) as Partial<Record<ConditionGrade, number | null>>);
+      setGradePricesLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+      setGradePricesLoading(false);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step, quoteKey, catalog.apiOnline]);
 
   const cartDisplayTotal = state.cart.reduce((s, d) => s + d.offer, 0);
 
@@ -628,6 +698,8 @@ export function TradeInFlow() {
           grade={state.grade}
           valuation={state.valuation}
           owned={state.owned}
+          prices={gradePrices}
+          pricesLoading={gradePricesLoading}
           onOwned={(owned) =>
             patch({
               owned,

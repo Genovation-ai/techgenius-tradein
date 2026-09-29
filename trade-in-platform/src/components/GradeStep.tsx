@@ -20,6 +20,13 @@ interface Props {
   onOwned: (v: boolean) => void;
   onSelect: (g: ConditionGrade) => void;
   onContinue: () => void;
+  /**
+   * What each condition is worth, quoted by the server before the customer
+   * commits to one. Absent while they load, and null for a grade whose quote
+   * failed — a card with no number is honest; a guessed one is not.
+   */
+  prices?: Partial<Record<ConditionGrade, number | null>>;
+  pricesLoading?: boolean;
 }
 
 const grades: ConditionGrade[] = ["flawless", "good", "average", "fair", "defective"];
@@ -32,6 +39,8 @@ export function GradeStep({
   onOwned,
   onSelect,
   onContinue,
+  prices,
+  pricesLoading,
 }: Props) {
   const locked = isGradeLockedToDefective(valuation);
   const lockNote = gradeLockReason(valuation);
@@ -89,7 +98,18 @@ export function GradeStep({
                 onSelect(g);
               }}
             >
-              <span className="grade-card-title">{gradeLabels[g]}</span>
+              <span className="grade-card-head">
+                <span className="grade-card-title">{gradeLabels[g]}</span>
+                {/* The number people are actually choosing on, next to the
+                    choice rather than one click past it. */}
+                <span className="grade-card-price">
+                  {prices && prices[g] != null ? (
+                    <strong>${prices[g]!.toLocaleString()}</strong>
+                  ) : pricesLoading ? (
+                    <span className="grade-card-price-wait">…</span>
+                  ) : null}
+                </span>
+              </span>
               <span className="grade-card-tagline">{gradeTaglines[g]}</span>
               {/* Five cards each listing six or seven bullets made this a
                   5,000px page to answer one question. The tagline is what a
@@ -123,7 +143,7 @@ export function GradeStep({
         disabled={!grade || !owned}
         onClick={onContinue}
       >
-        See my cash offer
+        {grade && prices && prices[grade] != null ? "Continue" : "See my cash offer"}
       </button>
     </section>
   );
