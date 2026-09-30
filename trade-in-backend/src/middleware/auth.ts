@@ -4,7 +4,14 @@ import { getDb } from "../db/migrate.js";
 import { type Capability, roleHasCapability } from "./roles.js";
 import { DEFAULT_ORG_ID, findOrgApiKey } from "../services/tenancy.js";
 
-const MASTER_KEY = process.env.TG_API_KEY || "tg-dev-key-2026";
+/**
+ * Read when used, not when this module loads.
+ *
+ * Module bodies run before anything in server.ts, so capturing the key at
+ * import time froze the built-in default in place before boot could put a
+ * generated one into the environment.
+ */
+const masterKey = (): string => process.env.TG_API_KEY || "tg-dev-key-2026";
 
 export interface TgAuthContext {
   type: "master" | "session" | "api_key" | "org_key";
@@ -59,7 +66,7 @@ export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
     return res.status(401).json({ error: "Not authenticated. Sign in at /admin/login." });
   }
 
-  if (constantTimeEquals(key, MASTER_KEY)) {
+  if (constantTimeEquals(key, masterKey())) {
     req.tgAuth = {
       type: "master",
       role: "master",

@@ -4,6 +4,7 @@ import { getDb, migrate } from "./db/migrate.js";
 import { seedCatalog } from "./db/seed.js";
 import { hydrateCatalogIfFresh } from "./db/hydrate.js";
 import { seedRepairMarketPrices } from "./db/patches.js";
+import { ensureSecrets, reportSecrets } from "./bootSecrets.js";
 import { apiKeyAuth } from "./middleware/auth.js";
 import { catalogRouter } from "./routes/catalog.js";
 import { offersRouter } from "./routes/offers.js";
@@ -41,6 +42,10 @@ seedCatalog();
   // fraction of one. No-ops once any offer exists.
   const boot = getDb();
   try {
+    // Before anything reads a key: a deployment given no secrets gets its own
+    // rather than the public defaults, so the guard below has nothing to
+    // refuse and nothing insecure is ever served.
+    reportSecrets(ensureSecrets(boot));
     hydrateCatalogIfFresh(boot);
     // After hydration, never before: these rows are keyed to device ids that
     // only exist once the snapshot is in.
@@ -320,7 +325,9 @@ function warnOnInsecureDefaults() {
 
   console.warn("\n⚠️  SECURITY — insecure default secrets:");
   for (const p of problems) console.warn(`   - ${p}`);
-  console.warn("   Set TG_API_KEY, TG_CRON_SECRET, and TG_ADMIN_PASSWORD before public deploy.\n");
+  console.warn("   Boot generates these when they are unset, so reaching here means that failed —");
+  console.warn("   most likely the database is not writable. Set TG_API_KEY, TG_CRON_SECRET and");
+  console.warn("   TG_ADMIN_PASSWORD in the environment to start regardless.\n");
 
   if (isProd || forceExit) {
     console.error("Refusing to start: production requires real secrets (or set NODE_ENV≠production for local).");
