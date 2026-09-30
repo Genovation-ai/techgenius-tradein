@@ -1,6 +1,17 @@
 /* Fast embed fonts — avoid render-blocking Google Fonts on Framer/Shopify */
+/*
+ * How wide the widget is allowed to be on the shop's page.
+ *
+ * 760px was a reading measure, and it made the estimator look like a form
+ * dropped into a page rather than the shop's storefront: four small device
+ * tiles a row where GoRecell shows five large ones across most of the window.
+ * The shop compared the two side by side and ours "looks very small".
+ *
+ * This is only a ceiling — the host still decides the real width, and on
+ * Framer the section the embed sits in can cap it lower than this.
+ */
 .tg-trade-in-host {
-  width: min(760px, 100%);
+  width: min(1180px, 100%);
   margin: 1.5rem auto 2.5rem;
   padding: 0 1rem;
   font-family: var(--font-body, "PT Sans", "Segoe UI", system-ui, sans-serif);

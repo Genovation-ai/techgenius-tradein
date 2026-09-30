@@ -1,5 +1,13 @@
+/*
+ * The card the whole flow sits in.
+ *
+ * 720px was the real constraint on how big the device tiles could be —
+ * widening the host alone just left this card floating in the middle of it.
+ * The shop's complaint was that next to GoRecell our devices look small, and
+ * GoRecell gives its grid most of the window.
+ */
 .trade-in-embed {
-  width: min(720px, 100%);
+  width: min(1180px, 100%);
   margin: 0 auto;
   padding: 1.35rem 1.35rem 2rem;
   border-radius: var(--radius-lg);

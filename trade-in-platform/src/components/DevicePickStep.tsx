@@ -6,6 +6,7 @@ import {
   type DeviceModel,
 } from "../data/catalog";
 import { deviceImage } from "../data/deviceImages";
+import { BrandLogo } from "./BrandLogos";
 import { assetUrl, deviceImageUrl, ensureDeviceFromName, mapApiDevice } from "../lib/tradeInApi";
 import "./ChoiceGrid.css";
 import "./FormSteps.css";
@@ -149,10 +150,12 @@ export function DevicePickStep({
             className={`chip chip-brand ${brandFilter === b ? "chip--on" : ""}`}
             onClick={() => onBrandFilter(b)}
           >
-            {/* Brands without a bundled thumbnail (LG, TCL, Nothing…) render
-                the name alone rather than an empty image box. */}
-
-            {b}
+            {/* The mark, with the name left for screen readers. A row of words
+                reads as a form; a row of marks reads as a storefront, which is
+                what the shop is being compared against. A brand with no drawn
+                mark gets its name set as a wordmark, so the row stays even. */}
+            <BrandLogo brand={b} className="chip-brand-mark" />
+            <span className="sr-only">{b}</span>
           </button>
         ))}
         {/* Last, not first. "All brands" is the way out of a filter, not the

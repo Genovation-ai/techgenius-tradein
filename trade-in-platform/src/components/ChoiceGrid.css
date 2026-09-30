@@ -38,10 +38,26 @@
 /* Two comfortable columns on a phone rather than two cramped ones, and the
    photo gets the room: recognising your own handset is the entire job of this
    screen. */
+/*
+ * Device tiles.
+ *
+ * A wider host would otherwise just fit more 155px tiles a row rather than
+ * bigger ones, and the complaint was that the devices look small, not that
+ * there are too few. 200px is close to the tile size the shop is comparing
+ * against; auto-fill still collapses it to two a row on a phone.
+ */
 .device-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(155px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1.1rem;
+}
+
+/* Below the widest layouts a 200px floor would strand one tile per row. */
+@media (max-width: 460px) {
+  .device-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0.85rem;
+  }
 }
 
 .device-grid--cats {
@@ -160,19 +176,47 @@
   }
 }
 
-/* Brand chips carried a device photograph shrunk to 18x22 as a stand-in for a
-   brand mark. At that size it read as a smudge, and it was the same handset
-   picture the customer would meet again full-size two taps later. The name on
-   its own is what a person recognises, so the chip is now type, sized to be
-   read and tapped. */
+/*
+ * Brand chips.
+ *
+ * They once carried a device photograph shrunk to 18x22 as a stand-in for a
+ * brand mark, which read as a smudge and was the same handset the customer
+ * would meet full-size two taps later. They then carried the name as plain
+ * type, which was legible but made the row read as a form. They now carry the
+ * brand's own mark, with the name kept for screen readers.
+ */
 .chip-brand {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding-inline: 1.1rem;
-  font-size: 0.95rem;
-  font-weight: 600;
+  min-height: 52px;
+  padding-inline: 1rem;
+}
+
+.chip-brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Marks differ in aspect: Apple is square, "SAMSUNG" is a long ellipse. A
+     fixed height with a free width keeps them optically the same size. */
+  height: 22px;
+  max-width: 96px;
+}
+.chip-brand-mark svg {
+  height: 100%;
+  width: auto;
+  max-width: 100%;
+  display: block;
+}
+
+/* Monochrome marks take the chip's ink so they invert with it on selection;
+   the multi-colour ones keep their own palette. */
+.chip-brand .chip-brand-mark { color: var(--ink); }
+.chip-brand.chip--on .chip-brand-mark { color: inherit; }
+
+@media (max-width: 560px) {
+  .chip-brand { min-height: 46px; padding-inline: 0.8rem; }
+  .chip-brand-mark { height: 19px; max-width: 82px; }
 }
 
 @media (max-width: 560px) {
