@@ -518,7 +518,12 @@ describe("the model list reads newest first, the way a shop lists them", () => {
   const d = (name: string, basePrice = 0) => ({ name, basePrice });
 
   it("puts Apple first and All brands is not a brand", () => {
-    expect(orderBrands(["Samsung", "Google", "Apple", "LG"])).toEqual(["Apple", "Google", "LG", "Samsung"]);
+    // The three the shop takes in lead, in the owner's order; the rest follow
+    // alphabetically.
+    expect(orderBrands(["Samsung", "Google", "Apple", "LG"])).toEqual(["Apple", "Samsung", "Google", "LG"]);
+    expect(orderBrands(["TCL", "Google", "Motorola", "Apple"])).toEqual(["Apple", "Google", "Motorola", "TCL"]);
+    // A brand the catalogue does not carry is simply absent, not a blank slot.
+    expect(orderBrands(["LG", "Apple"])).toEqual(["Apple", "LG"]);
   });
 
   it("orders iPhones by generation, not by the alphabet", () => {

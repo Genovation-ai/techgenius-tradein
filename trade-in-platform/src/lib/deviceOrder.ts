@@ -1,11 +1,11 @@
 /**
  * The order a customer expects to find things in.
  *
- * Brands. Apple first, because in a Canadian phone shop it is what most
- * people walk in holding, then the rest alphabetically so a brand is where you
- * would guess. "All brands" goes last: it is the escape hatch, not the default
- * — leading with it was why the first screen dumped a Motorola beside a Galaxy
- * beside an iPhone with nothing in common.
+ * Brands. Apple, Samsung, then Google lead, in that order — the three the
+ * shop actually takes in, named by the owner. The rest follow alphabetically
+ * so a brand is where you would guess. "All brands" goes last: it is the
+ * escape hatch, not the default — leading with it was why the first screen
+ * dumped a Motorola beside a Galaxy beside an iPhone with nothing in common.
  *
  * Models. Newest first. There is no release date on a device, but the
  * generation is in the name — iPhone 17, Galaxy S25, Pixel 9 — and where it is
@@ -15,7 +15,7 @@
  * them in too.
  */
 
-const FIRST_BRANDS = ["Apple"];
+const FIRST_BRANDS = ["Apple", "Samsung", "Google"];
 
 export function orderBrands(brands: string[]): string[] {
   const pinned = FIRST_BRANDS.filter((b) => brands.includes(b));

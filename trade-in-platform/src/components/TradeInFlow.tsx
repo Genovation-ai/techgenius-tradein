@@ -18,6 +18,7 @@ import { getSnapshotPricingMeta } from "../lib/pricingBackend";
 import { assetUrl, deviceImageUrl, fetchQuote, recordLead, submitOffer, uploadOfferMedia } from "../lib/tradeInApi";
 import { mapOfferToTwenty } from "../lib/twenty";
 import { emitWidgetEvent } from "../lib/widgetEvents";
+import { scrollFlowIntoView } from "../lib/flowScroll";
 import {
   joinDetails,
   specLabel,
@@ -48,30 +49,7 @@ import "../templates.css";
 const ALL_GRADES: ConditionGrade[] = ["flawless", "good", "average", "fair", "defective"];
 
 
-/**
- * How much of the top of the viewport the shop's own header is covering.
- *
- * The widget is a guest on someone else's page, and most of them have a sticky
- * header. Scrolling the widget's top to y=0 tucked the step heading underneath
- * it, so the customer arrived at a step already looking past its title. Rather
- * than hard-coding a guess, ask the browser what is actually painted at the top
- * centre and measure the fixed or sticky ones.
- */
-function stickyHeaderOffset(): number {
-  if (typeof document.elementsFromPoint !== "function") return 0;
-  let offset = 0;
-  for (const el of document.elementsFromPoint(window.innerWidth / 2, 1)) {
-    const pos = getComputedStyle(el).position;
-    if (pos !== "fixed" && pos !== "sticky") continue;
-    const rect = el.getBoundingClientRect();
-    // Only bars pinned to the top, and only sane ones — a full-screen fixed
-    // overlay would otherwise push the scroll target off the page.
-    if (rect.top <= 0 && rect.bottom > offset && rect.height < window.innerHeight / 2) {
-      offset = rect.bottom;
-    }
-  }
-  return offset;
-}
+
 
 function resolveStickyImage(device: DeviceModel & { imageUrl?: string | null }) {
   return deviceImageUrl(device) || assetUrl(deviceImage(device.id, device));
@@ -158,15 +136,7 @@ export function TradeInFlow() {
       mountedRef.current = true;
       return;
     }
-    const root = rootRef.current;
-    if (!root) return;
-    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    const top = root.getBoundingClientRect().top + window.scrollY - stickyHeaderOffset() - 12;
-    // Only pull the page up. Scrolling down to the widget on a step change is
-    // the same yank the mount guard above avoids.
-    if (window.scrollY > top) {
-      window.scrollTo({ top: Math.max(0, top), behavior: reduce ? "auto" : "smooth" });
-    }
+    scrollFlowIntoView(rootRef.current);
   }, [state.step]);
 
   const patch = (p: Partial<TradeInState>) => setState((s) => ({ ...s, ...p }));

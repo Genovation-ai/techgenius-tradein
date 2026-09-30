@@ -14,6 +14,7 @@ import { DevicePickStep } from "./DevicePickStep";
 import { TradeInProgress } from "./TradeInProgress";
 import "./FormSteps.css";
 import "./RepairFlow.css";
+import { scrollFlowIntoView } from "../lib/flowScroll";
 
 /**
  * Repair, in the shape a customer already knows.
@@ -79,11 +80,8 @@ export function RepairFlow() {
       mounted.current = true;
       return;
     }
-    const root = rootRef.current;
-    if (!root) return;
-    const top = root.getBoundingClientRect().top + window.scrollY - 12;
-    if (window.scrollY > top) window.scrollTo({ top: Math.max(0, top), behavior: reduce ? "auto" : "smooth" });
-  }, [step, reduce]);
+    scrollFlowIntoView(rootRef.current);
+  }, [step]);
 
   const idx = ORDER.indexOf(step);
   const back = () => setStep(ORDER[Math.max(0, idx - 1)]);
