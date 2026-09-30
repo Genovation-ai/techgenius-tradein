@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Carrier, DeviceCategory, DeviceModel } from "../data/catalog";
 import { carriers } from "../data/catalog";
 import { specKind, specLabel, specQuestionLabel } from "../lib/tradeInTypes";
@@ -71,24 +71,93 @@ export function DetailsStep({
     (!isTwoAxis || Boolean(memory)) &&
     (!carrierRequired || Boolean(carrier));
 
+  /**
+   * One question at a time, and answering it moves to the next.
+   *
+   * This step used to put storage, memory, carrier and colour on one screen
+   * behind a Continue button. The shop asked for the flow it is compared
+   * against, where picking an answer replaces the question with the next one
+   * in the same place: "it automatically vanishes and goes to next step, on
+   * the same screen". A single choice is its own confirmation, so asking the
+   * customer to pick and then press Continue is asking twice.
+   *
+   * Only the required questions advance on their own. Colour is optional and
+   * never changes the quote, so it is last and keeps a button — auto-advancing
+   * past a question someone might want to skip would be the same discourtesy
+   * in the other direction.
+   */
+  type Q = "storage" | "memory" | "carrier" | "color";
+  const questions = useMemo(() => {
+    const q: Q[] = [];
+    if (showStoragePicker) q.push("storage");
+    if (isTwoAxis) q.push("memory");
+    if (carrierRequired) q.push("carrier");
+    q.push("color");
+    return q;
+  }, [showStoragePicker, isTwoAxis, carrierRequired]);
+
+  const answered = (q: Q): boolean =>
+    q === "storage" ? Boolean(storage) : q === "memory" ? Boolean(memory) : q === "carrier" ? Boolean(carrier) : true;
+
+  // Land on the first unanswered question, so coming back from a later step
+  // does not march the customer through answers they already gave.
+  const [at, setAt] = useState(() => {
+    const i = questions.findIndex((q) => !answered(q));
+    return i === -1 ? questions.length - 1 : i;
+  });
+  const current = questions[Math.min(at, questions.length - 1)];
+
+  /** Move to the next unanswered question, or stop on the last one. */
+  const advance = (justAnswered: Q) => {
+    const from = questions.indexOf(justAnswered);
+    for (let i = from + 1; i < questions.length; i++) {
+      if (!answered(questions[i])) return setAt(i);
+    }
+    setAt(questions.length - 1);
+  };
+
+  /** What has been chosen so far, so it can be seen and changed. */
+  const trail: Array<{ q: Q; label: string }> = [];
+  if (showStoragePicker && storage) trail.push({ q: "storage", label: specLabel(storage, device.category) });
+  if (isTwoAxis && memory) trail.push({ q: "memory", label: specLabel(memory, device.category) });
+  if (carrierRequired && carrier) trail.push({ q: "carrier", label: carrier });
+  if (color) trail.push({ q: "color", label: color });
+
   return (
     <section className="flow-panel">
       <header className="flow-header">
         <h1>{device.name}</h1>
+        {/* One line for the question on screen, not for all of them at once:
+            the others are not being asked yet. */}
         <p className="flow-lead">
-          {showStoragePicker
-            ? carrierRequired
-              ? `${specQuestion} and carrier / network status are required for an accurate quote.`
-              : isTwoAxis
-                ? "Tell us the storage and memory in your machine to continue."
-                : `Select your ${specNoun} to continue your quote.`
-            : carrierRequired
-              ? "Confirm carrier / network status for an accurate quote."
-              : "Confirm the details below to continue your quote."}
+          {current === "storage"
+            ? `Select your ${specNoun} — it changes what we can pay.`
+            : current === "memory"
+              ? "How much memory is in your machine?"
+              : current === "carrier"
+                ? "Who is it locked to, if anyone?"
+                : "Last one, and this is optional."}
         </p>
       </header>
 
-      {showStoragePicker ? (
+      {/* What is settled so far. Tapping one reopens that question, which is
+          the only way back to an answer once its question has been replaced. */}
+      {trail.length ? (
+        <div className="spec-trail">
+          {trail.map((t) => (
+            <button
+              key={t.q}
+              type="button"
+              className={`spec-trail-item ${current === t.q ? "is-open" : ""}`}
+              onClick={() => setAt(questions.indexOf(t.q))}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+
+      {current === "storage" && showStoragePicker ? (
         <div className="form-block">
           <h2 className="form-label">
             {specQuestion} <span className="req">*</span>
@@ -101,7 +170,10 @@ export function DetailsStep({
                   key={s}
                   type="button"
                   className={`chip ${storage === s ? "chip--on" : ""}`}
-                  onClick={() => onStorage(s)}
+                  onClick={() => {
+                    onStorage(s);
+                    advance("storage");
+                  }}
                 >
                   <span>{specLabel(s, device.category)}</span>
                   {tip && tip > 0 ? (
@@ -114,7 +186,7 @@ export function DetailsStep({
         </div>
       ) : null}
 
-      {isTwoAxis ? (
+      {current === "memory" && isTwoAxis ? (
         <div className="form-block">
           <h2 className="form-label">
             Memory (RAM) <span className="req">*</span>
@@ -125,7 +197,10 @@ export function DetailsStep({
                 key={m}
                 type="button"
                 className={`chip ${memory === m ? "chip--on" : ""}`}
-                onClick={() => onMemory?.(m)}
+                onClick={() => {
+                  onMemory?.(m);
+                  advance("memory");
+                }}
               >
                 <span>{specLabel(m, device.category)}</span>
               </button>
@@ -138,7 +213,7 @@ export function DetailsStep({
         </div>
       ) : null}
 
-      {carrierRequired ? (
+      {current === "carrier" && carrierRequired ? (
         <div className="form-block">
           <h2 className="form-label">
             Carrier / network <span className="req">*</span>
@@ -149,7 +224,10 @@ export function DetailsStep({
                 key={c}
                 type="button"
                 className={`chip ${carrier === c ? "chip--on" : ""}`}
-                onClick={() => onCarrier(c)}
+                onClick={() => {
+                  onCarrier(c);
+                  advance("carrier");
+                }}
               >
                 {c}
               </button>
@@ -160,27 +238,30 @@ export function DetailsStep({
 
       {/* Optional, and deliberately last: it never gates the quote and never
           changes it. Tapping a selected colour again clears it, so someone who
-          is not sure is not stuck with a guess. */}
-      <div className="form-block">
-        <h2 className="form-label">
-          Colour <span className="form-optional">optional</span>
-        </h2>
-        <p className="field-hint">Helps us match your device to your offer when it arrives.</p>
-        <div className="chip-row">
-          {/* The model's own launch palette, not a generic dozen. */}
-          {colorsFor(device.name).map((c) => (
-            <button
-              key={c}
-              type="button"
-              className={`chip ${color === c ? "chip--on" : ""}`}
-              aria-pressed={color === c}
-              onClick={() => onColor(color === c ? null : c)}
-            >
-              {c}
-            </button>
-          ))}
+          is not sure is not stuck with a guess — which is also why this one
+          does not advance on its own. */}
+      {current === "color" ? (
+        <div className="form-block">
+          <h2 className="form-label">
+            Colour <span className="form-optional">optional</span>
+          </h2>
+          <p className="field-hint">Helps us match your device to your offer when it arrives.</p>
+          <div className="chip-row">
+            {/* The model's own launch palette, not a generic dozen. */}
+            {colorsFor(device.name).map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`chip ${color === c ? "chip--on" : ""}`}
+                aria-pressed={color === c}
+                onClick={() => onColor(color === c ? null : c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <button type="button" className="btn btn-primary flow-cta" disabled={!ready} onClick={onContinue}>
         Continue

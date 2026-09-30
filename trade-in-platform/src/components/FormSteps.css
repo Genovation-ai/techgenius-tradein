@@ -314,3 +314,38 @@
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease,
     transform 0.12s var(--ease);
 }
+
+/*
+ * The answers already given on this step.
+ *
+ * With one question on screen at a time, a customer who mis-taps has no way
+ * back to an answer whose question has been replaced — the step's Back button
+ * leaves the step entirely. These are that way back, and they double as a
+ * record of what has been chosen so far.
+ */
+.spec-trail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1.1rem;
+}
+
+.spec-trail-item {
+  border: 1px solid var(--line);
+  background: var(--fog);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 0.3rem 0.8rem;
+  font: inherit;
+  font-size: 0.85rem;
+  line-height: 1.2;
+  cursor: pointer;
+  min-height: 32px;
+}
+.spec-trail-item:hover { border-color: var(--mint-dim); color: var(--ink); }
+.spec-trail-item.is-open {
+  border-color: var(--mint);
+  color: var(--ink);
+  background: rgba(57, 181, 74, 0.08);
+}
+.spec-trail-item:focus-visible { outline: 2px solid var(--mint-dim); outline-offset: 2px; }
