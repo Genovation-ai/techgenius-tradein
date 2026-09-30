@@ -163,25 +163,25 @@ export function DetailsStep({
             {specQuestion} <span className="req">*</span>
           </h2>
           <div className="chip-row">
-            {primaryOptions.map((s) => {
-              const tip = device.storagePrices?.[s];
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  className={`chip ${storage === s ? "chip--on" : ""}`}
-                  onClick={() => {
-                    onStorage(s);
-                    advance("storage");
-                  }}
-                >
-                  <span>{specLabel(s, device.category)}</span>
-                  {tip && tip > 0 ? (
-                    <span className="chip-price">up to ${tip.toLocaleString()}</span>
-                  ) : null}
-                </button>
-              );
-            })}
+            {/* No "up to $X" under each capacity. It is the same trap the
+                condition cards had: a column of figures turns "how much
+                storage does my phone have" into "which of these pays most",
+                and the answer to the first question is a fact the customer
+                either knows or can look up. The price for what they actually
+                chose sits in the panel beside this. */}
+            {primaryOptions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className={`chip ${storage === s ? "chip--on" : ""}`}
+                onClick={() => {
+                  onStorage(s);
+                  advance("storage");
+                }}
+              >
+                <span>{specLabel(s, device.category)}</span>
+              </button>
+            ))}
           </div>
         </div>
       ) : null}

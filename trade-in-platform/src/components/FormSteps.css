@@ -68,16 +68,6 @@
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.chip-price {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: var(--mint-dim);
-}
-
-.chip--on .chip-price {
-  color: rgba(255, 255, 255, 0.88);
-}
-
 .chip:hover {
   border-color: var(--mint-dim);
 }

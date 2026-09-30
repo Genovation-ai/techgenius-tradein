@@ -196,7 +196,6 @@ select,
 .admin-stat-value,
 .admin-status-pill,
 .offer-amount,
-.chip-price,
 .device-card-price {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
