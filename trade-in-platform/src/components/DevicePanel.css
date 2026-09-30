@@ -1,0 +1,108 @@
+/*
+ * The device, kept beside the questions about it.
+ *
+ * Sticky on a wide screen so it stays level with whichever question is being
+ * answered; above the question on a narrow one, where a column beside it would
+ * leave neither enough room.
+ */
+.device-panel {
+  align-self: start;
+}
+
+.device-panel-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg, 16px);
+  background: var(--fog);
+  padding: 1.15rem 1.1rem 1.25rem;
+  text-align: center;
+  position: sticky;
+  top: 1rem;
+}
+
+.device-panel-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  line-height: 1.25;
+}
+
+.device-panel-spec {
+  margin: 0.3rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.device-panel-media {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  margin: 0.9rem 0 0;
+}
+.device-panel-media img {
+  max-width: 100%;
+  max-height: 240px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+}
+.device-panel-fallback {
+  font-family: var(--font-display);
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+/* The number, once there is a condition for it to be about. */
+.device-panel-payout {
+  margin: 0.9rem 0 0;
+  padding: 0.85rem 0.75rem;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius, 12px);
+}
+.device-panel-payout-label {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.device-panel-payout-value {
+  margin: 0.2rem 0 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 4.5vw, 2.5rem);
+  font-weight: 700;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.device-panel-payout-wait {
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+/* Beside the question when there is room for both. */
+.flow-with-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(240px, 0.85fr);
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .flow-with-panel {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+  /* Above the question, and smaller: on a phone the handset must not push the
+     question it is about off the screen. */
+  .device-panel { order: -1; }
+  .device-panel-card { position: static; display: grid; grid-template-columns: auto 1fr; gap: 0 0.9rem; text-align: left; align-items: center; }
+  .device-panel-media { min-height: 0; grid-row: span 2; margin: 0; }
+  .device-panel-media img { max-height: 92px; }
+  .device-panel-name { align-self: end; }
+  .device-panel-spec { align-self: start; }
+  .device-panel-payout { grid-column: 1 / -1; margin-top: 0.8rem; text-align: center; }
+}

@@ -19,9 +19,8 @@ import { assetUrl, deviceImageUrl, fetchQuote, recordLead, submitOffer, uploadOf
 import { mapOfferToTwenty } from "../lib/twenty";
 import { emitWidgetEvent } from "../lib/widgetEvents";
 import { scrollFlowIntoView } from "../lib/flowScroll";
+import { DevicePanel } from "./DevicePanel";
 import {
-  joinDetails,
-  specLabel,
   emptyValuation,
   initialTradeInState,
   stepOrder,
@@ -544,37 +543,13 @@ export function TradeInFlow() {
         </p>
       ) : null}
 
-      {showSticky && state.device ? (
-        <div className="sticky-device">
-          {resolveStickyImage(state.device as DeviceModel & { imageUrl?: string | null }) ? (
-            <img
-              src={resolveStickyImage(state.device as DeviceModel & { imageUrl?: string | null })}
-              alt=""
-              width={44}
-              height={52}
-            />
-          ) : (
-            <span className="sticky-device-fallback" aria-hidden="true">
-              {state.device.name.slice(0, 1)}
-            </span>
-          )}
-          <div>
-            <strong>{state.device.name}</strong>
-            <span>
-              {joinDetails(
-                specLabel(state.storage ?? "", state.device.category),
-                state.memory ? specLabel(state.memory, state.device.category) : "",
-              ) || (state.storage ? "" : "Storage TBD")}
-              {state.carrier ? ` · ${state.carrier}` : ""}
-            </span>
-          </div>
-        </div>
-      ) : null}
-
       {/* Steps cross-fade instead of snapping. mode="wait" lets the outgoing
           step finish before the next mounts, so the panel never shows two
           headings at once, and the key is the step id so React treats each as
           a fresh element. Reduced motion gets the swap with no movement. */}
+      {/* The device beside the questions about it, once there is a device
+          and while the questions are still about it. */}
+      <div className={showSticky && state.device ? "flow-with-panel" : undefined}>
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={state.step}
@@ -669,7 +644,6 @@ export function TradeInFlow() {
           valuation={state.valuation}
           owned={state.owned}
           prices={gradePrices}
-          pricesLoading={gradePricesLoading}
           onOwned={(owned) =>
             patch({
               owned,
@@ -764,6 +738,22 @@ export function TradeInFlow() {
       )}
         </motion.div>
       </AnimatePresence>
+
+      {showSticky && state.device ? (
+        <DevicePanel
+          device={state.device}
+          imageSrc={resolveStickyImage(state.device as DeviceModel & { imageUrl?: string | null })}
+          storage={state.storage}
+          memory={state.memory}
+          carrier={state.carrier}
+          color={state.color}
+          grade={state.grade}
+          // Only the chosen condition's price, and only once one is chosen.
+          price={state.grade ? (quotedPrice ?? gradePrices[state.grade] ?? null) : null}
+          priceLoading={quoteLoading || gradePricesLoading}
+        />
+      ) : null}
+      </div>
     </div>
   );
 }

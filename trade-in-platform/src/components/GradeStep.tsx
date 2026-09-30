@@ -21,12 +21,11 @@ interface Props {
   onSelect: (g: ConditionGrade) => void;
   onContinue: () => void;
   /**
-   * What each condition is worth, quoted by the server before the customer
-   * commits to one. Absent while they load, and null for a grade whose quote
-   * failed — a card with no number is honest; a guessed one is not.
+   * What each condition is worth. Not shown on the cards — the panel beside
+   * them shows the one the customer picked — but it decides whether the
+   * button can say "Continue" or has to admit the price is still coming.
    */
   prices?: Partial<Record<ConditionGrade, number | null>>;
-  pricesLoading?: boolean;
 }
 
 const grades: ConditionGrade[] = ["flawless", "good", "average", "fair", "defective"];
@@ -40,7 +39,6 @@ export function GradeStep({
   onSelect,
   onContinue,
   prices,
-  pricesLoading,
 }: Props) {
   const locked = isGradeLockedToDefective(valuation);
   const lockNote = gradeLockReason(valuation);
@@ -98,18 +96,13 @@ export function GradeStep({
                 onSelect(g);
               }}
             >
-              <span className="grade-card-head">
-                <span className="grade-card-title">{gradeLabels[g]}</span>
-                {/* The number people are actually choosing on, next to the
-                    choice rather than one click past it. */}
-                <span className="grade-card-price">
-                  {prices && prices[g] != null ? (
-                    <strong>${prices[g]!.toLocaleString()}</strong>
-                  ) : pricesLoading ? (
-                    <span className="grade-card-price-wait">…</span>
-                  ) : null}
-                </span>
-              </span>
+              {/* No price here. Five figures side by side turns "which of
+                  these describes my phone" into "which of these pays most",
+                  and the customer picks the number instead of the truth —
+                  then the device arrives and the grade has to be corrected.
+                  The price for the condition they chose appears beside it,
+                  the moment they choose. */}
+              <span className="grade-card-title">{gradeLabels[g]}</span>
               <span className="grade-card-tagline">{gradeTaglines[g]}</span>
               {/* Five cards each listing six or seven bullets made this a
                   5,000px page to answer one question. The tagline is what a
