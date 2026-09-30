@@ -157,7 +157,30 @@ const devicesDir = firstExisting(
   path.resolve(HERE, "../../trade-in-platform/public/devices"),
 );
 if (devicesDir) {
-  app.use("/devices", express.static(devicesDir, { maxAge: "7d" }));
+  /*
+   * Device photographs: cached, but revalidated before use.
+   *
+   * These were served with a seven-day max-age, so a browser that had seen a
+   * tile once would not ask for it again for a week. Three corrections to the
+   * iPhone 17 Pro Max tile went out and the shop saw the same broken picture
+   * every time, because the fixes were live and their browser never looked.
+   * The embed script had exactly this bug and exactly this fix.
+   *
+   * no-cache does not mean "do not cache" — the file is still stored and
+   * still answered from disk on a 304, which for an unchanged image is a
+   * request with no body. What it buys is that a corrected picture appears
+   * the moment it ships rather than up to a week later.
+   */
+  app.use(
+    "/devices",
+    express.static(devicesDir, {
+      etag: true,
+      lastModified: true,
+      setHeaders: (res) => {
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+      },
+    }),
+  );
 } else {
   console.warn("[static] device images not found — the widget will render broken images");
 }
