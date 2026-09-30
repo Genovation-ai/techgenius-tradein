@@ -189,24 +189,37 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 52px;
-  padding-inline: 1rem;
+  /*
+   * Big enough to read as a logo rather than a bullet point.
+   *
+   * These were 52px tall around a 22px mark. The storefront the shop compares
+   * us with gives each brand a card of its own with the logo at 150px, and
+   * beside that ours read as punctuation — which is what "the logos are small"
+   * meant. Their layout can afford it because brand selection is a whole step
+   * there; here it is a filter above the models, one click shorter, and that
+   * is worth keeping. So the row grows instead of becoming a page.
+   */
+  min-height: 78px;
+  padding-inline: 1.15rem;
 }
 
 .chip-brand-mark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* Marks differ in aspect: Apple is square, "SAMSUNG" is a long ellipse. A
-     fixed height with a free width keeps them optically the same size. */
-  height: 22px;
-  max-width: 96px;
+  /* Marks differ in aspect: Apple is square, "SAMSUNG" is a long ellipse and
+     the Microsoft wordmark is longer still. Bounding both height and width
+     keeps them optically the same size instead of letting the widest win. */
+  height: 42px;
+  max-width: 124px;
 }
-.chip-brand-mark svg {
+.chip-brand-mark svg,
+.chip-brand-mark img {
   height: 100%;
   width: auto;
   max-width: 100%;
   display: block;
+  object-fit: contain;
 }
 
 /* Monochrome marks take the chip's ink so they invert with it on selection;
@@ -214,9 +227,28 @@
 .chip-brand .chip-brand-mark { color: var(--ink); }
 .chip-brand.chip--on .chip-brand-mark { color: inherit; }
 
+/*
+ * A selected brand keeps its white card and takes a ring instead of filling
+ * with ink.
+ *
+ * Filling worked while every mark was a monochrome glyph that inverted with
+ * the text colour. A real logo cannot invert: Apple's is black, and selecting
+ * it put a black mark on a near-black chip. Photographs of brands have their
+ * own colours and the surface under them has to stay light for any of them to
+ * survive selection.
+ */
+.chip-brand:has(img).chip--on {
+  background: var(--paper);
+  border-color: var(--forest);
+  box-shadow: inset 0 0 0 2px var(--forest);
+  color: var(--ink);
+}
+
 @media (max-width: 560px) {
-  .chip-brand { min-height: 46px; padding-inline: 0.8rem; }
-  .chip-brand-mark { height: 19px; max-width: 82px; }
+  /* Still clearly a logo on a phone, but not so tall that the row of brands
+     pushes the models it filters off the screen. */
+  .chip-brand { min-height: 62px; padding-inline: 0.85rem; }
+  .chip-brand-mark { height: 32px; max-width: 96px; }
 }
 
 @media (max-width: 560px) {

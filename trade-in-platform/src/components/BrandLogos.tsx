@@ -9,8 +9,19 @@
  * Anything without a mark falls back to its name set as a wordmark, which is
  * honest and looks deliberate — better than a generic placeholder glyph that
  * says nothing about which brand it is.
+ *
+ * The drawn marks are now the fallback rather than the first choice. Measured
+ * against the storefront the shop compares us with, our marks rendered at 22px
+ * where theirs run to 150, and several of ours were approximations that named
+ * the wrong thing: Huawei came out as a plain leaf where the real mark is a
+ * red fan, LG as a lowercase "lc" in a circle. A brand mark that is not the
+ * brand is worse than a word, because the customer reads it as a different
+ * company. Real logos are served from /brands and these stand behind them, so
+ * a slow or failed fetch still leaves something recognisable rather than a row
+ * of empty boxes.
  */
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
+import { assetUrl } from "../lib/tradeInApi";
 
 interface Props {
   brand: string;
@@ -146,8 +157,39 @@ export function hasBrandMark(brand: string): boolean {
   return brandKey(brand) in MARKS;
 }
 
+/** Brands with a real logo file in /brands. */
+const PHOTOGRAPHED = new Set([
+  "apple",
+  "samsung",
+  "google",
+  "huawei",
+  "lg",
+  "motorola",
+  "blackberry",
+  "tcl",
+  "microsoft",
+  "oneplus",
+]);
+
 export function BrandLogo({ brand, className }: Props) {
-  const Mark = MARKS[brandKey(brand)];
+  const key = brandKey(brand);
+  const Mark = MARKS[key];
+  const [failed, setFailed] = useState(false);
+
+  if (PHOTOGRAPHED.has(key) && !failed) {
+    return (
+      <span className={className}>
+        <img
+          src={assetUrl(`/brands/${key}.png`)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(true)}
+        />
+      </span>
+    );
+  }
+
   return (
     <span className={className}>{Mark ? <Mark /> : <Wordmark name={brand} />}</span>
   );

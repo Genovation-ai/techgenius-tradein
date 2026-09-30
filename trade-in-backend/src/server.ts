@@ -185,6 +185,30 @@ if (devicesDir) {
   console.warn("[static] device images not found — the widget will render broken images");
 }
 
+/*
+ * Brand logos, served like the device photographs and revalidated the same
+ * way, so a corrected mark is not stuck in a browser for a week.
+ */
+const brandsDir = firstExisting(
+  path.resolve(HERE, "../public/brands"),
+  path.resolve(HERE, "../../public/brands"),
+  path.resolve(HERE, "../../trade-in-platform/public/brands"),
+);
+if (brandsDir) {
+  app.use(
+    "/brands",
+    express.static(brandsDir, {
+      etag: true,
+      lastModified: true,
+      setHeaders: (res) => {
+        res.setHeader("Cache-Control", "no-cache, must-revalidate");
+      },
+    }),
+  );
+} else {
+  console.warn("[static] brand logos not found — the picker falls back to drawn marks");
+}
+
 // The built widget bundle the Framer page loads.
 //
 // Freshly-built output wins over the committed copy in framer-deliverable/.
