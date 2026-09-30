@@ -96,13 +96,57 @@
     grid-template-columns: minmax(0, 1fr);
     gap: 1rem;
   }
-  /* Above the question, and smaller: on a phone the handset must not push the
-     question it is about off the screen. */
+
+  /*
+   * Above the question, and laid out sideways.
+   *
+   * On a phone the panel is a header, not a poster: the handset must not push
+   * the question it is about off the screen. The handset keeps the right-hand
+   * side it has on a wide screen, the name and its growing spec line stack to
+   * its left, and the payout spans the full width underneath it — the same
+   * order the customer reads on the desktop layout, so the page does not
+   * rearrange itself between their phone and their laptop.
+   */
   .device-panel { order: -1; }
-  .device-panel-card { position: static; display: grid; grid-template-columns: auto 1fr; gap: 0 0.9rem; text-align: left; align-items: center; }
-  .device-panel-media { min-height: 0; grid-row: span 2; margin: 0; }
-  .device-panel-media img { max-height: 92px; }
-  .device-panel-name { align-self: end; }
-  .device-panel-spec { align-self: start; }
-  .device-panel-payout { grid-column: 1 / -1; margin-top: 0.8rem; text-align: center; }
+
+  .device-panel-card {
+    position: static;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name  media"
+      "spec  media"
+      "payout payout";
+    align-items: center;
+    gap: 0.15rem 0.9rem;
+    text-align: left;
+    padding: 0.9rem 1rem 1rem;
+  }
+
+  .device-panel-media {
+    grid-area: media;
+    min-height: 0;
+    margin: 0;
+    width: 74px;
+  }
+  .device-panel-media img { max-height: 96px; }
+  .device-panel-fallback { font-size: 2rem; }
+
+  .device-panel-name { grid-area: name; align-self: end; font-size: 1rem; }
+  .device-panel-spec { grid-area: spec; align-self: start; margin: 0.15rem 0 0; }
+
+  .device-panel-payout {
+    grid-area: payout;
+    margin-top: 0.85rem;
+    text-align: center;
+  }
+}
+
+/* Narrower still: the spec line needs the whole width to stay on two lines. */
+@media (max-width: 400px) {
+  .device-panel-card { gap: 0.1rem 0.7rem; padding: 0.8rem 0.85rem 0.9rem; }
+  .device-panel-media { width: 62px; }
+  .device-panel-media img { max-height: 80px; }
+  .device-panel-name { font-size: 0.95rem; }
+  .device-panel-spec { font-size: 0.8rem; }
 }
