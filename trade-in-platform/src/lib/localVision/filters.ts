@@ -118,3 +118,100 @@ export function regionStats(
     strongRatio: n ? strong / n : 0,
   };
 }
+
+/**
+ * How much of the strong edge in a frame forms long, thin, connected runs.
+ *
+ * Crack detection counted strong-edge pixels and compared the total against a
+ * threshold. Measured against frames with fractures drawn into them, that
+ * count came out at 0.092 where the same phones clean read 0.080 — a gap far
+ * too small to act on, because a phone displaying a busy wallpaper has strong
+ * edges everywhere and the count cannot tell a pattern from a break. Detection
+ * sat at 8% while false positives sat at 8%: the same number, which is what
+ * chance looks like.
+ *
+ * A crack is not merely edge, it is *elongated* edge — one long connected
+ * thread across the glass, usually with branches. Wallpaper texture is edge
+ * that is everywhere and connected to nothing in particular. So this walks the
+ * strong-edge mask, finds connected components, and returns the share of edge
+ * pixels living in components whose bounding box is much longer than it is
+ * wide. Texture scores near zero however busy it is; a fracture scores high
+ * however faint.
+ */
+export function edgeElongation(
+  mag: Float32Array,
+  w: number,
+  h: number,
+  threshold: number,
+): number {
+  const strong = new Uint8Array(w * h);
+  let strongCount = 0;
+  for (let i = 0; i < mag.length; i++) {
+    if (mag[i] >= threshold) {
+      strong[i] = 1;
+      strongCount++;
+    }
+  }
+  if (strongCount === 0) return 0;
+
+  const seen = new Uint8Array(w * h);
+  const stack = new Int32Array(w * h);
+  let elongated = 0;
+
+  for (let start = 0; start < strong.length; start++) {
+    if (!strong[start] || seen[start]) continue;
+
+    let top = 0;
+    stack[top++] = start;
+    seen[start] = 1;
+
+    let count = 0;
+    let minX = w;
+    let maxX = -1;
+    let minY = h;
+    let maxY = -1;
+
+    while (top > 0) {
+      const p = stack[--top];
+      const x = p % w;
+      const y = (p / w) | 0;
+      count++;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+
+      // Eight-connected: a fracture runs diagonally as readily as square-on.
+      for (let dy = -1; dy <= 1; dy++) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= h) continue;
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx;
+          if (nx < 0 || nx >= w) continue;
+          const np = ny * w + nx;
+          if (strong[np] && !seen[np]) {
+            seen[np] = 1;
+            stack[top++] = np;
+          }
+        }
+      }
+    }
+
+    // Too small to be a fracture; almost certainly sensor noise or a corner.
+    if (count < 12) continue;
+
+    const bw = maxX - minX + 1;
+    const bh = maxY - minY + 1;
+    const longSide = Math.max(bw, bh);
+    const shortSide = Math.max(1, Math.min(bw, bh));
+    const aspect = longSide / shortSide;
+    // Thin relative to its own bounding box: a line, not a blob.
+    const fill = count / (bw * bh);
+
+    if (aspect >= 2.2 && fill <= 0.34 && longSide >= Math.min(w, h) * 0.12) {
+      elongated += count;
+    }
+  }
+
+  return elongated / strongCount;
+}

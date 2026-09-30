@@ -49,6 +49,8 @@ export interface FrameAnalysis {
   sharpness: number;
   /** 0–1 mean luminance */
   brightness: number;
+  /** 0–1 share of near-saturated pixels — a reflection, not overall brightness */
+  blownFraction: number;
   /** Heuristic: center looks like lit glass/screen */
   screenLikelihood: number;
   /** Dominant interpretation of this frame */

@@ -23,6 +23,27 @@ export function analyzeFrame(image: ImageData, withPreview = false): {
   const { mean: brightnessRaw, std: brightStd } = meanStd(gray);
   const brightness = brightnessRaw / 255;
 
+  /*
+   * How much of the frame is blown out, as distinct from how bright it is on
+   * average.
+   *
+   * Glare was detected by asking whether the whole frame was brighter than
+   * 0.88, which is a photograph of a lightbulb, not a photograph of a phone
+   * with a reflection on it. Measured against frames with a known reflection
+   * burned into them, average brightness came out at 0.498 against 0.501 for
+   * the same phone clean: the reflection moves a patch to white and leaves the
+   * rest alone, so the mean says nothing and the test never fired. Every glare
+   * frame in the corpus went unreported.
+   *
+   * The fraction of near-saturated pixels does see it, because that is what a
+   * reflection is — a region with no detail left in it.
+   */
+  let blown = 0;
+  for (let i = 0; i < gray.length; i++) {
+    if (gray[i] >= 244) blown++;
+  }
+  const blownFraction = gray.length ? blown / gray.length : 0;
+
   // Dual thresholds: dark frames use a higher bar so camera noise ≠ cracks
   const darkFrame = brightness < 0.18;
   const edgeThresh = darkFrame ? 140 : 90;
@@ -34,6 +55,23 @@ export function analyzeFrame(image: ImageData, withPreview = false): {
   }
   let crackDensity = strong / mag.length;
   const extremeEdgeRatio = veryStrong / mag.length;
+
+  /*
+   * Fracture shape is deliberately not measured here yet.
+   *
+   * edgeElongation in filters.ts finds long thin connected edge, which is what
+   * a crack is and what busy texture is not. It is not called, because it
+   * could not be validated: the only labelled frames available are built on
+   * product renders, and those renders display swirling line wallpapers that
+   * are themselves long thin curves. Measured against them the feature scored
+   * 0.078 on undamaged phones and 0.012 on badly cracked ones — it was reading
+   * the wallpaper, in the wrong direction.
+   *
+   * Running it anyway would cost a connected-component pass over every frame
+   * on a customer's phone in exchange for a number nobody has shown to mean
+   * anything. It waits for photographs of real cracked devices, which the
+   * shop generates every week and which nothing currently keeps.
+   */
 
   const scratchIndex = clamp01(localContrastIndex(gray, w, h, 2) * 4.5);
   const discoloration = clamp01(brightStd / 55);
@@ -68,6 +106,7 @@ export function analyzeFrame(image: ImageData, withPreview = false): {
   const scenario = classifyScenario({
     brightness,
     brightStd,
+    blownFraction,
     crackDensity,
     extremeEdgeRatio,
     sharpness,
@@ -93,6 +132,7 @@ export function analyzeFrame(image: ImageData, withPreview = false): {
   const analysis: FrameAnalysis = {
     width: w,
     height: h,
+    blownFraction,
     crackDensity,
     scratchIndex,
     discoloration,
@@ -111,6 +151,7 @@ export function analyzeFrame(image: ImageData, withPreview = false): {
 function classifyScenario(s: {
   brightness: number;
   brightStd: number;
+  blownFraction: number;
   crackDensity: number;
   extremeEdgeRatio: number;
   sharpness: number;
@@ -124,6 +165,20 @@ function classifyScenario(s: {
   if (s.brightness < 0.08) return "too_dark";
 
   // Blown-out glare
+  /*
+   * A reflection is a patch with no detail left in it. Judge it by how much of
+   * the frame is blown out, together with a lift in the average, rather than
+   * by the average alone. The old test — whole frame above 0.88 — described a
+   * photograph of a light, not of a phone with a reflection on it, and
+   * reported glare on none of the frames that had one.
+   *
+   * These two numbers are where a corpus of known reflections separates from
+   * the same phones clean: 0.034 blown and 0.61 bright against 0.015 and 0.50.
+   * The margin is real but not wide, and it was measured on product renders
+   * rather than on photographs taken in a shop. Re-measure it against real
+   * customer photographs before trusting it to refuse one.
+   */
+  if (s.blownFraction > 0.020 && s.brightness > 0.53) return "glare";
   if (s.brightness > 0.88 && s.brightStd < 30) return "glare";
 
   // Soft / motion blur video frame

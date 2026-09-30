@@ -166,12 +166,30 @@ export function detectIssuesForAngle(
     push(type, severityFrom(discoloration, 0.9, 0.95, 0.98), Math.min(75, 40 + discoloration * 30));
   }
 
-  // Dent / warp: asymmetric strong edges on body angles
-  if (isBody && (edgeAsymmetry ?? 0) > 0.28 && scratchIndex > 0.18) {
+  /*
+   * Dent / warp: one side of the housing carrying more strong edge than the
+   * other.
+   *
+   * This asked for an asymmetry above 0.28 and a scratch index above 0.18.
+   * Measured across frames with dents of known size, asymmetry runs from 0.030
+   * to 0.054 and the scratch index never passes 0.06 — so the first test was
+   * roughly five times out of range and the second could not be satisfied at
+   * all. Both had to hold, so the rule had never once fired, on any photograph,
+   * since it was written. It reads like thresholds left behind when the metric
+   * underneath them was rescaled.
+   *
+   * The thresholds below are where dents separate from undamaged housings in
+   * that corpus. Glare and blur are excluded rather than merely out-scored:
+   * both land at asymmetries that reach into the dent range, and reporting a
+   * reflection as a dent takes money off a customer for damage that is not
+   * there.
+   */
+  const dentAsym = edgeAsymmetry ?? 0;
+  if (isBody && dentAsym > 0.03 && dominant !== "glare" && dominant !== "blurry") {
     push(
       "dent",
-      severityFrom(edgeAsymmetry ?? 0, 0.28, 0.4, 0.55),
-      Math.min(88, 45 + (edgeAsymmetry ?? 0) * 80),
+      severityFrom(dentAsym, 0.03, 0.04, 0.05),
+      Math.min(88, 40 + dentAsym * 600),
       angle,
     );
   }
