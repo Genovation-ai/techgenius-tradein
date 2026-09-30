@@ -74,9 +74,27 @@ function Widget({ offer }: { offer: "both" | Mode }) {
 
   const choose = (m: Mode) => {
     setMode(m);
+    // Keep the choice in the URL so it can be linked to and so a reload lands
+    // where the customer was — but only where that is possible.
+    //
+    // On Framer the widget runs inside an about:srcdoc iframe, whose document
+    // has the parent's origin and the URL "about:srcdoc". Asking that document
+    // to rewrite its history to "/srcdoc" throws a SecurityError, which is
+    // what every Sell/Repair tap on the live site was doing. The switch still
+    // worked because the throw came after setMode, but it filled the console
+    // with an error on the shop's own page, and anything added after that line
+    // would never have run.
+    //
     // Replace rather than push: the switch is not a page the back button
-    // should have to walk through on the shop's own site.
-    window.history.replaceState(null, "", m === "repair" ? "#repair" : window.location.pathname + window.location.search);
+    // should have to walk through.
+    try {
+      if (window.location.protocol === "about:") return;
+      const next = m === "repair" ? "#repair" : window.location.pathname + window.location.search;
+      window.history.replaceState(null, "", next);
+    } catch {
+      // A host that will not let us touch history is not a reason to fail to
+      // switch; the customer already sees the flow they asked for.
+    }
   };
 
   return (
