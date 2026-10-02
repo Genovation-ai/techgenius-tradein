@@ -67,9 +67,15 @@ export function RepairFlow() {
     setBrandFilter(catalog.brands[0] as Brand);
   }, [step, brandFilter, catalog.brands]);
 
+  // Re-asked whenever the device changes, because the answer depends on it:
+  // a laptop has no back glass, a PlayStation has no screen.
   useEffect(() => {
-    void fetchRepairProblems().then(setProblems).catch(() => setProblems([]));
-  }, []);
+    let cancelled = false;
+    void fetchRepairProblems(device?.id ?? null)
+      .then((p) => { if (!cancelled) setProblems(p); })
+      .catch(() => { if (!cancelled) setProblems([]); });
+    return () => { cancelled = true; };
+  }, [device?.id]);
 
   // Same landing behaviour as the trade-in: a step change brings the panel's
   // top into view rather than leaving the reader at the bottom of the last one.

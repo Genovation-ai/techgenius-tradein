@@ -464,8 +464,17 @@ export interface RepairQuoteResponse {
    */
 }
 
-export async function fetchRepairProblems(): Promise<RepairProblem[]> {
-  return fetchJson<RepairProblem[]>("/api/repair/problems");
+/**
+ * The repairs a device can actually have.
+ *
+ * Passing the device narrows the list to what is physically there. Without it
+ * every device was offered all twelve, so a customer with a PlayStation was
+ * asked about its screen, its battery and its rear camera, and the shop
+ * received enquiries for repairs that cannot exist.
+ */
+export async function fetchRepairProblems(deviceId?: string | null): Promise<RepairProblem[]> {
+  const qs = deviceId ? `?device_id=${encodeURIComponent(deviceId)}` : "";
+  return fetchJson<RepairProblem[]>(`/api/repair/problems${qs}`);
 }
 
 export async function fetchRepairQuote(device_id: string, problem: string): Promise<RepairQuoteResponse> {

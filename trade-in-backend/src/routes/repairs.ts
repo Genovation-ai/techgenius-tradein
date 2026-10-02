@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import type { Database } from "better-sqlite3";
 import { nanoid } from "nanoid";
+import { applicableProblems, type ProblemId } from "../services/repairApplicability.js";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
 import { orgFilter, orgIdOf } from "../middleware/orgScope.js";
@@ -55,7 +56,24 @@ function resolveOrg(db: Database, req: Request): string {
 repairPublicRouter.get("/problems", (req, res) => {
   const db = getDb();
   try {
-    res.json(getProblems(db, resolveOrg(db, req)).map(({ id, label }) => ({ id, label })));
+    const all = getProblems(db, resolveOrg(db, req)).map(({ id, label }) => ({ id, label }));
+
+    /*
+     * Narrowed to the device when one is named. Without it every device was
+     * offered all twelve, so a PlayStation was asked about its screen, its
+     * battery and its rear camera. Callers that name no device still get the
+     * full list, which keeps older embeds working.
+     */
+    const deviceId = String((req.query as { device_id?: string })?.device_id ?? "").trim();
+    if (!deviceId) return res.json(all);
+
+    const device = db
+      .prepare("SELECT id, name, category_id FROM devices WHERE id = ? AND enabled = 1")
+      .get(deviceId) as { id: string; name: string; category_id: string } | undefined;
+    if (!device) return res.json(all);
+
+    const allowed = applicableProblems(device.category_id, device.id, device.name);
+    return res.json(all.filter((p) => allowed.has(p.id as ProblemId)));
   } finally {
     db.close();
   }
@@ -69,10 +87,26 @@ repairPublicRouter.post("/quote", (req, res) => {
     if (!device_id || !isRepairProblem(db, orgId, problem)) {
       return res.status(400).json({ error: "device_id and a known problem are required" });
     }
-    const device = db.prepare("SELECT id, name FROM devices WHERE id = ? AND enabled = 1").get(device_id) as
-      | { id: string; name: string }
-      | undefined;
+    const device = db
+      .prepare("SELECT id, name, category_id FROM devices WHERE id = ? AND enabled = 1")
+      .get(device_id) as { id: string; name: string; category_id: string } | undefined;
     if (!device) return res.status(404).json({ error: "Unknown device" });
+
+    /*
+     * Decline a repair the device cannot have. This used to be accepted and
+     * answered with "we will price it by hand", which sent the shop enquiries
+     * about cracked PlayStation screens. The widget no longer offers these,
+     * so reaching here means a direct caller, and a clear refusal is more use
+     * to them than a quote that will never arrive.
+     */
+    if (!applicableProblems(device.category_id, device.id, device.name).has(problem as ProblemId)) {
+      return res.status(400).json({
+        error: `A ${device.name} does not have that part.`,
+        device_id: device.id,
+        problem,
+      });
+    }
+
     const q = quoteRepair(db, orgId, device.id, problem);
     res.json({
       device_id: device.id,
