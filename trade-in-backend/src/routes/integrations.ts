@@ -2,7 +2,7 @@ import { Router } from "express";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
-import { emailStatusSummary } from "../services/email.js";
+import { emailStatusSummary, flushBlockedEmails } from "../services/email.js";
 import { orgIdOf } from "../middleware/orgScope.js";
 import { emailIdentityFor } from "../services/emailIdentity.js";
 
@@ -77,6 +77,25 @@ integrationsRouter.get("/crm/outbox", requireCapability("crm:dispatch"), (_req, 
  * org_id and belong to the original tenant, so they are shown to it and to
  * nobody else.
  */
+/**
+ * Send the queue that built up while delivery was unconfigured.
+ *
+ * Messages written with no provider were stored as 'blocked' and nothing read
+ * them again, so configuring a provider helped the next customer and left the
+ * earlier ones in silence. This is the catch-up, and it is deliberately manual:
+ * the shop decides when a stack of late receipts should land in people's
+ * inboxes, rather than having them all arrive the moment a key is pasted in.
+ */
+integrationsRouter.post("/email/flush", requireCapability("settings:write"), async (req, res) => {
+  const limit = Number((req.body as { limit?: number })?.limit ?? 50);
+  const result = await flushBlockedEmails({
+    orgId: orgIdOf(req),
+    limit: Number.isFinite(limit) ? limit : 50,
+  });
+  if (result.skipped) return res.status(409).json({ error: result.skipped, ...result });
+  res.json(result);
+});
+
 integrationsRouter.get("/email/outbox", requireCapability("settings:read"), (req, res) => {
   const db = getDb();
   const orgId = orgIdOf(req);

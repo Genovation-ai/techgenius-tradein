@@ -576,3 +576,36 @@ describe("colours are the model's own, not a generic dozen", () => {
     expect(c).not.toContain("Purple");
   });
 });
+
+describe("what a customer is told about their parcel", () => {
+  // Mirrors shippingLine in TrackOffer.tsx: the shop's own identifier must not
+  // be presented as a carrier's tracking number.
+  const shippingLine = (courier?: string | null, tracking?: string | null): string => {
+    const t = (tracking || "").trim();
+    if (!t) return "Shipping: not sent yet";
+    if (/^TG[0-9A-Z]{6,}$/.test(t)) return `Your reference: ${t}`;
+    const c = (courier || "").trim();
+    return c ? `Tracking: ${c} · ${t}` : `Tracking: ${t}`;
+  };
+
+  it("does not call our own identifier a Canada Post tracking number", () => {
+    const line = shippingLine("Canada Post", "TGMUX7M0DE");
+    expect(line).toBe("Your reference: TGMUX7M0DE");
+    expect(line).not.toContain("Canada Post");
+  });
+
+  it("does name a real carrier number as tracking", () => {
+    expect(shippingLine("Canada Post", "1234567890123456")).toBe(
+      "Tracking: Canada Post · 1234567890123456",
+    );
+  });
+
+  it("says nothing has shipped when there is no number", () => {
+    expect(shippingLine("Canada Post", null)).toBe("Shipping: not sent yet");
+    expect(shippingLine(null, "")).toBe("Shipping: not sent yet");
+  });
+
+  it("still shows a real number when the courier is unknown", () => {
+    expect(shippingLine(null, "9876543210")).toBe("Tracking: 9876543210");
+  });
+});

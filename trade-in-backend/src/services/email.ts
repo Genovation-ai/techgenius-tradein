@@ -142,3 +142,106 @@ export function emailStatusSummary(orgId?: string | null): {
     db.close();
   }
 }
+
+/**
+ * Deliver the mail that was written while no provider was configured.
+ *
+ * Every message sent before TG_EMAIL_WEBHOOK existed was stored with status
+ * 'blocked' and nothing ever looked at those rows again. Configuring delivery
+ * fixes the next customer and leaves the earlier ones with silence — on this
+ * deployment, seventeen people who asked for a quote and heard nothing back.
+ *
+ * Rows are updated in place rather than re-inserted, so a flush that runs
+ * twice does not fill the outbox with copies of the same message, and a row
+ * that fails again stays as one row carrying its latest error.
+ */
+export async function flushBlockedEmails(opts: {
+  orgId?: string | null;
+  limit?: number;
+}): Promise<{ attempted: number; sent: number; failed: number; skipped: string | null }> {
+  const webhook = (process.env.TG_EMAIL_WEBHOOK || "").trim();
+  if (!webhook) {
+    return { attempted: 0, sent: 0, failed: 0, skipped: "TG_EMAIL_WEBHOOK is not set" };
+  }
+
+  const limit = Math.min(Math.max(1, opts.limit ?? 50), 200);
+  const db = getDb();
+  try {
+    const rows = db
+      .prepare(
+        opts.orgId
+          ? `SELECT id, org_id, offer_id, recipient, subject, body FROM email_outbox
+              WHERE status = 'blocked' AND org_id = ? ORDER BY id ASC LIMIT ?`
+          : `SELECT id, org_id, offer_id, recipient, subject, body FROM email_outbox
+              WHERE status = 'blocked' ORDER BY id ASC LIMIT ?`,
+      )
+      .all(...(opts.orgId ? [opts.orgId, limit] : [limit])) as Array<{
+      id: number;
+      org_id: string | null;
+      offer_id: string | null;
+      recipient: string;
+      subject: string;
+      body: string;
+    }>;
+
+    let sent = 0;
+    let failed = 0;
+
+    for (const row of rows) {
+      // Recomputed from the row's own tenant, so a queued message still goes
+      // out as the shop it belonged to rather than whoever triggered the flush.
+      const identity = emailIdentityFor(db, row.org_id);
+      let status: "sent" | "failed" = "failed";
+      let detail = "";
+      try {
+        const res = await fetch(webhook, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(process.env.TG_EMAIL_WEBHOOK_TOKEN
+              ? { Authorization: `Bearer ${process.env.TG_EMAIL_WEBHOOK_TOKEN}` }
+              : {}),
+          },
+          body: JSON.stringify({
+            from: `${identity.fromName} <${identity.from}>`,
+            ...(identity.replyTo ? { reply_to: identity.replyTo } : {}),
+            to: row.recipient,
+            subject: row.subject,
+            text: row.body,
+            offer_id: row.offer_id,
+          }),
+        });
+        detail = (await res.text()).slice(0, 2000);
+        status = res.ok ? "sent" : "failed";
+      } catch (e) {
+        detail = (e instanceof Error ? e.message : String(e)).slice(0, 2000);
+      }
+
+      db.prepare(
+        `UPDATE email_outbox
+            SET status = ?, provider_response = ?,
+                sent_at = CASE WHEN ? = 'sent' THEN datetime('now') ELSE sent_at END
+          WHERE id = ?`,
+      ).run(status, detail, status, row.id);
+
+      if (row.offer_id) {
+        db.prepare(
+          `INSERT INTO notifications (offer_id, type, channel, recipient, subject)
+           VALUES (?, ?, 'email', ?, ?)`,
+        ).run(
+          row.offer_id,
+          status === "sent" ? "email_sent" : "email_failed",
+          row.recipient,
+          row.subject.slice(0, 500),
+        );
+      }
+
+      if (status === "sent") sent++;
+      else failed++;
+    }
+
+    return { attempted: rows.length, sent, failed, skipped: null };
+  } finally {
+    db.close();
+  }
+}

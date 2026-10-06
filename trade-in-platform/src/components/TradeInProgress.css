@@ -32,7 +32,7 @@
   /* Back is the control people reach for most on a phone, and it was the
      smallest thing on the screen at 31px tall. */
   min-height: 44px;
-  font-weight: 600;
+  font-weight: 700;
   padding: 0.35rem 0;
   transition: color 0.15s ease;
 }
@@ -46,10 +46,9 @@
   align-items: center;
   gap: 0.45rem;
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 700;
   font-size: 1rem;
   color: var(--ink);
-  letter-spacing: -0.02em;
 }
 
 .tip-brand svg {
@@ -60,7 +59,7 @@
   min-width: 5.25rem;
   text-align: right;
   font-size: 0.8rem;
-  font-weight: 650;
+  font-weight: 700;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
@@ -101,7 +100,7 @@
   /* Was 0.65rem — around ten pixels, which is below what most people read
      comfortably, on the one element whose job is telling them where they are. */
   font-size: 0.74rem;
-  font-weight: 650;
+  font-weight: 700;
   color: rgba(42, 42, 42, 0.42);
 }
 

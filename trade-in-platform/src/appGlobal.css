@@ -87,7 +87,7 @@ body {
   padding: 10px 20px;
   border-radius: var(--radius, 10px);
   font: inherit;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   text-decoration: none;
   border: 1px solid var(--line-strong, #bbb);

@@ -63,8 +63,7 @@ h2,
 h3,
 h4 {
   font-family: var(--font-display);
-  font-weight: 600;
-  letter-spacing: -0.02em;
+  font-weight: 700;
   margin: 0;
   font-optical-sizing: auto;
 }
@@ -81,7 +80,7 @@ p {
   border: 0;
   border-radius: var(--radius-sm);
   padding: 0.85rem 1.25rem;
-  font-weight: 650;
+  font-weight: 700;
   letter-spacing: 0.01em;
   /* opacity included so a button that becomes enabled fades in rather than
      snapping from the 0.45 disabled state the moment the last answer lands. */
@@ -136,7 +135,7 @@ p {
   padding: 0.3rem 0.6rem;
   border-radius: var(--radius-sm);
   font-size: 0.75rem;
-  font-weight: 650;
+  font-weight: 700;
 }
 
 .badge-mint {
@@ -231,7 +230,7 @@ select,
   border-radius: 999px;
   background: transparent;
   color: var(--ink-soft);
-  font-weight: 650;
+  font-weight: 700;
   cursor: pointer;
   transition: background 0.18s var(--ease), color 0.18s var(--ease);
 }

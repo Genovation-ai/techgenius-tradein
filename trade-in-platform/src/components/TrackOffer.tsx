@@ -19,6 +19,31 @@ const JOURNEY_LABELS: Record<string, string> = {
   completed: "Paid",
 };
 
+/**
+ * What to say about a parcel.
+ *
+ * Generating a label also generates an identifier — "TG" and a timestamp — and
+ * stores "Canada Post" beside it. Shown together as "Canada Post · TGMUX7M0DE"
+ * that reads as a carrier tracking number, so a customer takes it to
+ * canadapost.ca and finds nothing there, because the number is ours and the
+ * parcel may not even have been handed over yet.
+ *
+ * A number the shop pasted in from a real carrier is a real number and is
+ * named as one. Ours is called what it is: a reference for talking to the shop
+ * about this trade-in.
+ */
+function shippingLine(courier?: string | null, tracking?: string | null): string {
+  const t = (tracking || "").trim();
+  if (!t) return "Shipping: not sent yet";
+
+  // The identifier this system makes for itself, as generated server-side.
+  const isOurReference = /^TG[0-9A-Z]{6,}$/.test(t);
+  if (isOurReference) return `Your reference: ${t}`;
+
+  const c = (courier || "").trim();
+  return c ? `Tracking: ${c} · ${t}` : `Tracking: ${t}`;
+}
+
 export function TrackOffer() {
   const [query, setQuery] = useState("");
   const [email, setEmail] = useState("");
@@ -125,9 +150,7 @@ export function TrackOffer() {
               {isPortal(result) ? (
                 <ul>
                   <li>Payout: {result.payout_method || "—"} · {result.payout_status || "pending"}</li>
-                  <li>
-                    Shipping: {result.courier || "—"} · {result.tracking_number || "No tracking yet"}
-                  </li>
+                  <li>{shippingLine(result.courier, result.tracking_number)}</li>
                   {result.invoice ? (
                     <li>
                       Invoice {result.invoice.id} · {result.invoice.status} · $
