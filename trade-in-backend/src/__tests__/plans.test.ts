@@ -11,8 +11,8 @@ import {
 describe("subscription tiers", () => {
   it("stays inside the price band the product was positioned at", () => {
     for (const p of Object.values(PLANS)) {
-      expect(p.price).toBeGreaterThanOrEqual(5);
-      expect(p.price).toBeLessThanOrEqual(20);
+      expect(p.price).toBeGreaterThanOrEqual(10);
+      expect(p.price).toBeLessThanOrEqual(25);
     }
   });
 
@@ -41,12 +41,13 @@ describe("subscription tiers", () => {
   });
 
   it("charges for stores past the included count", () => {
-    expect(monthlyPrice("starter", 1)).toBe(5);
-    expect(monthlyPrice("starter", 2)).toBe(9);
-    expect(monthlyPrice("starter", 3)).toBe(13);
-    expect(monthlyPrice("growth", 3)).toBe(12);
-    expect(monthlyPrice("growth", 5)).toBe(20);
-    expect(monthlyPrice("scale", 10)).toBe(20);
+    expect(monthlyPrice("starter", 1)).toBe(10);
+    expect(monthlyPrice("starter", 2)).toBe(16);
+    expect(monthlyPrice("starter", 3)).toBe(22);
+    expect(monthlyPrice("growth", 3)).toBe(17);
+    expect(monthlyPrice("growth", 5)).toBe(29);
+    expect(monthlyPrice("scale", 10)).toBe(25);
+    expect(monthlyPrice("scale", 20)).toBe(85);
   });
 
   it("undercuts Reusely at every size", () => {

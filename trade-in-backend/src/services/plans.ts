@@ -9,14 +9,14 @@ import type { Capability } from "../middleware/roles.js";
  * drift from the one the customer was sold.
  *
  * The prices are deliberately far under the market. Reusely charges $99 for a
- * single shop and $246 for five. These are $5 and $20. That is not a discount,
- * it is a different strategy: win on volume and on repairs, which Reusely does
- * not offer at any price.
+ * single shop and $246 for five. These are $10 and $25 — roughly a tenth. That
+ * is not a discount, it is a different strategy: win on volume and on repairs,
+ * which Reusely does not offer at any price.
  *
- * It only works if support stays near zero. At $5 a month, one ten-minute
- * support email costs more than the customer pays for a year and a half, so
- * every tier is self-serve by construction: limits return a message naming the
- * plan that lifts them, never an error that needs a human to interpret.
+ * It only works if support stays near zero. At $10 a month, one twenty-minute
+ * support call costs more than the customer pays in a year, so every tier is
+ * self-serve by construction: a limit returns a message naming the plan that
+ * lifts it and what that costs, never an error that needs a human to read.
  */
 
 export type PlanId = "starter" | "growth" | "scale";
@@ -56,9 +56,9 @@ export const PLANS: Record<PlanId, Plan> = {
   starter: {
     id: "starter",
     name: "Starter",
-    price: 5,
+    price: 10,
     stores: 1,
-    perExtraStore: 4,
+    perExtraStore: 6,
     offersPerMonth: 50,
     features: [],
     pitch: "One shop, taking trade-ins online this week.",
@@ -66,9 +66,9 @@ export const PLANS: Record<PlanId, Plan> = {
   growth: {
     id: "growth",
     name: "Growth",
-    price: 12,
+    price: 17,
     stores: 3,
-    perExtraStore: 4,
+    perExtraStore: 6,
     offersPerMonth: 300,
     features: ["repairs", "own_branding", "promo_codes", "market_pricing", "reports"],
     pitch: "Repairs as well as trade-ins, under your own name.",
@@ -76,9 +76,9 @@ export const PLANS: Record<PlanId, Plan> = {
   scale: {
     id: "scale",
     name: "Scale",
-    price: 20,
+    price: 25,
     stores: 10,
-    perExtraStore: 4,
+    perExtraStore: 6,
     offersPerMonth: Infinity,
     features: [
       "repairs",
