@@ -10,7 +10,7 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import { fetchDevices, fetchQuote, type ApiDevice } from "../lib/tradeInApi";
+import { assetUrl, fetchDevices, fetchQuote, type ApiDevice } from "../lib/tradeInApi";
 import "./LandingPage.css";
 
 /**
@@ -178,6 +178,94 @@ function PriceBuild() {
         </div>
       </div>
     </section>
+  );
+}
+
+/**
+ * The plans, read from the server that enforces them.
+ *
+ * This section used to be three hand-written cards saying Free, $49 and $149,
+ * none of which matched what the backend would actually let a tenant do. A
+ * price on a marketing page that nothing checks is a price that drifts, and
+ * the first person to notice is a customer who was charged something else.
+ *
+ * The fallback below is the same set, so a slow or failed call shows the right
+ * numbers rather than an empty section — but the server stays the authority.
+ */
+interface ApiPlan {
+  id: string;
+  name: string;
+  price: number;
+  pitch: string;
+  stores: number;
+  per_extra_store: number;
+  offers_per_month: number | null;
+  features: string[];
+}
+
+const FALLBACK_PLANS: ApiPlan[] = [
+  { id: "starter", name: "Starter", price: 10, pitch: "One shop, taking trade-ins online this week.", stores: 1, per_extra_store: 6, offers_per_month: 50, features: [] },
+  { id: "growth", name: "Growth", price: 17, pitch: "Repairs as well as trade-ins, under your own name.", stores: 3, per_extra_store: 6, offers_per_month: 300, features: ["repairs", "own_branding", "promo_codes", "market_pricing", "reports"] },
+  { id: "scale", name: "Scale", price: 25, pitch: "Several shops, your own systems talking to ours.", stores: 10, per_extra_store: 6, offers_per_month: null, features: ["repairs", "own_branding", "promo_codes", "market_pricing", "reports", "api_access", "bulk_quote", "ai_scan"] },
+];
+
+const FEATURE_LABEL: Record<string, string> = {
+  repairs: "Repair quoting",
+  own_branding: "Your name, not ours",
+  promo_codes: "Promo codes",
+  market_pricing: "Live competitor pricing",
+  reports: "Reports",
+  api_access: "API and webhooks",
+  bulk_quote: "Bulk quoting",
+  ai_scan: "Photo condition scan",
+};
+
+function PlanCards() {
+  const [plans, setPlans] = useState<ApiPlan[]>(FALLBACK_PLANS);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch(assetUrl("/api/saas/plans"))
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!cancelled && d?.plans?.length) setPlans(d.plans as ApiPlan[]);
+      })
+      .catch(() => {
+        /* the fallback is already on screen */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return (
+    <div className="rc-plans">
+      {plans.map((p, i) => (
+        <div className="rc-plan" key={p.id} data-featured={i === 1 ? "true" : undefined}>
+          <h3>{p.name}</h3>
+          <p className="rc-plan-price">
+            ${p.price}
+            <span> / month</span>
+          </p>
+          <p className="rc-plan-pitch">{p.pitch}</p>
+          <ul>
+            <li>
+              {p.stores} {p.stores === 1 ? "store" : "stores"}
+              {p.per_extra_store ? `, then $${p.per_extra_store} each` : ""}
+            </li>
+            <li>
+              {p.offers_per_month ? `${p.offers_per_month} offers a month` : "Unlimited offers"}
+            </li>
+            {p.features.map((f) => (
+              <li key={f}>{FEATURE_LABEL[f] ?? f}</li>
+            ))}
+          </ul>
+          <Link className={i === 1 ? "rc-btn" : "rc-btn rc-btn--quiet"} to="/admin/signup">
+            Start free trial
+          </Link>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -495,55 +583,10 @@ export default function LandingPage() {
           <div className="rc-wrap">
             <h2>Plans</h2>
             <p className="rc-section-lead">
-              Start free while you decide. Upgrade when the trade-ins justify it.
+              Two weeks free, no card. Reusely charges $99 for one shop and $246
+              for five.
             </p>
-            <div className="rc-plans">
-              <div className="rc-plan">
-                <h3>Free</h3>
-                <p className="rc-plan-price">
-                  $0<span> / month</span>
-                </p>
-                <ul>
-                  <li>Up to 25 offers a month</li>
-                  <li>Full device catalogue</li>
-                  <li>Widget on one site</li>
-                  <li>Follow-up list</li>
-                </ul>
-                <Link className="rc-btn rc-btn--quiet" to="/admin/signup">
-                  Start free
-                </Link>
-              </div>
-              <div className="rc-plan" data-featured="true">
-                <h3>Shop</h3>
-                <p className="rc-plan-price">
-                  $49<span> / month</span>
-                </p>
-                <ul>
-                  <li>Unlimited offers</li>
-                  <li>Your colours and logo</li>
-                  <li>Staff accounts and roles</li>
-                  <li>Inventory, invoices, payouts</li>
-                </ul>
-                <Link className="rc-btn" to="/admin/signup">
-                  Start free trial
-                </Link>
-              </div>
-              <div className="rc-plan">
-                <h3>Group</h3>
-                <p className="rc-plan-price">
-                  $149<span> / month</span>
-                </p>
-                <ul>
-                  <li>Several locations</li>
-                  <li>Per-store pricing</li>
-                  <li>API access</li>
-                  <li>Priority support</li>
-                </ul>
-                <Link className="rc-btn rc-btn--quiet" to="/admin/signup">
-                  Start free trial
-                </Link>
-              </div>
-            </div>
+            <PlanCards />
           </div>
         </section>
         </div>

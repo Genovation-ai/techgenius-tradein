@@ -877,3 +877,13 @@ html.rc-dark body {
 @media (max-width: 860px) {
   .rc-cost-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* One line under the price saying who the tier is for, so a shop owner can
+   pick without reading the bullet list underneath it. */
+.rc-plan-pitch {
+  margin: 0 0 0.9rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--muted, #756F68);
+  min-height: 2.6em;
+}
