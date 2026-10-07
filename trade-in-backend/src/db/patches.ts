@@ -5,6 +5,54 @@ import { ensureSaasSchema } from "../services/tenancy.js";
 
 /** Additive schema patches for existing DBs (CREATE IF NOT EXISTS / ALTER safe). */
 export function applySchemaPatches(db: Database): void {
+  /*
+   * Where a tenant sells, and in what currency.
+   *
+   * price_source is null for a region with no catalogue of its own. That is
+   * not a gap to be filled by converting Canadian prices — a used phone is
+   * worth a different amount in a different market, and an exchange rate
+   * knows nothing about carrier locking or import duty. A region with no
+   * source quotes by hand, which the widget already does for any device it
+   * has no price for.
+   */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS regions (
+      code TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      currency TEXT NOT NULL,
+      price_source TEXT,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+  db.prepare(
+    `INSERT INTO regions (code, name, currency, price_source) VALUES (?, ?, ?, ?)
+     ON CONFLICT(code) DO NOTHING`,
+  ).run("CA", "Canada", "CAD", "gorecell");
+  db.prepare(
+    `INSERT INTO regions (code, name, currency, price_source) VALUES (?, ?, ?, ?)
+     ON CONFLICT(code) DO NOTHING`,
+  ).run("US", "United States", "USD", null);
+
+  /*
+   * What each tenant used, one row per billable thing.
+   *
+   * This is both the meter and the analytics. A plan limit that cannot be
+   * computed from stored rows is a limit nobody can explain to the customer
+   * who hit it, so the count and the evidence are the same table.
+   */
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS usage_events (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id TEXT NOT NULL,
+      kind TEXT NOT NULL,
+      qty INTEGER NOT NULL DEFAULT 1,
+      ref_id TEXT,
+      occurred_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_usage_org_month
+      ON usage_events(org_id, kind, occurred_at);
+  `);
+
   // Provenance the repair quote shows the customer: whether the supplier had
   // the part in stock when it was read, and how many grades were listed for
   // it. Added after the fact, so existing rows keep working without them.

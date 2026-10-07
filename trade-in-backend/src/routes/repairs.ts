@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import type { Database } from "better-sqlite3";
 import { nanoid } from "nanoid";
 import { applicableProblems, type ProblemId } from "../services/repairApplicability.js";
+import { checkFeature, checkWritable, meter, subscriptionOf } from "../services/entitlements.js";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
 import { orgFilter, orgIdOf } from "../middleware/orgScope.js";
@@ -107,6 +108,19 @@ repairPublicRouter.post("/quote", (req, res) => {
       });
     }
 
+    /*
+     * Repairs are what Reusely does not do at any price, so they are the
+     * reason to be on Growth rather than Starter. A Starter shop asking for a
+     * repair quote is told the plan that includes it and what it costs — the
+     * moment of most interest is the moment to say the price.
+     */
+    {
+      const sub = subscriptionOf(db, orgId);
+      const denial = checkWritable(sub) || checkFeature(sub, "repairs", "Repair quoting");
+      if (denial) return res.status(denial.status).json(denial);
+    }
+
+    meter(db, orgId, "repair_quoted", `${device.id}:${problem}`);
     const q = quoteRepair(db, orgId, device.id, problem);
     res.json({
       device_id: device.id,

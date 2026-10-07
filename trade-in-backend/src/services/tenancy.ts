@@ -4,6 +4,7 @@
  */
 import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { nanoid } from "nanoid";
+import { DEFAULT_PLAN, TRIAL_DAYS } from "./plans.js";
 import type { Database } from "better-sqlite3";
 import { getDb } from "../db/migrate.js";
 import { orgWidgetTemplate } from "./widgetTemplate.js";
@@ -80,6 +81,10 @@ export function ensureSaasSchema(db: Database): void {
       name TEXT NOT NULL,
       status TEXT NOT NULL DEFAULT 'active',
       plan TEXT NOT NULL DEFAULT 'starter',
+      plan_status TEXT NOT NULL DEFAULT 'active',
+      trial_ends_at TEXT,
+      region_code TEXT NOT NULL DEFAULT 'CA',
+      billing_ref TEXT,
       created_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -127,6 +132,24 @@ export function ensureSaasSchema(db: Database): void {
       enabled INTEGER DEFAULT 1
     );
   `);
+
+  /*
+   * Databases created before subscriptions existed. These live here rather
+   * than in patches.ts because that runs before this table is created, so the
+   * ALTERs there silently did nothing on a fresh install and the first signup
+   * failed on a missing column.
+   */
+  const orgCols = new Set(
+    (db.prepare("PRAGMA table_info(orgs)").all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  if (!orgCols.has("plan_status")) {
+    db.exec("ALTER TABLE orgs ADD COLUMN plan_status TEXT NOT NULL DEFAULT 'active'");
+  }
+  if (!orgCols.has("trial_ends_at")) db.exec("ALTER TABLE orgs ADD COLUMN trial_ends_at TEXT");
+  if (!orgCols.has("region_code")) {
+    db.exec("ALTER TABLE orgs ADD COLUMN region_code TEXT NOT NULL DEFAULT 'CA'");
+  }
+  if (!orgCols.has("billing_ref")) db.exec("ALTER TABLE orgs ADD COLUMN billing_ref TEXT");
 
   const userCols = new Set(
     (db.prepare("PRAGMA table_info(admin_users)").all() as Array<{ name: string }>).map((c) => c.name),
@@ -308,6 +331,8 @@ export function createOrganization(input: {
   adminPassword: string;
   phone?: string;
   plan?: string;
+  /** ISO country the shop signed up from. CA or US for now. */
+  region?: string;
 }): {
   org: OrgRow;
   store: OrgStoreRow;
@@ -334,9 +359,26 @@ export function createOrganization(input: {
     const userId = nanoid(12);
     const key = generateApiKey();
 
+    /*
+     * A new shop starts a real trial with a real end date. The old row set
+     * status 'trial' and stopped there, so nothing could ever expire — every
+     * tenant who signed up had the product free for good.
+     *
+     * region decides billing currency and which catalogue feeds their quotes.
+     * It is corrected from the card country when they subscribe; until then
+     * the signup country is the best guess available.
+     */
     db.prepare(
-      `INSERT INTO orgs (id, slug, name, status, plan) VALUES (?, ?, ?, 'trial', ?)`,
-    ).run(orgId, slug, companyName, input.plan || "starter");
+      `INSERT INTO orgs (id, slug, name, status, plan, plan_status, trial_ends_at, region_code)
+       VALUES (?, ?, ?, 'active', ?, 'trialing', datetime('now', ?), ?)`,
+    ).run(
+      orgId,
+      slug,
+      companyName,
+      input.plan || DEFAULT_PLAN,
+      `+${TRIAL_DAYS} days`,
+      (input.region || "CA").toUpperCase().slice(0, 2),
+    );
 
     db.prepare(
       `INSERT INTO org_settings (

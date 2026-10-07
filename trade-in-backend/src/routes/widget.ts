@@ -1,6 +1,7 @@
 import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
+import { checkOfferLimit, checkWritable, meter, subscriptionOf } from "../services/entitlements.js";
 import { getDb } from "../db/migrate.js";
 import { nanoid } from "nanoid";
 import { computeServerQuote } from "../services/quoteEngine.js";
@@ -335,6 +336,22 @@ widgetRouter.post("/submit", (req, res) => {
   // no items cannot be paid out, a lead marked "converted" against an offer that
   // was never written is unrecoverable, and a promo use counted without an offer
   // silently burns a redemption. SQLite rolls the whole set back on any throw.
+  /*
+   * The subscription decides whether this offer may be taken, before any of
+   * it is written. Checked here rather than in middleware because the org is
+   * only known once the request body has been resolved to a tenant, and
+   * because a refusal must name the plan that lifts it — a widget customer
+   * must never see a bare 403.
+   */
+  {
+    const sub = subscriptionOf(db, orgId);
+    const denial = checkWritable(sub) || checkOfferLimit(db, sub);
+    if (denial) {
+      db.close();
+      return res.status(denial.status).json(denial);
+    }
+  }
+
   const commitOffer = db.transaction(() => {
     db.prepare(
       "INSERT INTO customers (id, first_name, last_name, email, phone, org_id) VALUES (?, ?, ?, ?, ?, ?)",
@@ -400,6 +417,7 @@ widgetRouter.post("/submit", (req, res) => {
     }
   });
   commitOffer();
+  meter(db, orgId, "offer_created", id);
 
   recordOfferNotification(db, {
     offerId: id,

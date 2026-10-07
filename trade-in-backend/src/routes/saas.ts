@@ -7,6 +7,15 @@ import { getDb } from "../db/migrate.js";
 import { apiKeyAuth, requireCapability, requireOrg } from "../middleware/auth.js";
 import { rateLimit } from "../middleware/rateLimit.js";
 import {
+  checkStoreLimit,
+  checkWritable,
+  meter,
+  offersThisMonth,
+  storeCount,
+  subscriptionOf,
+} from "../services/entitlements.js";
+import { monthlyPrice, PLANS, planOf, type PlanId } from "../services/plans.js";
+import {
   createOrganization,
   generateApiKey,
   getOrgById,
@@ -17,6 +26,87 @@ import {
 } from "../services/tenancy.js";
 
 export const saasRouter = Router();
+
+/**
+ * The tiers, for a pricing page. Public: nobody should have to sign up to
+ * find out what it costs.
+ */
+saasRouter.get("/plans", (_req, res) => {
+  res.json({
+    currency: "USD",
+    note: "Canadian shops are billed the same number in CAD.",
+    plans: (["starter", "growth", "scale"] as PlanId[]).map((id) => {
+      const p = PLANS[id];
+      return {
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        pitch: p.pitch,
+        stores: p.stores,
+        per_extra_store: p.perExtraStore,
+        offers_per_month: Number.isFinite(p.offersPerMonth) ? p.offersPerMonth : null,
+        features: p.features,
+      };
+    }),
+  });
+});
+
+/**
+ * What this tenant has used against what they are allowed, plus the numbers
+ * worth watching. One call, because a billing page and an analytics page want
+ * the same facts and splitting them guarantees they disagree.
+ */
+saasRouter.get("/usage", apiKeyAuth, requireOrg, (req, res) => {
+  const db = getDb();
+  try {
+    const orgId = req.tgAuth!.orgId!;
+    const sub = subscriptionOf(db, orgId);
+    const plan = planOf(sub?.plan);
+    const stores = storeCount(db, orgId);
+    const offers = offersThisMonth(db, orgId);
+
+    const since = (days: number) =>
+      db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM offers
+            WHERE org_id = ? AND created_at >= date('now', ?)`,
+        )
+        .get(orgId, `-${days} days`) as { c: number };
+
+    const value = db
+      .prepare(
+        `SELECT COALESCE(SUM(total_value),0) AS v FROM offers
+          WHERE org_id = ? AND created_at >= date('now','start of month')`,
+      )
+      .get(orgId) as { v: number };
+
+    res.json({
+      plan: {
+        id: plan.id,
+        name: plan.name,
+        price: plan.price,
+        status: sub?.plan_status ?? "active",
+        trial_ends_at: sub?.trial_ends_at ?? null,
+        region: sub?.region_code ?? "CA",
+      },
+      limits: {
+        stores: { used: stores, included: plan.stores, per_extra: plan.perExtraStore },
+        offers_this_month: {
+          used: offers,
+          included: Number.isFinite(plan.offersPerMonth) ? plan.offersPerMonth : null,
+        },
+      },
+      billing: { this_month: monthlyPrice(plan.id, stores) },
+      activity: {
+        offers_7d: since(7).c,
+        offers_30d: since(30).c,
+        offer_value_this_month: Number(value.v ?? 0),
+      },
+    });
+  } finally {
+    db.close();
+  }
+});
 
 const signupLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -35,6 +125,9 @@ saasRouter.post("/signup", signupLimiter, (req, res) => {
       adminPassword: String(req.body?.password || ""),
       phone: req.body?.phone ? String(req.body.phone) : undefined,
       plan: req.body?.plan ? String(req.body.plan) : "starter",
+      // Which country they sell in: decides billing currency and which
+      // catalogue feeds their quotes. Corrected from the card on subscribe.
+      region: req.body?.region ? String(req.body.region) : "CA",
     });
 
     // Issue session so they land in admin immediately
@@ -157,6 +250,21 @@ saasRouter.post("/org/stores", apiKeyAuth, requireCapability("settings:write"), 
   if (!name) return res.status(400).json({ error: "name required" });
   const id = `store-${nanoid(8)}`;
   const db = getDb();
+
+  /*
+   * Past the included count this is a price, not a refusal: the shop is told
+   * what the next store costs and what their invoice becomes. Saying "no" to
+   * a customer trying to give you more money is the worst possible answer.
+   */
+  {
+    const sub = subscriptionOf(db, req.tgAuth!.orgId!);
+    const denial = checkWritable(sub) || checkStoreLimit(db, sub);
+    if (denial) {
+      db.close();
+      return res.status(denial.status).json(denial);
+    }
+  }
+
   db.prepare(
     `INSERT INTO org_stores (id, org_id, name, address, phone, enabled) VALUES (?, ?, ?, ?, ?, 1)`,
   ).run(
@@ -166,6 +274,7 @@ saasRouter.post("/org/stores", apiKeyAuth, requireCapability("settings:write"), 
     req.body?.address ? String(req.body.address) : null,
     req.body?.phone ? String(req.body.phone) : null,
   );
+  meter(db, req.tgAuth!.orgId, "store_added", id);
   const store = db.prepare("SELECT * FROM org_stores WHERE id = ?").get(id);
   db.close();
   res.status(201).json(store);
