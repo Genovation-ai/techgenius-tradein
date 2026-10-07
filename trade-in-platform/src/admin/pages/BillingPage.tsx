@@ -93,7 +93,7 @@ export function BillingPage() {
     try {
       const out = await adminFetch<{ url: string }>("/api/saas/billing/checkout", {
         method: "POST",
-        body: JSON.stringify({ plan, return_to: window.location.origin }),
+        body: JSON.stringify({ plan }),
       });
       window.location.href = out.url;
     } catch (e) {

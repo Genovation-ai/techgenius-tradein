@@ -108,6 +108,21 @@ export class StripeProvider implements BillingProvider {
       success_url: req.successUrl,
       cancel_url: req.cancelUrl,
       customer_email: req.email || undefined,
+      /*
+       * Sales tax, calculated and collected by Stripe.
+       *
+       * Taking payment through Stripe rather than a merchant of record makes
+       * us the seller, which makes GST/HST ours to charge and remit. Stripe
+       * Tax works that out per customer once it is switched on in the
+       * dashboard and the business address is set; without it every Canadian
+       * invoice is short by 5-15% and the shortfall is ours, not theirs.
+       *
+       * The address has to be collected for that calculation to be possible
+       * at all, so it is required rather than optional.
+       */
+      "automatic_tax[enabled]": "true",
+      billing_address_collection: "required",
+      "tax_id_collection[enabled]": "true",
       // Carried back on the webhook. The org is never read from the URL the
       // browser returns to — that is guessable and would let anyone upgrade.
       "metadata[org_id]": req.orgId,
@@ -282,4 +297,34 @@ export function applyBillingEvent(db: Database, evt: BillingEvent): "applied" | 
       break;
   }
   return "applied";
+}
+
+
+/**
+ * What is still missing before this deployment can take money.
+ *
+ * Configuration spread across six environment variables fails in a way that
+ * is tedious to diagnose from a 502 at checkout, so it is worth being able to
+ * ask directly. Never returns a key or a secret — only whether each is set.
+ */
+export function billingReadiness(): {
+  ready: boolean;
+  provider: string;
+  missing: string[];
+  present: string[];
+} {
+  const needed = [
+    "TG_STRIPE_SECRET_KEY",
+    "TG_STRIPE_WEBHOOK_SECRET",
+    "TG_STRIPE_PRICE_STARTER_CAD",
+    "TG_STRIPE_PRICE_GROWTH_CAD",
+    "TG_STRIPE_PRICE_SCALE_CAD",
+  ];
+  const missing = needed.filter((k) => !(process.env[k] || "").trim());
+  return {
+    ready: missing.length === 0,
+    provider: "stripe",
+    missing,
+    present: needed.filter((k) => !missing.includes(k)),
+  };
 }

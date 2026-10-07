@@ -15,7 +15,7 @@ import {
   subscriptionOf,
 } from "../services/entitlements.js";
 import { monthlyPrice, PLANS, planOf, type PlanId } from "../services/plans.js";
-import { activeProvider, applyBillingEvent } from "../services/billing.js";
+import { activeProvider, applyBillingEvent, billingReadiness } from "../services/billing.js";
 import {
   createOrganization,
   generateApiKey,
@@ -27,6 +27,14 @@ import {
 } from "../services/tenancy.js";
 
 export const saasRouter = Router();
+
+/*
+ * The webhook is the one route here with no key in front of it — the
+ * signature is the authentication. A limiter keeps an unauthenticated,
+ * CPU-bearing endpoint from being a cheap way to occupy the service. Stripe
+ * retries with backoff and will never approach this.
+ */
+const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 240 });
 
 /**
  * The tiers, for a pricing page. Public: nobody should have to sign up to
@@ -57,6 +65,11 @@ saasRouter.get("/plans", (_req, res) => {
  * worth watching. One call, because a billing page and an analytics page want
  * the same facts and splitting them guarantees they disagree.
  */
+/** What is still missing before this deployment can take money. */
+saasRouter.get("/billing/status", apiKeyAuth, requireCapability("settings:read"), (_req, res) => {
+  res.json(billingReadiness());
+});
+
 /**
  * Start a subscription. Returns a hosted page where the card is entered; we
  * never see a card number and never want to.
@@ -82,8 +95,22 @@ saasRouter.post("/billing/checkout", apiKeyAuth, requireCapability("settings:wri
       | undefined;
     if (!org) return res.status(404).json({ error: "Organization not found" });
 
-    const base = String((req.body as { return_to?: string })?.return_to || "").trim();
-    const root = base || `${req.protocol}://${req.get("host")}`;
+    /*
+     * Where Stripe sends the customer afterwards is never taken from the
+     * request.
+     *
+     * It used to be read from a return_to field in the body. Anyone who could
+     * call this — a shop's own staff account, or anyone holding a leaked API
+     * key — could point it at a site they controlled, and Stripe would deliver
+     * a freshly-paying customer to it straight after checkout. That is a
+     * phishing page wearing our redirect.
+     *
+     * TG_APP_URL is the one place the admin actually lives; without it we fall
+     * back to the host that served this request, which the caller cannot
+     * choose.
+     */
+    const root = (process.env.TG_APP_URL || "").trim().replace(/\/+$/, "") ||
+      `${req.protocol}://${req.get("host")}`;
 
     const out = await provider.createCheckout({
       orgId: org.id,
@@ -96,7 +123,10 @@ saasRouter.post("/billing/checkout", apiKeyAuth, requireCapability("settings:wri
     });
     res.json({ url: out.url, plan: planId });
   } catch (e) {
-    res.status(502).json({ error: e instanceof Error ? e.message : "Checkout failed" });
+    // The provider's own words can name price ids, account state and
+    // configuration. Useful in a log, not in a response to whoever asked.
+    console.warn("[billing] checkout failed:", e instanceof Error ? e.message : e);
+    res.status(502).json({ error: "Could not start checkout. Please try again." });
   } finally {
     db.close();
   }
@@ -118,7 +148,8 @@ saasRouter.post("/billing/portal", apiKeyAuth, requireCapability("settings:write
     const out = await provider.portalUrl(org.id, org.billing_ref, `${root}/admin/billing`);
     res.json(out);
   } catch (e) {
-    res.status(502).json({ error: e instanceof Error ? e.message : "Portal failed" });
+    console.warn("[billing] portal failed:", e instanceof Error ? e.message : e);
+    res.status(502).json({ error: "Could not open the billing portal. Please try again." });
   } finally {
     db.close();
   }
@@ -131,9 +162,21 @@ saasRouter.post("/billing/portal", apiKeyAuth, requireCapability("settings:write
  * payment provider cannot hold an API key. A body that does not verify is
  * treated as a forgery and answered 400 without touching the database.
  */
-saasRouter.post("/billing/webhook", (req, res) => {
+saasRouter.post("/billing/webhook", webhookLimiter, (req, res) => {
   const provider = activeProvider();
   const raw = (req as Request & { rawBody?: string }).rawBody ?? "";
+
+  /*
+   * Refuse anything implausibly large before hashing it.
+   *
+   * Verifying a signature means an HMAC over the whole body, so an unbounded
+   * body is unbounded work for anyone who can reach this URL — and it has to
+   * be reachable without a key, because a payment provider cannot hold one.
+   * A real event is a few kilobytes; 64KB is generous.
+   */
+  if (raw.length > 64_000) {
+    return res.status(413).json({ error: "Payload too large" });
+  }
   const sig =
     (req.headers["stripe-signature"] as string | undefined) ||
     (req.headers["paddle-signature"] as string | undefined);

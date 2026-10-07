@@ -127,3 +127,50 @@ describe("applying an event", () => {
     expect(row().plan).toBe("starter");
   });
 });
+
+describe("what an attacker can reach", () => {
+  const p = new StripeProvider();
+  beforeEach(() => {
+    process.env.TG_STRIPE_WEBHOOK_SECRET = SECRET;
+  });
+
+  it("will not take a plan from an unsigned body", () => {
+    const body = JSON.stringify(checkout("org-victim", "scale"));
+    expect(p.parseWebhook(body, undefined)).toBeNull();
+    expect(p.parseWebhook(body, "")).toBeNull();
+    expect(p.parseWebhook(body, "t=,v1=")).toBeNull();
+  });
+
+  it("will not accept a signature from a different body", () => {
+    const a = signed(checkout("org-a", "starter", "evt_a"));
+    const b = signed(checkout("org-b", "scale", "evt_b"));
+    // the attacker has a valid header, just not for this payload
+    expect(p.parseWebhook(b.raw, a.header)).toBeNull();
+  });
+
+  it("will not let a stale capture be replayed tomorrow", () => {
+    for (const age of [301, 3600, 86_400]) {
+      const { raw, header } = signed(checkout("org-a", "scale"), { age });
+      expect(p.parseWebhook(raw, header), `age ${age}s`).toBeNull();
+    }
+  });
+
+  it("treats a malformed signature header as a forgery, not an error", () => {
+    const { raw } = signed(checkout("org-a", "growth"));
+    for (const h of ["garbage", "v1=onlythis", "t=notanumber,v1=abc", "t=1"]) {
+      expect(p.parseWebhook(raw, h), h).toBeNull();
+    }
+  });
+
+  it("never reads a plan from anywhere but signed metadata", () => {
+    // no metadata at all: nothing to apply, even though the signature is good
+    const { raw, header } = signed({
+      id: "evt_nometa",
+      type: "checkout.session.completed",
+      data: { object: { customer: "cus_x" } },
+    });
+    const evt = p.parseWebhook(raw, header);
+    expect(evt?.orgId).toBeNull();
+    expect(evt?.plan).toBeNull();
+  });
+});
