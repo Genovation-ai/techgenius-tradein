@@ -124,7 +124,26 @@ app.use((req, res, next) => {
   return isPublic ? openCors(req, res, next) : restrictedCors(req, res, next);
 });
 app.use(securityHeaders);
-app.use(express.json({ limit: "10mb" }));
+/*
+ * Keep the exact bytes of a webhook body.
+ *
+ * A payment provider signs the raw payload. JSON.parse then re-serialise does
+ * not round-trip byte for byte — key order and number formatting can both
+ * move — so a signature checked against the re-serialised form fails for
+ * legitimate events and, worse, invites someone to "fix" it by skipping the
+ * check. Only kept for the billing webhook; every other route has no use for
+ * it and no reason to hold a second copy of its body in memory.
+ */
+app.use(
+  express.json({
+    limit: "10mb",
+    verify: (req, _res, buf) => {
+      if (req.url?.includes("/billing/webhook")) {
+        (req as express.Request & { rawBody?: string }).rawBody = buf.toString("utf8");
+      }
+    },
+  }),
+);
 
 // Throttle abuse-prone public endpoints.
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: "Too many login attempts. Try again in a few minutes." });

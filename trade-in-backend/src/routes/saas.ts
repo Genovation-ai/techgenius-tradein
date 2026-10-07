@@ -1,7 +1,7 @@
 /**
  * SaaS org APIs: signup, branding, stores, API keys, public widget config.
  */
-import { Router } from "express";
+import { Router, type Request } from "express";
 import { nanoid } from "nanoid";
 import { getDb } from "../db/migrate.js";
 import { apiKeyAuth, requireCapability, requireOrg } from "../middleware/auth.js";
@@ -15,6 +15,7 @@ import {
   subscriptionOf,
 } from "../services/entitlements.js";
 import { monthlyPrice, PLANS, planOf, type PlanId } from "../services/plans.js";
+import { activeProvider, applyBillingEvent } from "../services/billing.js";
 import {
   createOrganization,
   generateApiKey,
@@ -56,6 +57,101 @@ saasRouter.get("/plans", (_req, res) => {
  * worth watching. One call, because a billing page and an analytics page want
  * the same facts and splitting them guarantees they disagree.
  */
+/**
+ * Start a subscription. Returns a hosted page where the card is entered; we
+ * never see a card number and never want to.
+ */
+saasRouter.post("/billing/checkout", apiKeyAuth, requireCapability("settings:write"), requireOrg, async (req, res) => {
+  const provider = activeProvider();
+  if (!provider.configured()) {
+    return res.status(503).json({
+      error: "Payments are not switched on for this deployment yet.",
+      provider: provider.name,
+    });
+  }
+  const planId = String((req.body as { plan?: string })?.plan || "").toLowerCase();
+  if (!(planId in PLANS)) {
+    return res.status(400).json({ error: "Unknown plan", plans: Object.keys(PLANS) });
+  }
+
+  const db = getDb();
+  try {
+    const orgId = req.tgAuth!.orgId!;
+    const org = db.prepare("SELECT id, name, region_code FROM orgs WHERE id = ?").get(orgId) as
+      | { id: string; name: string; region_code: string }
+      | undefined;
+    if (!org) return res.status(404).json({ error: "Organization not found" });
+
+    const base = String((req.body as { return_to?: string })?.return_to || "").trim();
+    const root = base || `${req.protocol}://${req.get("host")}`;
+
+    const out = await provider.createCheckout({
+      orgId: org.id,
+      orgName: org.name,
+      plan: planId as PlanId,
+      region: org.region_code,
+      email: String((req.body as { email?: string })?.email || "") || null,
+      successUrl: `${root}/admin/billing?subscribed=1`,
+      cancelUrl: `${root}/admin/billing?cancelled=1`,
+    });
+    res.json({ url: out.url, plan: planId });
+  } catch (e) {
+    res.status(502).json({ error: e instanceof Error ? e.message : "Checkout failed" });
+  } finally {
+    db.close();
+  }
+});
+
+/** Where a shop changes its card or cancels. Hosted by the provider. */
+saasRouter.post("/billing/portal", apiKeyAuth, requireCapability("settings:write"), requireOrg, async (req, res) => {
+  const provider = activeProvider();
+  if (!provider.configured()) return res.status(503).json({ error: "Payments are not switched on." });
+  const db = getDb();
+  try {
+    const org = db.prepare("SELECT id, billing_ref FROM orgs WHERE id = ?").get(req.tgAuth!.orgId!) as
+      | { id: string; billing_ref: string | null }
+      | undefined;
+    if (!org?.billing_ref) {
+      return res.status(409).json({ error: "This shop has no subscription yet." });
+    }
+    const root = `${req.protocol}://${req.get("host")}`;
+    const out = await provider.portalUrl(org.id, org.billing_ref, `${root}/admin/billing`);
+    res.json(out);
+  } catch (e) {
+    res.status(502).json({ error: e instanceof Error ? e.message : "Portal failed" });
+  } finally {
+    db.close();
+  }
+});
+
+/**
+ * The only authority on what a shop has paid for.
+ *
+ * Unauthenticated by design — the signature is the authentication, and a
+ * payment provider cannot hold an API key. A body that does not verify is
+ * treated as a forgery and answered 400 without touching the database.
+ */
+saasRouter.post("/billing/webhook", (req, res) => {
+  const provider = activeProvider();
+  const raw = (req as Request & { rawBody?: string }).rawBody ?? "";
+  const sig =
+    (req.headers["stripe-signature"] as string | undefined) ||
+    (req.headers["paddle-signature"] as string | undefined);
+
+  const evt = provider.parseWebhook(raw, sig);
+  if (!evt) return res.status(400).json({ error: "Signature did not verify" });
+
+  const db = getDb();
+  try {
+    const outcome = applyBillingEvent(db, evt);
+    // 200 even for a duplicate: the provider retries anything that is not 2xx,
+    // and an event we have already applied is handled, not failed.
+    res.json({ received: true, outcome, type: evt.type });
+  } finally {
+    db.close();
+  }
+});
+
 saasRouter.get("/usage", apiKeyAuth, requireOrg, (req, res) => {
   const db = getDb();
   try {
