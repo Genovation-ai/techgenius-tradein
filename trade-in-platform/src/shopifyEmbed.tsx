@@ -53,6 +53,55 @@ function ensureFont() {
   document.head.appendChild(link);
 }
 
+/*
+ * Where this script was served from, captured while the browser is still
+ * executing it.
+ *
+ * document.currentScript is only non-null during that first synchronous run,
+ * so it has to be read at module top rather than inside a function called
+ * later.
+ */
+const SCRIPT_SRC: string =
+  (document.currentScript as HTMLScriptElement | null)?.src ||
+  Array.from(document.querySelectorAll<HTMLScriptElement>("script[src]"))
+    .map((el) => el.src)
+    .find((src) => /tg-trade-in(\.lite)?\.js(\?|$)/.test(src)) ||
+  "";
+
+/**
+ * Bring our own stylesheet.
+ *
+ * The site tells a shop to paste two lines: a div and this script. Two lines
+ * is the promise and it was not true — the widget needs its stylesheet as
+ * well, and without it a new customer's first act after subscribing was to
+ * paste the snippet and get Times New Roman, square grey buttons and the
+ * progress bar rendered as a numbered list. Nothing was broken; it simply
+ * looked like nothing worked.
+ *
+ * The script knows its own URL, so it can fetch the stylesheet sitting beside
+ * it. Guarded by id and by href, so an embed that already links the CSS — the
+ * shops set up by hand before this existed — does not load it twice.
+ */
+function ensureStyles() {
+  if (!SCRIPT_SRC) return;
+  const ID = "tg-trade-in-styles";
+  if (document.getElementById(ID)) return;
+
+  const href = SCRIPT_SRC.replace(/\.js(\?.*)?$/, ".css$1");
+  if (href === SCRIPT_SRC) return;
+
+  const already = Array.from(
+    document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'),
+  ).some((l) => l.href === href);
+  if (already) return;
+
+  const link = document.createElement("link");
+  link.id = ID;
+  link.rel = "stylesheet";
+  link.href = href;
+  document.head.appendChild(link);
+}
+
 /**
  * Sell and repair in one block.
  *
@@ -132,6 +181,7 @@ function Widget({ offer }: { offer: "both" | Mode }) {
 
 function mount() {
   ensureFont();
+  ensureStyles();
   const el = document.getElementById(MOUNT_ID);
   if (!el) {
     console.warn(`[Reclaim] #${MOUNT_ID} not found on page.`);
