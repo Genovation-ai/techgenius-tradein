@@ -66,7 +66,10 @@ const nav: NavGroup[] = [
   },
   {
     label: "Support",
-    items: [{ to: "/admin/settings", icon: <NavSettings />, text: "Settings", cap: "settings:read" }],
+    items: [
+      { to: "/admin/billing", icon: <NavSettings />, text: "Plan & billing", cap: "settings:read" },
+      { to: "/admin/settings", icon: <NavSettings />, text: "Settings", cap: "settings:read" },
+    ],
   },
 ];
 

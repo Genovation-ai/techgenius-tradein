@@ -5,6 +5,7 @@ import "./tokens.css";
 import "./appGlobal.css";
 import App from "./App.tsx";
 import LandingPage from "./marketing/LandingPage.tsx";
+import { BillingPage } from "./admin/pages/BillingPage.tsx";
 import { AdminLayout } from "./admin/AdminLayout.tsx";
 import { LoginPage } from "./admin/LoginPage.tsx";
 import { SignupPage } from "./admin/SignupPage.tsx";
@@ -53,6 +54,7 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/admin/signup" element={<SignupPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
+          <Route path="billing" element={<BillingPage />} />
           <Route path="offers" element={<OffersPage />} />
           <Route path="repairs" element={<RepairsPage />} />
           <Route path="leads" element={<LeadsPage />} />
