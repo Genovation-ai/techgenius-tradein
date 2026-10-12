@@ -505,3 +505,26 @@ export function safeEqualHex(a: string, b: string): boolean {
   }
   return timingSafeEqual(ba, bb);
 }
+
+
+/**
+ * How a shop is willing to receive devices.
+ *
+ * Both when it has never said, because offering a way in the shop does not
+ * want is recoverable and offering none strands its customers. An empty list
+ * is treated the same way for the same reason.
+ */
+export function allowedOfferTypes(db: Database, orgId: string): string[] {
+  const BOTH = ["mail-in", "drop-off"];
+  try {
+    const row = db
+      .prepare("SELECT offer_types FROM org_settings WHERE org_id = ?")
+      .get(orgId) as { offer_types?: string } | undefined;
+    const parsed = safeJson(row?.offer_types, BOTH) as unknown;
+    if (!Array.isArray(parsed)) return BOTH;
+    const clean = parsed.filter((t): t is string => t === "mail-in" || t === "drop-off");
+    return clean.length ? clean : BOTH;
+  } catch {
+    return BOTH;
+  }
+}

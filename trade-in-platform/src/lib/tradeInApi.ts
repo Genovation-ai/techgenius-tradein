@@ -340,6 +340,15 @@ export interface OrgBranding {
   ctaColor: string | null;
   logoUrl: string | null;
   plan: string | null;
+  /**
+   * How this shop will take a device in.
+   *
+   * A shop that only serves walk-ins has no use for mail-in, and showing it
+   * anyway promises a free label nobody will send. The setting already
+   * existed per shop and nothing read it, so every shop offered both
+   * regardless of what it had chosen.
+   */
+  offerTypes: Array<"mail-in" | "drop-off">;
 }
 
 const DEFAULT_BRANDING: OrgBranding = {
@@ -348,6 +357,9 @@ const DEFAULT_BRANDING: OrgBranding = {
   ctaColor: null,
   logoUrl: null,
   plan: null,
+  // Both, when we have not been told otherwise: offering a way in that the
+  // shop does not want is recoverable, offering none is not.
+  offerTypes: ["mail-in", "drop-off"],
 };
 
 export async function fetchOrgBranding(orgSlug?: string | null): Promise<OrgBranding> {
@@ -359,13 +371,22 @@ export async function fetchOrgBranding(orgSlug?: string | null): Promise<OrgBran
       cta_color?: string | null;
       logo_url?: string | null;
       plan?: string | null;
+      offer_types?: string[] | null;
     }>(`/api/saas/widget-config?org=${encodeURIComponent(orgSlug)}`);
+
+    const allowed = (data.offer_types ?? []).filter(
+      (t): t is "mail-in" | "drop-off" => t === "mail-in" || t === "drop-off",
+    );
+
     return {
       companyName: data.company_name?.trim() || DEFAULT_BRANDING.companyName,
       brandColor: data.brand_color || null,
       ctaColor: data.cta_color || null,
       logoUrl: data.logo_url || null,
       plan: data.plan || null,
+      // A shop that has turned both off is a shop that cannot be sold to, so
+      // an empty list falls back rather than stranding its customers.
+      offerTypes: allowed.length ? allowed : DEFAULT_BRANDING.offerTypes,
     };
   } catch {
     return DEFAULT_BRANDING;

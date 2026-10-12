@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { storeLocations } from "../data/catalog";
 import { checkoutComplete, type TradeInState } from "../lib/tradeInTypes";
 import "./FormSteps.css";
@@ -8,10 +9,40 @@ interface Props {
   cartCount: number;
   onChange: (patch: Partial<TradeInState["contact"]>) => void;
   onSubmit: () => void;
+  /** How this shop takes devices in. Both, unless it has said otherwise. */
+  offerTypes?: Array<"mail-in" | "drop-off">;
+  /** This shop's name. Never another shop's. */
+  companyName?: string;
 }
 
-export function CheckoutStep({ contact, cartTotal, cartCount, onChange, onSubmit }: Props) {
+export function CheckoutStep({
+  contact,
+  cartTotal,
+  cartCount,
+  onChange,
+  onSubmit,
+  offerTypes = ["mail-in", "drop-off"],
+  companyName = "the shop",
+}: Props) {
   const ready = checkoutComplete(contact);
+
+  const canMail = offerTypes.includes("mail-in");
+  const canDrop = offerTypes.includes("drop-off");
+  // One way in is not a choice, so it is not presented as one — the customer
+  // is told how it works instead of being asked to pick from a row of one.
+  const onlyOne = canMail !== canDrop;
+
+  /*
+   * Keep the selection inside what this shop offers.
+   *
+   * A customer who got as far as this step on a shop that only does drop-off
+   * could still be carrying "mail-in" from a default, and would then be asked
+   * for a ship-from address that leads nowhere.
+   */
+  useEffect(() => {
+    if (contact.method === "mail-in" && !canMail) onChange({ method: "drop-off" });
+    else if (contact.method === "drop-off" && !canDrop) onChange({ method: "mail-in" });
+  }, [contact.method, canMail, canDrop, onChange]);
 
   return (
     <section className="flow-panel">
@@ -21,7 +52,11 @@ export function CheckoutStep({ contact, cartTotal, cartCount, onChange, onSubmit
           {cartCount > 1
             ? `${cartCount} devices · $${cartTotal.toLocaleString()} CAD total.`
             : `$${cartTotal.toLocaleString()} CAD.`}{" "}
-          Mail-in needs a ship-from address; drop-off uses Tech Genius Burlington.
+          {canMail && canDrop
+            ? "Mail-in needs a ship-from address; drop-off happens in store."
+            : canMail
+              ? "Send it to us with a free shipping label."
+              : `Bring it in to ${companyName}.`}
         </p>
       </header>
 
@@ -30,20 +65,28 @@ export function CheckoutStep({ contact, cartTotal, cartCount, onChange, onSubmit
           Handoff <span className="req">*</span>
         </h2>
         <div className="chip-row">
-          <button
-            type="button"
-            className={`chip ${contact.method === "mail-in" ? "chip--on" : ""}`}
-            onClick={() => onChange({ method: "mail-in" })}
-          >
-            Mail-in (free label)
-          </button>
-          <button
-            type="button"
-            className={`chip ${contact.method === "drop-off" ? "chip--on" : ""}`}
-            onClick={() => onChange({ method: "drop-off" })}
-          >
-            Drop off in-store
-          </button>
+          {canMail ? (
+            <button
+              type="button"
+              className={`chip ${contact.method === "mail-in" ? "chip--on" : ""}`}
+              onClick={() => onChange({ method: "mail-in" })}
+              aria-pressed={contact.method === "mail-in"}
+              disabled={onlyOne}
+            >
+              Mail-in (free label)
+            </button>
+          ) : null}
+          {canDrop ? (
+            <button
+              type="button"
+              className={`chip ${contact.method === "drop-off" ? "chip--on" : ""}`}
+              onClick={() => onChange({ method: "drop-off" })}
+              aria-pressed={contact.method === "drop-off"}
+              disabled={onlyOne}
+            >
+              Drop off in-store
+            </button>
+          ) : null}
         </div>
       </div>
 

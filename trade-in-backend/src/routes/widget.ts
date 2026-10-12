@@ -2,6 +2,7 @@ import { Router } from "express";
 import fs from "node:fs";
 import path from "node:path";
 import { checkOfferLimit, checkWritable, meter, subscriptionOf } from "../services/entitlements.js";
+import { allowedOfferTypes } from "../services/tenancy.js";
 import { getDb } from "../db/migrate.js";
 import { nanoid } from "nanoid";
 import { computeServerQuote } from "../services/quoteEngine.js";
@@ -349,6 +350,25 @@ widgetRouter.post("/submit", (req, res) => {
     if (denial) {
       db.close();
       return res.status(denial.status).json(denial);
+    }
+  }
+
+  /*
+   * A shop only takes devices the way it said it would.
+   *
+   * offer_types has been a per-shop setting all along and nothing read it, so
+   * a walk-in-only shop could still be sent a mail-in offer and would owe
+   * somebody a shipping label it never meant to offer. The widget now hides
+   * what a shop has turned off; this is for everything that is not the widget.
+   */
+  if (offer_type) {
+    const allowed = allowedOfferTypes(db, orgId);
+    if (!allowed.includes(String(offer_type))) {
+      db.close();
+      return res.status(400).json({
+        error: `This shop does not take devices by ${offer_type}.`,
+        accepted: allowed,
+      });
     }
   }
 

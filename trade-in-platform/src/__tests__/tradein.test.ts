@@ -609,3 +609,45 @@ describe("what a customer is told about their parcel", () => {
     expect(shippingLine(null, "9876543210")).toBe("Tracking: 9876543210");
   });
 });
+
+describe("a shop that does not do shipping", () => {
+  // Mirrors CheckoutStep: which handoff buttons exist, and which one the
+  // customer ends up on.
+  const resolve = (offerTypes: string[], current: "mail-in" | "drop-off") => {
+    const canMail = offerTypes.includes("mail-in");
+    const canDrop = offerTypes.includes("drop-off");
+    let method = current;
+    if (method === "mail-in" && !canMail) method = "drop-off";
+    else if (method === "drop-off" && !canDrop) method = "mail-in";
+    return { canMail, canDrop, method, onlyOne: canMail !== canDrop };
+  };
+
+  it("hides mail-in when the shop is walk-in only", () => {
+    const r = resolve(["drop-off"], "drop-off");
+    expect(r.canMail).toBe(false);
+    expect(r.canDrop).toBe(true);
+    expect(r.onlyOne).toBe(true);
+  });
+
+  it("moves a customer off a method the shop does not offer", () => {
+    // they arrived carrying the default and would otherwise be asked for a
+    // ship-from address that leads nowhere
+    expect(resolve(["drop-off"], "mail-in").method).toBe("drop-off");
+    expect(resolve(["mail-in"], "drop-off").method).toBe("mail-in");
+  });
+
+  it("leaves a shop that does both with a real choice", () => {
+    const r = resolve(["mail-in", "drop-off"], "mail-in");
+    expect(r.canMail && r.canDrop).toBe(true);
+    expect(r.onlyOne).toBe(false);
+    expect(r.method).toBe("mail-in");
+  });
+
+  it("never strands a customer when a shop has turned everything off", () => {
+    // an empty list falls back to both rather than leaving no way in
+    const offerTypes = [] as string[];
+    const allowed = offerTypes.length ? offerTypes : ["mail-in", "drop-off"];
+    const r = resolve(allowed, "mail-in");
+    expect(r.canMail || r.canDrop).toBe(true);
+  });
+});

@@ -7,6 +7,7 @@ const FALLBACK: OrgBranding = {
   ctaColor: null,
   logoUrl: null,
   plan: null,
+  offerTypes: ["mail-in", "drop-off"],
 };
 
 /**

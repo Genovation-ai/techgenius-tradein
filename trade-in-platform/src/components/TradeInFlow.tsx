@@ -19,6 +19,7 @@ import { assetUrl, deviceImageUrl, fetchQuote, recordLead, submitOffer, uploadOf
 import { mapOfferToTwenty } from "../lib/twenty";
 import { emitWidgetEvent } from "../lib/widgetEvents";
 import { scrollFlowIntoView } from "../lib/flowScroll";
+import { useOrgBranding } from "../hooks/useOrgBranding";
 import { DevicePanel } from "./DevicePanel";
 import {
   emptyValuation,
@@ -128,6 +129,7 @@ export function TradeInFlow() {
    * not ours. Skipped on first mount so landing on /sell does not yank the host
    * page down to the widget.
    */
+  const branding = useOrgBranding();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const mountedRef = useRef(false);
   useEffect(() => {
@@ -712,6 +714,8 @@ export function TradeInFlow() {
 
       {state.step === "checkout" && (
         <CheckoutStep
+          offerTypes={branding.offerTypes}
+          companyName={branding.companyName}
           contact={state.contact}
           cartCount={state.cart.length}
           cartTotal={checkoutTotal}
