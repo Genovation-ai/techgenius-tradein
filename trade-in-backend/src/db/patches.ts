@@ -6,6 +6,29 @@ import { ensureSaasSchema } from "../services/tenancy.js";
 /** Additive schema patches for existing DBs (CREATE IF NOT EXISTS / ALTER safe). */
 export function applySchemaPatches(db: Database): void {
   /*
+   * Where a shop's parcels go back to.
+   *
+   * Needed to buy a real carrier label, and kept per shop rather than in an
+   * environment variable because on a multi-tenant platform every shop has a
+   * different one and must be able to correct it without asking us.
+   */
+  const settingsCols = new Set(
+    (db.prepare("PRAGMA table_info(org_settings)").all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  if (settingsCols.size) {
+    for (const col of [
+      "ship_street1",
+      "ship_street2",
+      "ship_city",
+      "ship_state",
+      "ship_zip",
+      "ship_country",
+    ]) {
+      if (!settingsCols.has(col)) db.exec(`ALTER TABLE org_settings ADD COLUMN ${col} TEXT`);
+    }
+  }
+
+  /*
    * Where a tenant sells, and in what currency.
    *
    * price_source is null for a region with no catalogue of its own. That is

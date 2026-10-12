@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { activeShippingProvider, shippingReadiness, shopAddress } from "../services/shipping.js";
 import { getDb } from "../db/migrate.js";
 import { logActivityWith, historyFor, type Actor } from "../services/activityLog.js";
 import type { Request } from "express";
@@ -495,6 +496,106 @@ offersRouter.patch("/:id", requireCapability("offers:write"), (req, res) => {
 
   db.close();
   res.json({ ok: true });
+});
+
+/** What is missing before real carrier labels can be bought. */
+offersRouter.get("/shipping/status", requireCapability("shipping:write"), (_req, res) => {
+  res.json(shippingReadiness());
+});
+
+/**
+ * Buy a real label from a carrier.
+ *
+ * Falls back to nothing: a shop with no carrier account keeps the printable
+ * page and its own reference, and is told so rather than handed an error. The
+ * tracking number written here is one the carrier issued, so the number shown
+ * to the customer is one they can actually look up — which the invented "TG"
+ * reference never was.
+ */
+offersRouter.post("/:id/shipping/purchase", requireCapability("shipping:write"), async (req, res) => {
+  const provider = activeShippingProvider();
+  if (!provider.configured()) {
+    return res.status(503).json({
+      error: "No carrier account is connected, so labels are printed rather than bought.",
+      provider: provider.name,
+      missing: shippingReadiness().missing,
+    });
+  }
+
+  const db = getDb();
+  try {
+    const offer = db
+      .prepare(
+        `SELECT o.id, o.org_id, c.first_name, c.last_name, c.email, c.phone
+           FROM offers o LEFT JOIN customers c ON c.id = o.customer_id
+          WHERE o.id = ?`,
+      )
+      .get(req.params.id) as Record<string, string> | undefined;
+    if (!offer) return res.status(404).json({ error: "Not found" });
+
+    const to = shopAddress(db, offer.org_id);
+    if (!to) {
+      return res.status(409).json({
+        error: "Add your shop's return address in Settings before buying labels.",
+      });
+    }
+
+    const body = (req.body || {}) as {
+      from?: Record<string, string>;
+      parcel?: Record<string, number>;
+      carrier?: string;
+      service?: string;
+    };
+    if (!body.from?.street1 || !body.from?.city || !body.from?.zip) {
+      return res.status(400).json({ error: "The customer's address is required to buy a label." });
+    }
+
+    const label = await provider.buy(
+      {
+        to,
+        from: {
+          name: `${offer.first_name ?? ""} ${offer.last_name ?? ""}`.trim() || "Customer",
+          street1: String(body.from.street1),
+          street2: body.from.street2 ? String(body.from.street2) : null,
+          city: String(body.from.city),
+          state: String(body.from.state ?? ""),
+          zip: String(body.from.zip),
+          country: String(body.from.country ?? "CA"),
+          phone: offer.phone ?? null,
+          email: offer.email ?? null,
+        },
+        // A phone in a padded box. Overridable, because a laptop is not.
+        parcel: {
+          length_cm: Number(body.parcel?.length_cm ?? 25),
+          width_cm: Number(body.parcel?.width_cm ?? 18),
+          height_cm: Number(body.parcel?.height_cm ?? 8),
+          weight_kg: Number(body.parcel?.weight_kg ?? 0.6),
+        },
+        reference: offer.id,
+      },
+      { carrier: body.carrier, service: body.service },
+    );
+
+    db.prepare(
+      `UPDATE offers
+          SET shipping_label_url = ?, tracking_number = ?, courier = ?, updated_at = datetime('now')
+        WHERE id = ?`,
+    ).run(label.label_url, label.tracking_number, label.carrier, req.params.id);
+
+    recordOfferNotification(db, {
+      offerId: req.params.id,
+      type: "shipping_label_purchased",
+      channel: "in_app",
+      subject: `${label.carrier} ${label.service} ${label.tracking_number} ($${label.cost})`,
+    });
+
+    res.json(label);
+  } catch (e) {
+    console.warn("[shipping] purchase failed:", e instanceof Error ? e.message : e);
+    res.status(502).json({ error: "The carrier could not produce a label for that address." });
+  } finally {
+    db.close();
+  }
 });
 
 /** Generate printable mail-in shipping label (HTML) and store URL. */
