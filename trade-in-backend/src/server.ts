@@ -31,6 +31,7 @@ import { cronRouter, pricingEngineRouter } from "./routes/cron.js";
 import { requireCapability } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { startSubscriptionLifecycle } from "./services/subscriptionLifecycle.js";
+import { startBackupSchedule } from "./services/backup.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
 import { ensureCompetitorSourcesSeeded } from "./services/competitorPricing.js";
 import { startWeeklyScrapeScheduler } from "./jobs/weeklyScrape.js";
@@ -407,6 +408,7 @@ const server = app.listen(PORT, () => {
   console.log(`Tech Genius Trade-In Backend running on http://localhost:${PORT}`);
   startWeeklyScrapeScheduler();
   startSubscriptionLifecycle();
+  startBackupSchedule();
 });
 
 // A rejected promise nobody awaited terminates the process on modern Node. One

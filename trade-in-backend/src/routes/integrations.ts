@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { listSnapshots, pruneSnapshots, takeSnapshot } from "../services/backup.js";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
@@ -94,6 +95,24 @@ integrationsRouter.post("/email/flush", requireCapability("settings:write"), asy
   });
   if (result.skipped) return res.status(409).json({ error: result.skipped, ...result });
   res.json(result);
+});
+
+/** What snapshots exist, newest first. */
+integrationsRouter.get("/backups", requireCapability("settings:read"), (_req, res) => {
+  res.json({ snapshots: listSnapshots() });
+});
+
+/**
+ * Take one now and read it back.
+ *
+ * Exposed so the answer to "do we have a backup" is a thing you can press
+ * rather than a thing you assume. Returns the row counts it found, because a
+ * snapshot that verified but holds one device is still bad news.
+ */
+integrationsRouter.post("/backups", requireCapability("settings:write"), async (_req, res) => {
+  const snap = await takeSnapshot();
+  pruneSnapshots();
+  res.status(snap.verified ? 200 : 500).json(snap);
 });
 
 integrationsRouter.get("/email/outbox", requireCapability("settings:read"), (req, res) => {
