@@ -21,13 +21,13 @@ Keep everything already on the page (the "Selling has never been so easy" hero,
 the three steps, trust badges, nav). Directly below the "Get Paid Fast"
 section, add ONE Embed element containing exactly this HTML and nothing else:
 
-<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<link rel="stylesheet" href="https://reclaimsr.up.railway.app/embed/tg-trade-in.css">
 <div id="tg-trade-in-root"
-     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-api="https://reclaimsr.up.railway.app"
      data-org="tech-genius"
      data-mode="sell"
      style="width:100%;min-height:480px"></div>
-<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+<script src="https://reclaimsr.up.railway.app/embed/tg-trade-in.js" defer></script>
 
 For that Embed element: Width = Fill, Height = FIT (auto-size to content; do
 NOT set a fixed pixel height). Give it a section anchor named "quote", and link
@@ -38,13 +38,13 @@ Keep the existing page content and nav. Where the repair tool should appear,
 add ONE Embed element containing exactly this HTML and nothing else — it is
 identical to the Sell embed except data-mode is "repair":
 
-<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<link rel="stylesheet" href="https://reclaimsr.up.railway.app/embed/tg-trade-in.css">
 <div id="tg-trade-in-root"
-     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-api="https://reclaimsr.up.railway.app"
      data-org="tech-genius"
      data-mode="repair"
      style="width:100%;min-height:480px"></div>
-<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+<script src="https://reclaimsr.up.railway.app/embed/tg-trade-in.js" defer></script>
 
 For that Embed element: Width = Fill, Height = FIT (auto; no fixed height).
 

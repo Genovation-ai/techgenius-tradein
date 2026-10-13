@@ -10,13 +10,13 @@ A) ON THE /sell PAGE
 1. Select the trade-in Embed element (the one with id "tg-trade-in-root").
 2. Replace its HTML with exactly this:
 
-<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<link rel="stylesheet" href="https://reclaimsr.up.railway.app/embed/tg-trade-in.css">
 <div id="tg-trade-in-root"
-     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-api="https://reclaimsr.up.railway.app"
      data-org="tech-genius"
      data-mode="sell"
      style="width:100%;min-height:480px"></div>
-<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+<script src="https://reclaimsr.up.railway.app/embed/tg-trade-in.js" defer></script>
 
 3. Set the Embed element Height to FIT (Auto) — NOT a fixed 1100.
    Width stays Fill.
@@ -27,13 +27,13 @@ B) ON THE /repair PAGE
 1. Add (or select) an Embed element where the repair tool should appear.
 2. Set its HTML to exactly this — identical except data-mode="repair":
 
-<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<link rel="stylesheet" href="https://reclaimsr.up.railway.app/embed/tg-trade-in.css">
 <div id="tg-trade-in-root"
-     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-api="https://reclaimsr.up.railway.app"
      data-org="tech-genius"
      data-mode="repair"
      style="width:100%;min-height:480px"></div>
-<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+<script src="https://reclaimsr.up.railway.app/embed/tg-trade-in.js" defer></script>
 
 3. Set the Embed element Height to FIT (Auto). Width Fill.
 

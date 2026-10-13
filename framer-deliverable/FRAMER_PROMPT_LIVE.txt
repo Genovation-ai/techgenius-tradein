@@ -12,12 +12,12 @@ Drop Off Device, Get Paid Fast), the trust badges, and the whole nav.
 Directly BELOW the "Get Paid Fast" section, add a full-width Embed element
 containing exactly this HTML:
 
-<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<link rel="stylesheet" href="https://reclaimsr.up.railway.app/embed/tg-trade-in.css">
 <div id="tg-trade-in-root"
-     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-api="https://reclaimsr.up.railway.app"
      data-org="tech-genius"
      style="width:100%;min-height:1100px"></div>
-<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+<script src="https://reclaimsr.up.railway.app/embed/tg-trade-in.js" defer></script>
 
 Requirements:
 - Set the Embed element to Width: Fill and Height: 1100.
@@ -45,9 +45,9 @@ and min height 1100, then link the 'Get an Instant Quote' button to it."
 ...then paste the contents of TechGeniusTradeIn.tsx.
 
 After it's placed, fill in the component's panel on the right:
-  API URL     = https://techgenius-tradein-production.up.railway.app
-  Script URL  = https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js
-  CSS URL     = https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css
+  API URL     = https://reclaimsr.up.railway.app
+  Script URL  = https://reclaimsr.up.railway.app/embed/tg-trade-in.js
+  CSS URL     = https://reclaimsr.up.railway.app/embed/tg-trade-in.css
   Org slug    = tech-genius
   Min height  = 1100
 
