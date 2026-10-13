@@ -1,0 +1,57 @@
+FRAMER FIX — SELL vs REPAIR + SCROLL
+====================================
+Two separate embeds, one per page, and a height setting that fixes the scroll.
+The widget already supports a data-mode attribute, so this is all configuration
+— nothing in the code needs changing.
+
+
+A) ON THE /sell PAGE
+--------------------
+1. Select the trade-in Embed element (the one with id "tg-trade-in-root").
+2. Replace its HTML with exactly this:
+
+<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<div id="tg-trade-in-root"
+     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-org="tech-genius"
+     data-mode="sell"
+     style="width:100%;min-height:480px"></div>
+<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+
+3. Set the Embed element Height to FIT (Auto) — NOT a fixed 1100.
+   Width stays Fill.
+
+
+B) ON THE /repair PAGE
+----------------------
+1. Add (or select) an Embed element where the repair tool should appear.
+2. Set its HTML to exactly this — identical except data-mode="repair":
+
+<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<div id="tg-trade-in-root"
+     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-org="tech-genius"
+     data-mode="repair"
+     style="width:100%;min-height:480px"></div>
+<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+
+3. Set the Embed element Height to FIT (Auto). Width Fill.
+
+
+WHY THIS FIXES BOTH ISSUES
+--------------------------
+- data-mode="sell" shows only the Sell flow (no Sell/Repair tabs).
+- data-mode="repair" shows only the Repair flow. That is why repair "wasn't
+  showing" — the embed was defaulting to "both", which opens on Sell.
+- The old embed forced min-height:1100px, so every short step left a tall empty
+  gap and the fixed height fought Framer's content sizing — that was the scroll
+  problem. Height: FIT lets the box grow and shrink with the content, and the
+  widget already scrolls each new step into view on its own.
+
+
+DO NOT
+------
+- Do not keep both data-mode embeds on the same page.
+- Do not change the id "tg-trade-in-root" or the data-api URL.
+- Do not set a fixed pixel height on the Embed element; use Fit.
+- Do not add your own prices — the widget loads them live.
