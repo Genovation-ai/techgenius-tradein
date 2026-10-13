@@ -106,7 +106,13 @@ export function ensureSaasSchema(db: Database): void {
       widget_cta_color TEXT,
       logo_url TEXT,
       payout_methods TEXT,
-      offer_types TEXT
+      offer_types TEXT,
+      ship_street1 TEXT,
+      ship_street2 TEXT,
+      ship_city TEXT,
+      ship_state TEXT,
+      ship_zip TEXT,
+      ship_country TEXT
     );
 
     CREATE TABLE IF NOT EXISTS org_api_keys (
@@ -150,6 +156,20 @@ export function ensureSaasSchema(db: Database): void {
     db.exec("ALTER TABLE orgs ADD COLUMN region_code TEXT NOT NULL DEFAULT 'CA'");
   }
   if (!orgCols.has("billing_ref")) db.exec("ALTER TABLE orgs ADD COLUMN billing_ref TEXT");
+
+  /*
+   * Where a shop's parcels go back to, needed before a carrier label can be
+   * bought. Here rather than in patches.ts for the same reason as the columns
+   * above: patches runs before these tables are created, so an ALTER there
+   * silently does nothing on a fresh install and the first save fails on a
+   * missing column. That has now caught me twice.
+   */
+  const setCols = new Set(
+    (db.prepare("PRAGMA table_info(org_settings)").all() as Array<{ name: string }>).map((c) => c.name),
+  );
+  for (const col of ["ship_street1", "ship_street2", "ship_city", "ship_state", "ship_zip", "ship_country"]) {
+    if (!setCols.has(col)) db.exec(`ALTER TABLE org_settings ADD COLUMN ${col} TEXT`);
+  }
 
   const userCols = new Set(
     (db.prepare("PRAGMA table_info(admin_users)").all() as Array<{ name: string }>).map((c) => c.name),

@@ -132,6 +132,16 @@ function OrgSaasPanel() {
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
+  /** How this shop will take devices in, and where parcels go back to. */
+  const [takesMail, setTakesMail] = useState(true);
+  const [takesDrop, setTakesDrop] = useState(true);
+  const [shipStreet, setShipStreet] = useState("");
+  const [shipCity, setShipCity] = useState("");
+  const [shipState, setShipState] = useState("");
+  const [shipZip, setShipZip] = useState("");
+  const [lookup, setLookup] = useState("");
+  const [found, setFound] = useState<Array<{ label: string; street1: string; city: string; state: string; zip: string }>>([]);
+
   const load = async () => {
     const org = await adminFetch<{
       org: { slug: string };
@@ -141,6 +151,11 @@ function OrgSaasPanel() {
         company_email?: string;
         widget_brand_color?: string;
         widget_cta_color?: string;
+        offer_types?: string[] | string;
+        ship_street1?: string;
+        ship_city?: string;
+        ship_state?: string;
+        ship_zip?: string;
       } | null;
       stores: Array<{ id: string; name: string; phone?: string | null }>;
     }>("/api/saas/org");
@@ -151,6 +166,25 @@ function OrgSaasPanel() {
     setBrand(org.settings?.widget_brand_color || "#0B3D2E");
     setCta(org.settings?.widget_cta_color || "#C45C26");
     setStores(org.stores || []);
+
+    const raw = org.settings?.offer_types;
+    const types: string[] = Array.isArray(raw)
+      ? raw
+      : typeof raw === "string"
+        ? (() => {
+            try {
+              return JSON.parse(raw) as string[];
+            } catch {
+              return ["mail-in", "drop-off"];
+            }
+          })()
+        : ["mail-in", "drop-off"];
+    setTakesMail(types.includes("mail-in"));
+    setTakesDrop(types.includes("drop-off"));
+    setShipStreet(org.settings?.ship_street1 || "");
+    setShipCity(org.settings?.ship_city || "");
+    setShipState(org.settings?.ship_state || "");
+    setShipZip(org.settings?.ship_zip || "");
     const keyRows = await adminFetch<Array<{ id: string; name: string; key_prefix: string; enabled: number }>>(
       "/api/saas/org/api-keys",
     ).catch(() => []);
@@ -175,6 +209,43 @@ function OrgSaasPanel() {
     });
     setMsg("Branding saved");
     document.documentElement.style.setProperty("--admin-brand", brand);
+  };
+
+  const saveHandoff = async () => {
+    setErr(null);
+    const offer_types = [
+      ...(takesMail ? ["mail-in"] : []),
+      ...(takesDrop ? ["drop-off"] : []),
+    ];
+    if (!offer_types.length) {
+      setErr("Keep at least one way of taking a device in, or customers cannot finish.");
+      return;
+    }
+    await adminFetch("/api/saas/org/settings", {
+      method: "PUT",
+      body: JSON.stringify({
+        offer_types,
+        ship_street1: shipStreet,
+        ship_city: shipCity,
+        ship_state: shipState,
+        ship_zip: shipZip,
+      }),
+    });
+    setMsg("Handoff settings saved");
+  };
+
+  /** Find a real address rather than trusting what was typed. */
+  const findAddress = async () => {
+    setFound([]);
+    if (lookup.trim().length < 3) return;
+    try {
+      const r = await adminFetch<{ results: typeof found }>(
+        `/api/geo/suggest?q=${encodeURIComponent(lookup.trim())}`,
+      );
+      setFound(r.results || []);
+    } catch {
+      // Typing it by hand still works; the lookup is help, not a gate.
+    }
   };
 
   const addStore = async () => {
@@ -237,6 +308,96 @@ function OrgSaasPanel() {
         <input className="admin-input grow" value={newStore} onChange={(e) => setNewStore(e.target.value)} placeholder="New location name" />
         <button type="button" className="admin-btn" onClick={() => void addStore()}>
           Add store
+        </button>
+      </div>
+
+      <h2 className="admin-section-title" style={{ marginTop: "1.25rem" }}>
+        How you take devices in
+      </h2>
+      <p className="admin-muted" style={{ marginTop: 0 }}>
+        Turn off anything you do not do. A customer is only shown the ways you
+        have left on, so a walk-in shop never promises a shipping label.
+      </p>
+      <div style={{ display: "grid", gap: "0.4rem", marginBottom: "0.75rem" }}>
+        <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={takesMail}
+            onChange={(e) => setTakesMail(e.target.checked)}
+          />
+          <span>
+            <strong>Mail-in.</strong> Customers post the device to you.
+          </span>
+        </label>
+        <label style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+          <input
+            type="checkbox"
+            checked={takesDrop}
+            onChange={(e) => setTakesDrop(e.target.checked)}
+          />
+          <span>
+            <strong>Drop-off.</strong> Customers bring it to a store.
+          </span>
+        </label>
+      </div>
+
+      {takesMail ? (
+        <>
+          <h3 style={{ fontSize: "0.95rem", margin: "0.75rem 0 0.25rem" }}>
+            Where parcels come back to
+          </h3>
+          <p className="admin-muted" style={{ marginTop: 0 }}>
+            Needed before a carrier label can be bought. Search for it rather
+            than typing it — a wrong postcode is a parcel that never arrives.
+          </p>
+          <div className="admin-toolbar">
+            <input
+              className="admin-input grow"
+              value={lookup}
+              onChange={(e) => setLookup(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void findAddress();
+              }}
+              placeholder="Search an address, e.g. 796 Brant St Burlington"
+            />
+            <button type="button" className="admin-btn" onClick={() => void findAddress()}>
+              Search
+            </button>
+          </div>
+          {found.length ? (
+            <ul style={{ margin: "0.5rem 0", paddingLeft: "1.1rem" }}>
+              {found.map((f) => (
+                <li key={f.label} style={{ marginBottom: "0.2rem" }}>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--quiet"
+                    onClick={() => {
+                      setShipStreet(f.street1);
+                      setShipCity(f.city);
+                      setShipState(f.state);
+                      setShipZip(f.zip);
+                      setFound([]);
+                      setLookup("");
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <div className="admin-toolbar" style={{ marginTop: "0.4rem", flexWrap: "wrap" }}>
+            <input className="admin-input grow" value={shipStreet} onChange={(e) => setShipStreet(e.target.value)} placeholder="Street" />
+            <input className="admin-input" value={shipCity} onChange={(e) => setShipCity(e.target.value)} placeholder="City" />
+            <input className="admin-input" value={shipState} onChange={(e) => setShipState(e.target.value)} placeholder="Province" />
+            <input className="admin-input" value={shipZip} onChange={(e) => setShipZip(e.target.value)} placeholder="Postal code" />
+          </div>
+        </>
+      ) : null}
+
+      <div className="admin-toolbar" style={{ marginTop: "0.5rem" }}>
+        <button type="button" className="admin-btn" onClick={() => void saveHandoff()}>
+          Save handoff settings
         </button>
       </div>
 

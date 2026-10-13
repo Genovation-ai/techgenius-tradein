@@ -355,7 +355,13 @@ saasRouter.put("/org/settings", apiKeyAuth, requireCapability("settings:write"),
       widget_cta_color = COALESCE(?, widget_cta_color),
       logo_url = COALESCE(?, logo_url),
       payout_methods = COALESCE(?, payout_methods),
-      offer_types = COALESCE(?, offer_types)
+      offer_types = COALESCE(?, offer_types),
+      ship_street1 = COALESCE(?, ship_street1),
+      ship_street2 = COALESCE(?, ship_street2),
+      ship_city = COALESCE(?, ship_city),
+      ship_state = COALESCE(?, ship_state),
+      ship_zip = COALESCE(?, ship_zip),
+      ship_country = COALESCE(?, ship_country)
      WHERE org_id = ?`,
   ).run(
     body.company_name ?? null,
@@ -366,6 +372,12 @@ saasRouter.put("/org/settings", apiKeyAuth, requireCapability("settings:write"),
     body.logo_url ?? null,
     body.payout_methods ? JSON.stringify(body.payout_methods) : null,
     body.offer_types ? JSON.stringify(body.offer_types) : null,
+    body.ship_street1 ?? null,
+    body.ship_street2 ?? null,
+    body.ship_city ?? null,
+    body.ship_state ?? null,
+    body.ship_zip ?? null,
+    body.ship_country ?? null,
     orgId,
   );
   if (body.company_name) {
