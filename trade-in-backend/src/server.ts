@@ -30,6 +30,7 @@ import { integrationsRouter } from "./routes/integrations.js";
 import { cronRouter, pricingEngineRouter } from "./routes/cron.js";
 import { requireCapability } from "./middleware/auth.js";
 import { rateLimit } from "./middleware/rateLimit.js";
+import { geoRouter } from "./routes/geo.js";
 import { startSubscriptionLifecycle } from "./services/subscriptionLifecycle.js";
 import { startBackupSchedule } from "./services/backup.js";
 import { securityHeaders } from "./middleware/securityHeaders.js";
@@ -323,6 +324,7 @@ app.use("/api/catalog", catalogRouter);
 app.post("/api/quote", quoteLimiter, (req, res, next) => { req.url = "/quote"; pricingRouter(req, res, next); });
 app.use("/api/widget", publicWriteLimiter, widgetRouter);
 app.use("/api/auth", authLimiter, authRouter);
+app.use("/api/geo", geoRouter);
 app.use("/api/saas", saasRouter);
 
 // Pricing engine (model quotes + baselines) — API key protected
