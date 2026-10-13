@@ -1,0 +1,69 @@
+MASTER FRAMER PROMPT — Tech Genius trade-in + repair widget
+Paste this whole thing into Framer AI with your site open. It sets up both the
+Sell and the Repair pages correctly and fixes the scrolling. Do each step
+exactly; the widget is already built, so only placement and settings change.
+
+====================  COPY EVERYTHING BELOW  ====================
+
+I have a prebuilt widget that embeds via a script. It can run in two modes,
+chosen by a data-mode attribute: "sell" shows only the trade-in flow, "repair"
+shows only the repair flow. I want Sell on the /sell page and Repair on the
+/repair page, each showing ONLY its own flow, and I want the scrolling fixed.
+
+First, clean up: on both /sell and /repair, find any existing Embed, iframe, or
+HTML block that references "tg-trade-in", "api.techgenius.ca", or a trade-in
+widget, and delete it. Old copies pointing at the previous address are why
+things are inconsistent. There must be exactly one widget embed per page when
+you are done.
+
+=== /sell PAGE ===
+Keep everything already on the page (the "Selling has never been so easy" hero,
+the three steps, trust badges, nav). Directly below the "Get Paid Fast"
+section, add ONE Embed element containing exactly this HTML and nothing else:
+
+<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<div id="tg-trade-in-root"
+     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-org="tech-genius"
+     data-mode="sell"
+     style="width:100%;min-height:480px"></div>
+<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+
+For that Embed element: Width = Fill, Height = FIT (auto-size to content; do
+NOT set a fixed pixel height). Give it a section anchor named "quote", and link
+the existing "Get an Instant Quote" button to #quote.
+
+=== /repair PAGE ===
+Keep the existing page content and nav. Where the repair tool should appear,
+add ONE Embed element containing exactly this HTML and nothing else — it is
+identical to the Sell embed except data-mode is "repair":
+
+<link rel="stylesheet" href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+<div id="tg-trade-in-root"
+     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-org="tech-genius"
+     data-mode="repair"
+     style="width:100%;min-height:480px"></div>
+<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js" defer></script>
+
+For that Embed element: Width = Fill, Height = FIT (auto; no fixed height).
+
+=== RULES — do not break these ===
+- One embed per page. Never put the sell and repair embeds on the same page.
+- Do not change the element id "tg-trade-in-root" or the data-api URL. The
+  widget will not load if either is altered.
+- Height must be FIT / auto on both embeds. A fixed height (like 1100) is what
+  caused the empty gap and the scroll problem — Fit lets the widget grow and
+  shrink with each step, and it scrolls each step into view by itself.
+- Do not add any device names, prices, or "starting at" text of your own. The
+  widget loads the catalogue and all prices live from the backend.
+- Do not restyle the inside of the embed; it ships its own stylesheet.
+- Leave the Shop links pointing at shoptechgenius.ca.
+
+Then publish both pages.
+
+====================  COPY EVERYTHING ABOVE  ====================
+
+After publishing, the Sell page shows only the sell flow, the Repair page shows
+only the repair flow, both size themselves with no empty gap, and neither shows
+a Sell/Repair tab (each page is locked to its one mode).
