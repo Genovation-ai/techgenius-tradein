@@ -1,0 +1,21 @@
+<!--
+  Tech Genius / Reclaim Trade-In — LIVE embed for Framer.
+
+  Paste this whole block into a Framer Embed element (Insert → Embed → HTML)
+  on your /sell page. Set the element to Width: Fill, Height: 1100.
+
+  This is already pointed at the live backend — nothing to replace. If the
+  backend URL ever changes, you only edit the three URLs below; the widget
+  reads its backend from data-api at runtime, so the JS never needs rebuilding.
+-->
+
+<link rel="stylesheet"
+      href="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.css">
+
+<div id="tg-trade-in-root"
+     data-api="https://techgenius-tradein-production.up.railway.app"
+     data-org="tech-genius"
+     style="width:100%;min-height:1100px"></div>
+
+<script src="https://techgenius-tradein-production.up.railway.app/embed/tg-trade-in.js"
+        defer></script>
