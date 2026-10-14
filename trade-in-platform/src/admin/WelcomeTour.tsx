@@ -28,21 +28,29 @@ interface Stop {
 }
 
 /**
- * First-run tour.
+ * Guided tour of every function.
  *
- * Someone who has just signed up is looking at fourteen navigation items and no
- * data, which reads as "where do I even start". This answers that in the order
- * the work actually happens — get it on your site, watch offers arrive, price
- * them, get paid — rather than walking the menu top to bottom.
+ * Someone who has just signed in is looking at a full menu and no data, which
+ * reads as "where do I even start". This walks the whole platform in the order
+ * the work actually happens — get it on your site, watch offers arrive, work
+ * them, pay, price, and run the back office — rather than the menu top to
+ * bottom, and gives each function one plain sentence of what it is for.
  *
  * Shown once, then remembered, and reachable from the sidebar for ever after
  * via openAdminTour(). Dismissible at every step — scrim, Escape or Skip —
- * because a tour you cannot leave is worse than no tour.
+ * because a tour you cannot leave is worse than no tour, and every stop can
+ * jump you straight to the page it describes.
  */
 const STOPS: Stop[] = [
   {
     title: "Welcome to Reclaim",
-    body: "Four things to know before you take your first trade-in. Under a minute, and you can leave at any point.",
+    body: "A quick tour of everything the platform does, in the order the work actually happens. About two minutes, and you can leave at any point — it is always here in the sidebar when you want it again.",
+  },
+  {
+    title: "Your shop at a glance",
+    body: "The Dashboard is your morning view: offers in progress, money moving, and anything waiting on you. Start here each day and follow it to whatever needs attention.",
+    to: "/admin/dashboard",
+    cta: "Open dashboard",
   },
   {
     title: "Put it on your website",
@@ -57,16 +65,88 @@ const STOPS: Stop[] = [
     cta: "See offers",
   },
   {
+    title: "Repair bookings",
+    body: "If you offer repairs, every booking from the repair tool arrives here with the device, the fault, and the price quoted — worked the same way you work a trade-in offer.",
+    to: "/admin/repairs",
+    cta: "See repairs",
+  },
+  {
     title: "The ones who didn't finish",
     body: "Follow-ups lists people who got a price and left without submitting, with the device and the number they saw. It is usually the cheapest revenue in the system — worth a phone call.",
     to: "/admin/leads",
     cta: "See follow-ups",
   },
   {
+    title: "Mail-in, tracked",
+    body: "Shipping is where mailed-in devices are followed: what is on its way, labels to print or buy, and whether you offer mail-in at all. The fine detail of one parcel is edited inside its offer.",
+    to: "/admin/shipping",
+    cta: "Open shipping",
+  },
+  {
+    title: "Paying the customer",
+    body: "Once a device is inspected, pay by e-transfer, cash or store credit and record it on Payouts — every payment tied to its offer, so what you owe and what you have paid is always clear.",
+    to: "/admin/payouts",
+    cta: "Open payouts",
+  },
+  {
+    title: "Taking in a batch",
+    body: "Clearing a drawer of old handsets, or buying a company's fleet? Bulk quote & hand-off prices many devices at once and processes them together, instead of one offer at a time.",
+    to: "/admin/bulk",
+    cta: "Open bulk",
+  },
+  {
+    title: "Devices become stock",
+    body: "Every completed trade-in lands in Inventory as a stock item, with what you paid for it — your resale pipeline, ready to list or move on.",
+    to: "/admin/inventory",
+    cta: "Open inventory",
+  },
+  {
+    title: "Invoices, made for you",
+    body: "Completing an offer generates its invoice automatically. They all live here, searchable, for your records and the customer's.",
+    to: "/admin/invoices",
+    cta: "See invoices",
+  },
+  {
+    title: "The devices you buy",
+    body: "Catalog is every model you accept — phones, tablets, laptops, consoles — and the storage variants of each. A sync keeps the list and its prices current.",
+    to: "/admin/catalog",
+    cta: "Open catalog",
+  },
+  {
     title: "Your prices track the market",
     body: "Reclaim reads what other buyers publish and quotes a set percentage under it. Set that margin once on Pricing and every model follows it. If a source goes quiet, the page says so rather than serving stale numbers.",
     to: "/admin/pricing",
     cta: "Open pricing",
+  },
+  {
+    title: "Everyone who sold to you",
+    body: "Customers collects everyone who submitted a trade-in, searchable, with their history. The first trade-in adds a customer for you automatically.",
+    to: "/admin/customers",
+    cta: "See customers",
+  },
+  {
+    title: "The numbers that matter",
+    body: "Reports shows what you have bought, what it cost, and what is still owed — the health of your trade-in business at a glance, ready to export.",
+    to: "/admin/reports",
+    cta: "Open reports",
+  },
+  {
+    title: "Your staff and what they can do",
+    body: "Add your team and set what each person sees. Admins control everything including billing; managers run the floor; operators process offers but not settings.",
+    to: "/admin/team",
+    cta: "Open team",
+  },
+  {
+    title: "Your subscription",
+    body: "Billing is your own Reclaim plan — what you are on, your usage against its limits, and your card. Change plan or update payment details here any time.",
+    to: "/admin/billing",
+    cta: "Open billing",
+  },
+  {
+    title: "Make it yours",
+    body: "Settings is the shop itself: logo and colours, your store locations, how you take devices in (mail-in, drop-off or both), your return address, and the keys that embed the widget on your site.",
+    to: "/admin/settings",
+    cta: "Open settings",
   },
 ];
 
