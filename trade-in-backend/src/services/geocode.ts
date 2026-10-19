@@ -43,7 +43,7 @@ const NOMINATIM = (process.env.TG_NOMINATIM_URL || "https://nominatim.openstreet
  * Nominatim's policy requires an identifying User-Agent and will refuse
  * requests without one. Anonymous traffic is the kind that gets blocked.
  */
-const UA = `Reclaim-TradeIn/1.0 (${process.env.TG_CONTACT_EMAIL || "support@reclaim.app"})`;
+const UA = `GadgetSwap-TradeIn/1.0 (${process.env.TG_CONTACT_EMAIL || "support@reclaim.app"})`;
 
 /* ───────────────── cache + pacing ───────────────── */
 

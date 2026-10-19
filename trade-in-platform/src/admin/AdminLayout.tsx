@@ -106,7 +106,7 @@ export function AdminLayout() {
    */
   const [store, setStore] = useState(() => localStorage.getItem(STORE_KEY) ?? "");
   const [stores, setStores] = useState<Array<{ id: string; name: string }>>([]);
-  const [orgName, setOrgName] = useState(cachedOrg?.name || "Reclaim");
+  const [orgName, setOrgName] = useState(cachedOrg?.name || "Gadget Swap");
   const [orgPlan, setOrgPlan] = useState(cachedOrg?.plan || "starter");
   const [searchQ, setSearchQ] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);

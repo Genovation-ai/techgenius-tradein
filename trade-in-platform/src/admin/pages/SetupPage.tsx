@@ -14,7 +14,7 @@ interface ApiKeyRow {
 }
 
 /**
- * Connect — how a shop gets Reclaim onto their own website.
+ * Connect — how a shop gets Gadget Swap onto their own website.
  *
  * Everything here is pre-filled with this shop's own values. A setup page that
  * shows a generic snippet and leaves the reader to substitute their identifier

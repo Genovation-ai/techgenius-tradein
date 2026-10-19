@@ -184,7 +184,7 @@ function mount() {
   ensureStyles();
   const el = document.getElementById(MOUNT_ID);
   if (!el) {
-    console.warn(`[Reclaim] #${MOUNT_ID} not found on page.`);
+    console.warn(`[Gadget Swap] #${MOUNT_ID} not found on page.`);
     return;
   }
 

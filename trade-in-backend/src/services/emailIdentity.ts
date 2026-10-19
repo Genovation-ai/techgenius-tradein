@@ -3,7 +3,7 @@ import type { Database } from "better-sqlite3";
 /**
  * Who an email appears to come from.
  *
- * Reclaim is white-label: the landing page promises a shop's customers "never
+ * Gadget Swap is white-label: the landing page promises a shop's customers "never
  * see us". Email was the one place that promise broke. Every message went out
  * from a single platform address and signed itself "Tech Genius Burlington",
  * so the first tenant to sign up after Tech Genius would have had their
@@ -34,7 +34,7 @@ export interface EmailIdentity {
   companyName: string;
 }
 
-const PLATFORM_FALLBACK_NAME = "Reclaim Trade-In";
+const PLATFORM_FALLBACK_NAME = "Gadget Swap Trade-In";
 
 /**
  * Never throws. An org with no settings row still gets a sane identity, since

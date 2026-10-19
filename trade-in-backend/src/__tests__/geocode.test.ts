@@ -61,7 +61,7 @@ describe("address suggestions", () => {
     await suggest("1 Unique Street Somewhere " + Math.random(), "CA");
     const [, init] = fetchMock.mock.calls[0];
     expect((init as RequestInit).headers).toMatchObject({
-      "User-Agent": expect.stringContaining("Reclaim-TradeIn"),
+      "User-Agent": expect.stringContaining("GadgetSwap-TradeIn"),
     });
   });
 

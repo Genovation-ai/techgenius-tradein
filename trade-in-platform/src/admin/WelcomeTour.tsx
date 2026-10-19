@@ -43,7 +43,7 @@ interface Stop {
  */
 const STOPS: Stop[] = [
   {
-    title: "Welcome to Reclaim",
+    title: "Welcome to Gadget Swap",
     body: "A quick tour of everything the platform does, in the order the work actually happens. About two minutes, and you can leave at any point — it is always here in the sidebar when you want it again.",
   },
   {
@@ -114,7 +114,7 @@ const STOPS: Stop[] = [
   },
   {
     title: "Your prices track the market",
-    body: "Reclaim reads what other buyers publish and quotes a set percentage under it. Set that margin once on Pricing and every model follows it. If a source goes quiet, the page says so rather than serving stale numbers.",
+    body: "Gadget Swap reads what other buyers publish and quotes a set percentage under it. Set that margin once on Pricing and every model follows it. If a source goes quiet, the page says so rather than serving stale numbers.",
     to: "/admin/pricing",
     cta: "Open pricing",
   },
@@ -138,7 +138,7 @@ const STOPS: Stop[] = [
   },
   {
     title: "Your subscription",
-    body: "Billing is your own Reclaim plan — what you are on, your usage against its limits, and your card. Change plan or update payment details here any time.",
+    body: "Billing is your own Gadget Swap plan — what you are on, your usage against its limits, and your card. Change plan or update payment details here any time.",
     to: "/admin/billing",
     cta: "Open billing",
   },
@@ -249,7 +249,7 @@ export function WelcomeTour() {
                 </button>
               ) : (
                 <button type="button" className="tour-next" onClick={close}>
-                  Start using Reclaim
+                  Start using Gadget Swap
                 </button>
               )}
             </div>

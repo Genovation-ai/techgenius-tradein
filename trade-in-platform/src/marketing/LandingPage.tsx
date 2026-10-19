@@ -22,7 +22,7 @@ import "./LandingPage.css";
 const FlowWave = lazy(() => import("./FlowWave").then((m) => ({ default: m.FlowWave })));
 
 /**
- * Reclaim — the platform's own page, for shop owners rather than shoppers.
+ * Gadget Swap — the platform's own page, for shop owners rather than shoppers.
  *
  * The hero is a real quote against the live catalogue, not a screenshot of one.
  * A shop owner deciding whether to buy this does not want to read about pricing
@@ -136,7 +136,7 @@ function PriceBuild() {
   const steps = [
     {
       h: "Start from a real number",
-      p: "Reclaim reads what other buyers publish for the exact model, storage and condition in front of you. Popular models are checked against live competitor listings each week; the rest of the catalogue is quoted from a price list synced from the same source. The Pricing page shows which is which, and how many are current.",
+      p: "Gadget Swap reads what other buyers publish for the exact model, storage and condition in front of you. Popular models are checked against live competitor listings each week; the rest of the catalogue is quoted from a price list synced from the same source. The Pricing page shows which is which, and how many are current.",
     },
     {
       h: "Take your margin off the top",
@@ -376,7 +376,7 @@ export default function LandingPage() {
         <div className="rc-wrap rc-nav-in">
           <span className="rc-mark">
             <span className="rc-mark-dot" aria-hidden />
-            Reclaim
+            Gadget Swap
           </span>
           {pastHero && price !== null ? (
             <motion.span
@@ -415,7 +415,7 @@ export default function LandingPage() {
                 <span className="rc-line-ghost">before you pay for it.</span>
               </motion.h1>
               <motion.p className="rc-hero-sub" variants={rise}>
-                Reclaim quotes from published buyback prices, puts the offer on your
+                Gadget Swap quotes from published buyback prices, puts the offer on your
                 website, and tracks the device through to payout.
               </motion.p>
               <motion.div className="rc-hero-actions" variants={rise}>
@@ -593,7 +593,7 @@ export default function LandingPage() {
       </main>
 
       <footer className="rc-wrap rc-foot">
-        <span>Reclaim — trade-in software for repair shops and resellers.</span>
+        <span>Gadget Swap — trade-in software for repair shops and resellers.</span>
         <Link to="/admin/login">Sign in</Link>
         <Link to="/preview">Widget preview</Link>
       </footer>

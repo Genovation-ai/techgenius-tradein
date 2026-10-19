@@ -44,7 +44,7 @@ export function SignupPage() {
         <section className="admin-login-left">
           <div className="admin-login-brand-row">
             <span className="rc-auth-mark" aria-hidden />
-            Reclaim
+            Gadget Swap
           </div>
           <h1>Your shop is live</h1>
           <p className="admin-section-lead">
@@ -71,9 +71,9 @@ export function SignupPage() {
       <section className="admin-login-left">
         <div className="admin-login-brand-row">
           <span className="rc-auth-mark" aria-hidden />
-          Reclaim
+          Gadget Swap
         </div>
-        <Link to="/" className="admin-login-back">Back to Reclaim</Link>
+        <Link to="/" className="admin-login-back">Back to Gadget Swap</Link>
         <h1>Create your shop</h1>
         <p className="admin-section-lead">
           Take trade-ins on your own site in under a minute. No card needed to start.

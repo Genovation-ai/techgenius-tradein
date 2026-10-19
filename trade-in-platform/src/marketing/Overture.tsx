@@ -129,7 +129,7 @@ export function Overture({ target = 1274 }: { target?: number }) {
   return (
     <div className={`rc-overture${leaving ? " is-leaving" : ""}`} role="presentation">
       <div className="rc-overture-inner">
-        <p className="rc-overture-mark">Reclaim</p>
+        <p className="rc-overture-mark">Gadget Swap</p>
         <p className="rc-overture-price" aria-hidden>
           <span className="rc-overture-cur">$</span>
           {display}

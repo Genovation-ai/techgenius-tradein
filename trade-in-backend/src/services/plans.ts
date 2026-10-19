@@ -44,7 +44,7 @@ export interface Plan {
  */
 export type PlanFeature =
   | "repairs"          // quote repairs, not just trade-ins
-  | "own_branding"     // remove Reclaim's name from the widget
+  | "own_branding"     // remove Gadget Swap's name from the widget
   | "promo_codes"
   | "market_pricing"   // competitor price sync
   | "reports"

@@ -33,9 +33,9 @@ export function LoginPage() {
       <section className="admin-login-left">
         <div className="admin-login-brand-row">
           <span className="rc-auth-mark" aria-hidden />
-          Reclaim
+          Gadget Swap
         </div>
-        <Link to="/" className="admin-login-back">Back to Reclaim</Link>
+        <Link to="/" className="admin-login-back">Back to Gadget Swap</Link>
         <h1>Sign in</h1>
         <form onSubmit={(e) => void login(e)}>
           <label>
@@ -91,7 +91,7 @@ export function LoginPage() {
         <PriceTicker />
         <h2>Trade-ins, priced by the market</h2>
         <p>
-          Reclaim watches what buyers actually pay and quotes from that, so an
+          Gadget Swap watches what buyers actually pay and quotes from that, so an
           offer is current the day a customer asks for it.
         </p>
       </section>

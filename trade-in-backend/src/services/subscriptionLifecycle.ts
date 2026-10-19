@@ -116,8 +116,8 @@ async function notifyLapsed(): Promise<void> {
               SELECT 1 FROM email_outbox e
                WHERE e.org_id = o.id
                  AND e.subject = CASE o.plan_status
-                       WHEN 'past_due' THEN 'Your Reclaim trial has ended'
-                       ELSE 'Your Reclaim subscription has been cancelled' END
+                       WHEN 'past_due' THEN 'Your Gadget Swap trial has ended'
+                       ELSE 'Your Gadget Swap subscription has been cancelled' END
             )`,
       )
       .all() as Array<{ id: string; name: string; plan_status: string; company_email: string | null }>;
@@ -129,8 +129,8 @@ async function notifyLapsed(): Promise<void> {
         orgId: r.id,
         recipient: r.company_email,
         subject: ending
-          ? "Your Reclaim trial has ended"
-          : "Your Reclaim subscription has been cancelled",
+          ? "Your Gadget Swap trial has ended"
+          : "Your Gadget Swap subscription has been cancelled",
         body: ending
           ? [
               `Hello ${r.name},`,
