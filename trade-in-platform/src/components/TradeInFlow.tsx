@@ -628,8 +628,8 @@ export function TradeInFlow() {
 
       {state.step === "media-ai" && (
         <MediaAiStep
-          valuation={state.valuation}
           media={state.media}
+          valuation={state.valuation}
           onMediaChange={(media: MediaFile[]) => patch({ media, mediaSkipped: false })}
           onSkip={() => {
             state.media.forEach((m) => URL.revokeObjectURL(m.previewUrl));
@@ -643,7 +643,6 @@ export function TradeInFlow() {
         <GradeStep
           aiResult={state.aiResult}
           grade={state.grade}
-          valuation={state.valuation}
           owned={state.owned}
           prices={gradePrices}
           onOwned={(owned) =>

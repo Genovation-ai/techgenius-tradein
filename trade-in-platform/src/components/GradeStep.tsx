@@ -1,11 +1,8 @@
 import {
   gradeDefinitions,
   gradeLabels,
-  gradeLockReason,
   gradeTaglines,
-  isGradeLockedToDefective,
   type ConditionGrade,
-  type ValuationAnswers,
 } from "../data/catalog";
 import type { AiScanResult } from "../lib/tradeInTypes";
 import "./FormSteps.css";
@@ -14,7 +11,6 @@ import "./OfferStep.css";
 interface Props {
   aiResult: AiScanResult | null;
   grade: ConditionGrade | null;
-  valuation: ValuationAnswers;
   /** The single legal confirmation that replaced two checklist questions. */
   owned: boolean;
   onOwned: (v: boolean) => void;
@@ -33,15 +29,12 @@ const grades: ConditionGrade[] = ["flawless", "good", "average", "fair", "defect
 export function GradeStep({
   aiResult,
   grade,
-  valuation,
   owned,
   onOwned,
   onSelect,
   onContinue,
   prices,
 }: Props) {
-  const locked = isGradeLockedToDefective(valuation);
-  const lockNote = gradeLockReason(valuation);
 
   return (
     <section className="flow-panel">
@@ -74,27 +67,22 @@ export function GradeStep({
         </div>
       ) : null}
 
-      {locked && lockNote ? (
-        <p className="grade-lock-banner" role="status">
-          {lockNote}
-        </p>
-      ) : null}
-
       <div className="grade-list">
         {grades.map((g) => {
-          const disabled = locked && g !== "defective";
+          // The cards must never disable each other. Condition is stated only
+          // here now, so the valuation the lock reads is derived from the card
+          // the customer just tapped — and As-Is sets powerOn:false, which used
+          // to lock the step and grey out every other card. That trapped anyone
+          // who tapped As-Is (even to read it) with no way back to a higher
+          // grade. We verify the real condition when the device arrives, so the
+          // honest model is to let them pick freely and correct it on receipt.
           const selected = grade === g;
           return (
             <button
               key={g}
               type="button"
-              disabled={disabled}
-              aria-disabled={disabled}
-              className={`grade-card ${selected ? "grade-card--on" : ""}${disabled ? " grade-card--locked" : ""}`}
-              onClick={() => {
-                if (disabled) return;
-                onSelect(g);
-              }}
+              className={`grade-card ${selected ? "grade-card--on" : ""}`}
+              onClick={() => onSelect(g)}
             >
               {/* No price here. Five figures side by side turns "which of
                   these describes my phone" into "which of these pays most",
