@@ -3,6 +3,89 @@ import { Link, useParams } from "react-router-dom";
 import { adminFetch, apiUrl, getAdminApiKey, PIPELINE_STAGES, type OfferDetail } from "../api";
 import { DeviceThumb } from "../DeviceThumb";
 import { pushOfferToCrm } from "../../lib/twenty";
+import { gradeLabels, type ConditionGrade } from "../../data/catalog";
+
+const REGRADE_OPTIONS: ConditionGrade[] = ["flawless", "good", "average", "fair", "defective"];
+
+/**
+ * Re-grade a device after inspection, and re-price it.
+ *
+ * The device that arrives is not always the device that was described, and the
+ * flow already promises the customer it is checked on arrival. This is where
+ * staff act on that: pick the real condition and the price follows the same
+ * catalogue the customer's quote came from, or type a figure to override it.
+ */
+function RegradeControl({
+  offerId,
+  itemId,
+  currentGrade,
+  onDone,
+}: {
+  offerId: string;
+  itemId: number;
+  currentGrade: string | undefined;
+  onDone: (note: string) => void;
+}) {
+  const [grade, setGrade] = useState<ConditionGrade>(
+    (REGRADE_OPTIONS.includes(currentGrade as ConditionGrade) ? currentGrade : "good") as ConditionGrade,
+  );
+  const [price, setPrice] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const changed = grade !== currentGrade || price.trim() !== "";
+
+  const save = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const body: { condition_grade: string; price?: number } = { condition_grade: grade };
+      if (price.trim() !== "") body.price = Number(price);
+      const r = await adminFetch<{ price: number; total_value: number }>(
+        `/api/offers/${encodeURIComponent(offerId)}/items/${itemId}/regrade`,
+        { method: "PATCH", body: JSON.stringify(body) },
+      );
+      setPrice("");
+      onDone(`Re-graded to ${gradeLabels[grade]} · $${Number(r.price).toLocaleString()}`);
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not re-grade");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="admin-regrade">
+      <select
+        className="admin-select"
+        value={grade}
+        onChange={(e) => setGrade(e.target.value as ConditionGrade)}
+        aria-label="Condition"
+      >
+        {REGRADE_OPTIONS.map((g) => (
+          <option key={g} value={g}>
+            {gradeLabels[g]}
+          </option>
+        ))}
+      </select>
+      <input
+        className="admin-input"
+        type="number"
+        min="0"
+        step="1"
+        value={price}
+        onChange={(e) => setPrice(e.target.value)}
+        placeholder="Auto price"
+        aria-label="Override price"
+        style={{ maxWidth: "7rem" }}
+      />
+      <button type="button" className="admin-btn" disabled={busy || !changed} onClick={() => void save()}>
+        {busy ? "Saving…" : "Re-grade"}
+      </button>
+      {err ? <span style={{ color: "#c0392b", fontSize: "0.8rem" }}>{err}</span> : null}
+    </div>
+  );
+}
 
 export function OfferDetailPage() {
   const { id = "" } = useParams();
@@ -237,6 +320,15 @@ export function OfferDetailPage() {
                 {item.storage || "—"} · {item.condition_grade || "—"} · {item.carrier || "—"}
                 {item.color ? ` · ${item.color}` : ""}
               </div>
+              <RegradeControl
+                offerId={id}
+                itemId={item.id}
+                currentGrade={item.condition_grade}
+                onDone={(note) => {
+                  setMessage(note);
+                  load();
+                }}
+              />
             </div>
             <strong>${Number(item.quoted_price || 0).toLocaleString()}</strong>
           </div>

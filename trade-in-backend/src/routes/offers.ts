@@ -498,6 +498,119 @@ offersRouter.patch("/:id", requireCapability("offers:write"), (req, res) => {
   res.json({ ok: true });
 });
 
+const VALID_GRADES = ["flawless", "good", "average", "fair", "defective"];
+
+/**
+ * Re-grade a device after it arrives, and re-price it.
+ *
+ * The flow promises the customer "we check it when it arrives — if it is better
+ * than you said, you get the higher price", but until now the shop had no way
+ * to act on that: condition on an offer item was write-once at submission.
+ * A device that turns up worse (or better) than claimed left the shop stuck
+ * with the customer's own grade. This lets staff set the real grade.
+ *
+ * Price follows the grade the same way the original quote did — through
+ * computeServerQuote, so a revision is priced on the same ladder the customer
+ * saw, never a number invented by hand. A manual `price` overrides that when a
+ * shop needs to, and the override is logged like any other change.
+ */
+offersRouter.patch("/:id/items/:itemId/regrade", requireCapability("offers:write"), (req, res) => {
+  const grade = String(req.body?.condition_grade || "").toLowerCase();
+  if (!VALID_GRADES.includes(grade)) {
+    return res.status(400).json({ error: `condition_grade must be one of ${VALID_GRADES.join(", ")}` });
+  }
+  const itemId = Number(req.params.itemId);
+  if (!Number.isInteger(itemId)) return res.status(400).json({ error: "Invalid item id" });
+
+  const db = getDb();
+  try {
+    const item = db
+      .prepare(
+        "SELECT id, device_id, device_name, storage, carrier, condition_grade, quoted_price, battery_health FROM offer_items WHERE id = ? AND offer_id = ?",
+      )
+      .get(itemId, req.params.id) as
+      | {
+          id: number;
+          device_id: string;
+          device_name: string;
+          storage: string | null;
+          carrier: string | null;
+          condition_grade: string | null;
+          quoted_price: number;
+          battery_health: number | null;
+        }
+      | undefined;
+    if (!item) return res.status(404).json({ error: "Offer item not found on this offer" });
+
+    const battery =
+      req.body?.battery_health != null ? Number(req.body.battery_health) : item.battery_health;
+
+    // A manual override wins; otherwise re-price on the catalogue ladder for
+    // the new grade, exactly as the customer's quote was computed.
+    let newPrice: number;
+    const override = req.body?.price;
+    if (override != null && override !== "") {
+      const n = Number(override);
+      if (!Number.isFinite(n) || n < 0) return res.status(400).json({ error: "price must be a non-negative number" });
+      newPrice = Math.round(n * 100) / 100;
+    } else {
+      const q = computeServerQuote({
+        deviceId: item.device_id,
+        storage: item.storage ?? "",
+        conditionGrade: grade,
+        carrier: item.carrier,
+        batteryHealth: battery,
+      });
+      if (!q) {
+        return res.status(422).json({
+          error: `No catalogue price for ${item.device_name} at grade "${grade}". Enter a price manually to revise it.`,
+        });
+      }
+      newPrice = q.quotedPrice;
+    }
+
+    const prevGrade = item.condition_grade;
+    const prevPrice = item.quoted_price;
+
+    db.prepare(
+      `UPDATE offer_items
+          SET condition_grade = ?, quoted_price = ?, final_price = ?, battery_health = ?
+        WHERE id = ?`,
+    ).run(grade, newPrice, newPrice, battery, itemId);
+
+    // The offer total is the sum of its items, so it moves with the revision.
+    const total = (
+      db.prepare("SELECT COALESCE(SUM(quoted_price), 0) AS t FROM offer_items WHERE offer_id = ?").get(req.params.id) as {
+        t: number;
+      }
+    ).t;
+    db.prepare("UPDATE offers SET total_value = ?, updated_at = datetime('now') WHERE id = ?").run(
+      total,
+      req.params.id,
+    );
+
+    // The history lives in the activity trail, so overwriting the item is safe.
+    if (prevGrade !== grade) {
+      logActivityWith(
+        db,
+        { entityType: "offer", entityId: req.params.id, action: "updated", field: "condition_grade", oldValue: prevGrade, newValue: grade },
+        actorOf(req),
+      );
+    }
+    if (prevPrice !== newPrice) {
+      logActivityWith(
+        db,
+        { entityType: "offer", entityId: req.params.id, action: "updated", field: "quoted_price", oldValue: String(prevPrice), newValue: String(newPrice) },
+        actorOf(req),
+      );
+    }
+
+    res.json({ ok: true, item_id: itemId, condition_grade: grade, price: newPrice, total_value: total });
+  } finally {
+    db.close();
+  }
+});
+
 /** What is missing before real carrier labels can be bought. */
 offersRouter.get("/shipping/status", requireCapability("shipping:write"), (_req, res) => {
   res.json(shippingReadiness());
