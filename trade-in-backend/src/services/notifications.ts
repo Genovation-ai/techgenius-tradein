@@ -72,12 +72,14 @@ export function notifyOfferStatusChange(db: Database, offerId: string, status: s
       [
         `Hi ${offer.first_name || "there"},`,
         "",
-        `Your ${identity.companyName} trade-in offer ${offerId} is now: ${label}.`,
+        `Here's an update on your trade-in with ${identity.companyName}.`,
+        "",
+        `Offer ${offerId} is now: ${label}.`,
         `Current offer value: $${Number(offer.total_value || 0).toFixed(2)} CAD.`,
         "",
-        "Track anytime with your Offer ID on our sell page.",
+        "You can track your trade-in anytime using your Offer ID on our sell page, or just reply to this email with any questions.",
         "",
-        `— ${identity.companyName}`,
+        `— The ${identity.companyName} team`,
       ].join("\n");
 
     recordOfferNotification(db, {

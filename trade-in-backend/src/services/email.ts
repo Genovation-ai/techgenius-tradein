@@ -1,5 +1,6 @@
 import { getDb } from "../db/migrate.js";
 import { emailIdentityFor } from "./emailIdentity.js";
+import { renderEmailHtml } from "./emailTemplate.js";
 
 export type EmailSendResult = {
   status: "sent" | "queued" | "blocked" | "failed";
@@ -67,6 +68,7 @@ export async function sendTradeInEmail(opts: {
           ...(identity.replyTo ? { reply_to: identity.replyTo } : {}),
           to: opts.recipient,
           subject: opts.subject,
+          html: renderEmailHtml(identity, opts.subject, opts.body),
           text: opts.body,
           offer_id: opts.offerId || null,
         }),
@@ -207,6 +209,7 @@ export async function flushBlockedEmails(opts: {
             ...(identity.replyTo ? { reply_to: identity.replyTo } : {}),
             to: row.recipient,
             subject: row.subject,
+            html: renderEmailHtml(identity, row.subject, row.body),
             text: row.body,
             offer_id: row.offer_id,
           }),

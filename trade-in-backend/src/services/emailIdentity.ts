@@ -32,6 +32,8 @@ export interface EmailIdentity {
   replyTo: string | null;
   /** The shop's name, for use inside the message body. */
   companyName: string;
+  /** The shop's accent colour, for the email header. */
+  brandColor: string;
 }
 
 const PLATFORM_FALLBACK_NAME = "Gadget Swap Trade-In";
@@ -46,13 +48,19 @@ export function emailIdentityFor(db: Database, orgId: string | null | undefined)
 
   let companyName = "";
   let companyEmail = "";
+  let brandColor = "";
   if (orgId) {
     try {
       const row = db
-        .prepare("SELECT company_name, company_email FROM org_settings WHERE org_id = ?")
-        .get(orgId) as { company_name?: string; company_email?: string } | undefined;
+        .prepare(
+          "SELECT company_name, company_email, widget_brand_color FROM org_settings WHERE org_id = ?",
+        )
+        .get(orgId) as
+        | { company_name?: string; company_email?: string; widget_brand_color?: string }
+        | undefined;
       companyName = (row?.company_name || "").trim();
       companyEmail = (row?.company_email || "").trim();
+      brandColor = (row?.widget_brand_color || "").trim();
     } catch {
       /* settings table missing on a very old database — fall through */
     }
@@ -64,5 +72,7 @@ export function emailIdentityFor(db: Database, orgId: string | null | undefined)
     // Only a real address; a blank reply-to is better than one that bounces.
     replyTo: companyEmail.includes("@") ? companyEmail : null,
     companyName: companyName || "our shop",
+    // A sane, professional default when a shop has not set its own.
+    brandColor: /^#[0-9a-fA-F]{6}$/.test(brandColor) ? brandColor : "#0B3D2E",
   };
 }
