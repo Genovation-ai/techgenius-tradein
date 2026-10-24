@@ -336,6 +336,14 @@ CREATE TABLE IF NOT EXISTS admin_sessions (
   created_at TEXT DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS password_resets (
+  token_hash TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES admin_users(id),
+  expires_at TEXT NOT NULL,
+  used_at TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+
 -- Seed default workflow stages
 INSERT OR IGNORE INTO workflow_stages (id, name, label, sort_order, send_email) VALUES
   ('active_lead', 'Active Leads', 'Active Leads', 1, 1),

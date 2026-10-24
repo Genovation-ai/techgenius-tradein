@@ -71,11 +71,12 @@ export function LoginPage() {
               </button>
             </div>
           </label>
-          <div className="admin-login-row">
+          <div className="admin-login-row" style={{ justifyContent: "space-between", alignItems: "center" }}>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 400 }}>
               <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} />
               Remember me
             </label>
+            <Link to="/admin/forgot" style={{ fontSize: "0.88rem" }}>Forgot password?</Link>
           </div>
           {error ? <p className="admin-error">{error}</p> : null}
           <button type="submit" className="admin-btn" disabled={loading}>

@@ -185,6 +185,29 @@ export async function logoutAdmin(): Promise<void> {
   }
 }
 
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const res = await fetch(apiUrl("/api/auth/forgot-password"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+  // Always generic, whether or not the account exists.
+  const data = (await res.json().catch(() => ({ message: "" }))) as { message?: string };
+  return { message: data.message || "If that email has an account, a reset link is on its way." };
+}
+
+export async function resetPassword(token: string, password: string): Promise<void> {
+  const res = await fetch(apiUrl("/api/auth/reset-password"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+}
+
 export async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const key = getAdminApiKey();
   const res = await fetch(apiUrl(path), {

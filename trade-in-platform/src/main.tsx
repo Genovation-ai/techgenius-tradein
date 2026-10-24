@@ -8,6 +8,8 @@ import LandingPage from "./marketing/LandingPage.tsx";
 import { BillingPage } from "./admin/pages/BillingPage.tsx";
 import { AdminLayout } from "./admin/AdminLayout.tsx";
 import { LoginPage } from "./admin/LoginPage.tsx";
+import { ForgotPasswordPage } from "./admin/ForgotPasswordPage.tsx";
+import { ResetPasswordPage } from "./admin/ResetPasswordPage.tsx";
 import { SignupPage } from "./admin/SignupPage.tsx";
 import { DashboardPage } from "./admin/pages/DashboardPage.tsx";
 import { OffersPage } from "./admin/pages/OffersPage.tsx";
@@ -51,6 +53,8 @@ createRoot(document.getElementById("root")!).render(
         <Route path="/" element={<LandingPage />} />
         <Route path="/preview" element={<App />} />
         <Route path="/admin/login" element={<LoginPage />} />
+        <Route path="/admin/forgot" element={<ForgotPasswordPage />} />
+        <Route path="/admin/reset" element={<ResetPasswordPage />} />
         <Route path="/admin/signup" element={<SignupPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<DashboardPage />} />
