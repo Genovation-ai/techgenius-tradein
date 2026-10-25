@@ -86,6 +86,11 @@ export function seedAdminUser() {
   db.prepare("UPDATE admin_users SET org_id = 'org-tech-genius' WHERE org_id IS NULL").run();
   // Purge expired sessions on boot
   db.prepare("DELETE FROM admin_sessions WHERE expires_at < datetime('now')").run();
+  // Dead reset tokens accumulate one row per completed or expired reset; clear
+  // them on boot the same way, so the table does not grow unbounded.
+  db.prepare(
+    "DELETE FROM password_resets WHERE used_at IS NOT NULL OR expires_at < datetime('now')",
+  ).run();
   db.close();
 }
 
@@ -202,6 +207,10 @@ authRouter.get("/me", (req, res) => {
 });
 
 const RESET_TTL_MIN = 60;
+// Per-account cap so the form cannot be used to bomb one person's inbox even
+// across many IPs (the shared authLimiter is keyed by IP, not by target).
+const RESET_WINDOW_MIN = 15;
+const RESET_MAX_PER_WINDOW = 3;
 
 /**
  * Start a password reset.
@@ -225,36 +234,55 @@ authRouter.post("/forgot-password", (req, res) => {
       .prepare("SELECT id, email, name, org_id FROM admin_users WHERE email = ? AND enabled = 1")
       .get(email) as { id: string; email: string; name: string; org_id: string | null } | undefined;
     if (user) {
-      const token = randomBytes(32).toString("hex");
-      const tokenHash = createHash("sha256").update(token).digest("hex");
-      const expires = new Date(Date.now() + RESET_TTL_MIN * 60_000).toISOString();
-      db.prepare("DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL").run(user.id);
-      db.prepare(
-        "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
-      ).run(tokenHash, user.id, expires);
+      // Cap how many reset emails one account can receive per window, so the
+      // endpoint cannot be used to flood a chosen victim's inbox.
+      const recent = db
+        .prepare(
+          `SELECT COUNT(*) AS c FROM password_resets
+            WHERE user_id = ? AND created_at > datetime('now', ?)`,
+        )
+        .get(user.id, `-${RESET_WINDOW_MIN} minutes`) as { c: number };
 
-      const base = (process.env.TG_APP_URL || "https://www.gadgetswap.store").replace(/\/$/, "");
-      const link = `${base}/admin/reset?token=${token}`;
-      const body = [
-        `Hi ${user.name || "there"},`,
-        "",
-        "We received a request to reset the password on your admin account.",
-        "",
-        `Reset it here (the link expires in ${RESET_TTL_MIN} minutes):`,
-        link,
-        "",
-        "If you did not request this, you can safely ignore this email — your password will not change.",
-        "",
-        "— The team",
-      ].join("\n");
+      if (recent.c < RESET_MAX_PER_WINDOW) {
+        // Do not delete earlier rows here: the throttle counts them, and
+        // deleting would keep the count at one and defeat the cap. Earlier
+        // links stay valid (single-use, 256-bit) until they expire or until
+        // one is used, which invalidates the rest in reset-password.
+        const token = randomBytes(32).toString("hex");
+        const tokenHash = createHash("sha256").update(token).digest("hex");
+        const expires = new Date(Date.now() + RESET_TTL_MIN * 60_000).toISOString();
+        db.prepare(
+          "INSERT INTO password_resets (token_hash, user_id, expires_at) VALUES (?, ?, ?)",
+        ).run(tokenHash, user.id, expires);
 
-      void sendTradeInEmail({
-        orgId: user.org_id,
-        recipient: user.email,
-        subject: "Reset your admin password",
-        body,
-      });
+        const base = (process.env.TG_APP_URL || "https://www.gadgetswap.store").replace(/\/$/, "");
+        const link = `${base}/admin/reset?token=${token}`;
+        const body = [
+          `Hi ${user.name || "there"},`,
+          "",
+          "We received a request to reset the password on your admin account.",
+          "",
+          `Reset it here (the link expires in ${RESET_TTL_MIN} minutes):`,
+          link,
+          "",
+          "If you did not request this, you can safely ignore this email — your password will not change.",
+          "",
+          "— The team",
+        ].join("\n");
+
+        void sendTradeInEmail({
+          orgId: user.org_id,
+          recipient: user.email,
+          subject: "Reset your admin password",
+          body,
+        });
+      }
     }
+  } catch (e) {
+    // A real account must never fail in a way an unknown one would not: a 500
+    // here where a missing account returns 200 is itself an enumeration oracle.
+    // Swallow, log, and return the same generic response either way.
+    console.warn("[forgot-password] suppressed error:", e instanceof Error ? e.message : e);
   } finally {
     db.close();
   }
@@ -272,17 +300,34 @@ authRouter.post("/reset-password", (req, res) => {
   const token = String(req.body?.token || "").trim();
   const password = String(req.body?.password || "");
   if (!token) return res.status(400).json({ error: "Missing reset token." });
-  if (password.length < 8) {
-    return res.status(400).json({ error: "Password must be at least 8 characters." });
+  // Bound both ends, mirroring login: an unbounded password feeds scryptSync a
+  // multi-megabyte input that blocks the single event loop.
+  if (password.length < 8 || password.length > 256) {
+    return res.status(400).json({ error: "Password must be between 8 and 256 characters." });
   }
 
   const tokenHash = createHash("sha256").update(token).digest("hex");
   const db = getDb();
   try {
+    // Join the account so we can also check it is still enabled and clear its
+    // login lockout — a token issued before an admin was disabled must not let
+    // them set a new credential, and a reset must actually restore access.
     const row = db
-      .prepare("SELECT user_id, expires_at, used_at FROM password_resets WHERE token_hash = ?")
-      .get(tokenHash) as { user_id: string; expires_at: string; used_at: string | null } | undefined;
-    if (!row || row.used_at || new Date(row.expires_at).getTime() < Date.now()) {
+      .prepare(
+        `SELECT pr.user_id AS user_id, pr.expires_at AS expires_at, pr.used_at AS used_at,
+                u.email AS user_email, u.enabled AS enabled
+           FROM password_resets pr JOIN admin_users u ON u.id = pr.user_id
+          WHERE pr.token_hash = ?`,
+      )
+      .get(tokenHash) as
+      | { user_id: string; expires_at: string; used_at: string | null; user_email: string; enabled: number }
+      | undefined;
+    if (
+      !row ||
+      row.used_at ||
+      new Date(row.expires_at).getTime() < Date.now() ||
+      !row.enabled
+    ) {
       return res
         .status(400)
         .json({ error: "This reset link is invalid or has expired. Please request a new one." });
@@ -294,7 +339,14 @@ authRouter.post("/reset-password", (req, res) => {
     db.prepare("UPDATE password_resets SET used_at = datetime('now') WHERE token_hash = ?").run(
       tokenHash,
     );
+    // Using one link invalidates every other outstanding link for the account.
+    db.prepare(
+      "DELETE FROM password_resets WHERE user_id = ? AND used_at IS NULL",
+    ).run(row.user_id);
     db.prepare("DELETE FROM admin_sessions WHERE user_id = ?").run(row.user_id);
+    // Clear any failed-login lockout, so the reset actually lets them back in
+    // rather than leaving them stuck on 429 with valid new credentials.
+    clearFailures(String(row.user_email).trim().toLowerCase());
     return res.json({ ok: true });
   } finally {
     db.close();
