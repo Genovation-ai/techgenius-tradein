@@ -83,6 +83,44 @@ export function seedAdminUser() {
     ).run(nanoid(12), email.toLowerCase(), makePasswordRecord(password), name);
     console.log(`Seeded admin login: ${email}`);
   }
+  // TG_ADMIN_PASSWORD_ENSURE=1 is a one-shot boot flag that re-roots the admin
+  // credentials from TG_ADMIN_EMAIL + TG_ADMIN_PASSWORD. The ordinary seed only
+  // runs on an empty table, so a Railway deploy that later rotates the admin
+  // password otherwise leaves the stored hash on whatever the table was seeded
+  // with — the login still fails with the new env value. Turn the flag on,
+  // redeploy, log in, turn it off: the next boot stops rewriting the hash on
+  // every restart.
+  if ((process.env.TG_ADMIN_PASSWORD_ENSURE ?? "").toLowerCase() === "1" || (process.env.TG_ADMIN_PASSWORD_ENSURE ?? "").toLowerCase() === "true") {
+    const email = (process.env.TG_ADMIN_EMAIL || "").trim().toLowerCase();
+    const password = process.env.TG_ADMIN_PASSWORD || "";
+    if (!email || !password) {
+      console.warn("[admin-ensure] skipped: TG_ADMIN_EMAIL and TG_ADMIN_PASSWORD must both be set.");
+    } else {
+      const row = db
+        .prepare("SELECT id FROM admin_users WHERE email = ?")
+        .get(email) as { id: string } | undefined;
+      if (row) {
+        db.prepare("UPDATE admin_users SET password_hash = ?, enabled = 1 WHERE id = ?").run(
+          makePasswordRecord(password),
+          row.id,
+        );
+        console.log(`[admin-ensure] reset password for existing admin ${email}`);
+      } else {
+        db.prepare(
+          "INSERT INTO admin_users (id, email, password_hash, name, role, org_id) VALUES (?, ?, ?, ?, 'admin', 'org-tech-genius')",
+        ).run(
+          nanoid(12),
+          email,
+          makePasswordRecord(password),
+          process.env.TG_ADMIN_NAME || "Admin",
+        );
+        console.log(`[admin-ensure] created admin ${email}`);
+      }
+      console.warn(
+        "[admin-ensure] TG_ADMIN_PASSWORD_ENSURE is still on. Clear it after logging in — leaving it on rewrites the hash on every boot.",
+      );
+    }
+  }
   db.prepare("UPDATE admin_users SET org_id = 'org-tech-genius' WHERE org_id IS NULL").run();
   // Purge expired sessions on boot
   db.prepare("DELETE FROM admin_sessions WHERE expires_at < datetime('now')").run();
