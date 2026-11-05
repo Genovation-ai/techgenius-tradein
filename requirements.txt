@@ -1,0 +1,6 @@
+# Python runtime dependencies for the competitor-price scraper
+# (invoked by trade-in-backend/src/pricing-engine/scrapling/bridge.ts).
+# Listed at the repo root so Railway's Nixpacks builder detects Python and
+# installs them alongside the Node app on every deploy.
+scrapling[fetchers]>=0.5.1
+patchright>=1.47

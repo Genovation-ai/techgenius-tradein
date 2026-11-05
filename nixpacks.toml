@@ -1,0 +1,28 @@
+# Railway / Nixpacks build plan for the Gadget Swap trade-in platform.
+# The service is a Node app (admin portal + widget bundle + Express API)
+# that shells out to a Python scraper for competitor prices. Both runtimes
+# need to be present at run time, and Playwright's chromium headless shell
+# needs to be fetched during build so the scraper starts without a cold
+# download on the first request.
+
+providers = ["node", "python"]
+
+[phases.setup]
+# Python + a system chromium kept so Playwright can reuse it if the headless
+# shell download ever fails, and pip for installing scrapling.
+nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
+
+[phases.install]
+# Node install happens via the default npm phase; add the python side on top.
+cmds = [
+  "npm ci --no-audit --no-fund",
+  "python -m pip install --no-cache-dir -r requirements.txt",
+]
+
+[phases.build]
+cmds = [
+  "npm run build",
+]
+
+[start]
+cmd = "npm start"

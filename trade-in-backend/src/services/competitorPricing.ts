@@ -107,7 +107,11 @@ export function getFrontendPricingConfig(): {
   const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
   const source = (map.frontend_price_source || "manual") as FrontendPriceSource;
   const mode = (map.frontend_price_mode || "match") as FrontendPriceMode;
-  const beatPercent = Math.max(0, Math.min(25, Number(map.frontend_beat_percent) || 2));
+  // A saved beat of 0 means "match, with beat-mode still on for the audit
+  // trail" — and must not silently reappear as the 2% default because
+  // Number("0") is falsy. Only a missing or unparseable setting falls back.
+  const raw = Number(map.frontend_beat_percent);
+  const beatPercent = Math.max(0, Math.min(25, Number.isFinite(raw) ? raw : 2));
   return { source, mode, beatPercent };
 }
 
