@@ -345,11 +345,22 @@ export function resolveFrontendBasePrice(input: {
   db.close();
 
   if (cfg.source === "manual") {
+    // The manual (Tech Genius) table holds the competitor-style sticker price
+    // the shop seeded from GoRecell. When the shop sets mode: beat with a
+    // percent, they mean the number quoted to a customer sits below that
+    // sticker — not just when a live scrape happens to be fresh. Skipping the
+    // undercut here was why the sell page quoted the full manual price while
+    // competitors sat a step below it, so the shop looked more expensive even
+    // though the setting said "beat them by 2%".
+    let basePrice = manualPrice ?? 0;
+    if (basePrice > 0 && cfg.mode === "beat") {
+      basePrice = Math.round(basePrice * (1 - cfg.beatPercent / 100));
+    }
     return {
-      basePrice: manualPrice ?? 0,
+      basePrice,
       source: "manual",
       mode: cfg.mode,
-      competitorPrice: null,
+      competitorPrice: manualPrice ?? null,
       scaled: false,
       scraped_at: null,
       fromManualTable: true,
