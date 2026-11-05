@@ -262,6 +262,7 @@ export function applySchemaPatches(db: Database): void {
   repointStalePlaceholderImages(db);
   dedupeScrapedPrices(db);
   seedGorecellProductMap(db);
+  remapOrphanGorecellEntries(db);
 }
 
 /**
@@ -319,6 +320,102 @@ function seedGorecellProductMap(db: Database): void {
   });
   run();
   console.log(`[pricing] seeded GoRecell product map for ${seeded} of ${Object.keys(map).length} devices`);
+}
+
+/**
+ * Move orphan GoRecell map entries onto the enabled twin device.
+ *
+ * The catalogue was renamed at some point: `samsung-galaxy-s20` became
+ * `galaxy-s20`, `apple-iphone-11` became `iphone-11`, `galaxy-s22` became
+ * `s22`. The old rows were left disabled with their map keys attached, and the
+ * new rows came up enabled with no map. The catalog sync iterates map keys and
+ * skips anything not in `devices WHERE enabled = 1`, so the orphans do nothing
+ * and the twins quietly stay un-scraped. Last count: 32 enabled models paired
+ * with an orphan, none of them mapped — every one of the Galaxy S20–S25,
+ * recent iPhones, Tab S8/S9, Fold6/Flip6, Watch6/7.
+ *
+ * Twins are matched by normalized device name (spaces removed, + → plus,
+ * lowercased). Only moves when the twin has no map of its own, so a manual
+ * mapping someone set later always wins. The orphan row is deleted after the
+ * copy — a disabled device has nothing to say.
+ */
+export function remapOrphanGorecellEntries(db: Database): void {
+  // Normalize: lowercase, collapse whitespace, map "+" to "plus", and drop a
+  // trailing "5g" tag. "Galaxy S21+" and "Galaxy S21 Plus 5G" are the same
+  // model under two different catalogue conventions, and we want to pair them.
+  const norm = (s: string) =>
+    s
+      .toLowerCase()
+      .replace(/\+/g, "plus")
+      .replace(/\s+/g, "")
+      .replace(/5g$/, "");
+
+  const orphans = db
+    .prepare(
+      `SELECT s.key AS key, s.value AS value,
+              substr(s.key, length('gorecell_product_map:') + 1) AS src_id
+         FROM settings s
+        WHERE s.key LIKE 'gorecell_product_map:%'
+          AND NOT EXISTS (
+            SELECT 1 FROM devices d
+             WHERE d.id = substr(s.key, length('gorecell_product_map:') + 1)
+               AND d.enabled = 1
+          )`,
+    )
+    .all() as Array<{ key: string; value: string; src_id: string }>;
+  if (!orphans.length) return;
+
+  const srcDevices = new Map(
+    (
+      db.prepare("SELECT id, name FROM devices").all() as Array<{ id: string; name: string }>
+    ).map((d) => [d.id, d]),
+  );
+  const enabledByName = new Map<string, { id: string; name: string }>();
+  for (const d of db
+    .prepare("SELECT id, name FROM devices WHERE enabled = 1")
+    .all() as Array<{ id: string; name: string }>) {
+    enabledByName.set(norm(d.name), d);
+  }
+  const twinHasMap = db.prepare(
+    "SELECT 1 FROM settings WHERE key = ?",
+  );
+  const insert = db.prepare(
+    "INSERT OR IGNORE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+  );
+  const del = db.prepare("DELETE FROM settings WHERE key = ?");
+
+  let moved = 0;
+  let dropped = 0;
+  const run = db.transaction(() => {
+    for (const o of orphans) {
+      const src = srcDevices.get(o.src_id);
+      if (!src) {
+        // No device row at all — a stale key with nothing to pair to. Leave it,
+        // a future catalog import may bring the device back.
+        continue;
+      }
+      const twin = enabledByName.get(norm(src.name));
+      if (!twin || twin.id === o.src_id) continue;
+      if (twinHasMap.get(`gorecell_product_map:${twin.id}`)) continue;
+      insert.run(`gorecell_product_map:${twin.id}`, o.value);
+      del.run(o.key);
+      moved++;
+    }
+    // A key whose device has been removed from the catalogue entirely is just
+    // dead weight; prune it so the sync's iteration is honest.
+    for (const o of orphans) {
+      if (srcDevices.has(o.src_id)) continue;
+      del.run(o.key);
+      dropped++;
+    }
+  });
+  run();
+  if (moved || dropped) {
+    console.log(
+      `[pricing] remapped ${moved} orphan GoRecell entries to their enabled twin` +
+        (dropped ? `, pruned ${dropped} dead map key(s)` : ""),
+    );
+  }
 }
 
 /**
