@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { PriceTicker } from "../marketing/PriceTicker";
-import "../marketing/reclaim.css";
+import "../marketing/brand.css";
 import { signupShop } from "./api";
 import "./admin.css";
 

@@ -570,11 +570,11 @@ export default function LandingPage() {
                   the product had it, so anyone copying from this page got a working
                   but completely unstyled widget. These two lines are now exactly
                   what Connect hands out. */}
-              <pre>{`<link rel="stylesheet" href="https://reclaim-hq.up.railway.app/embed/tg-trade-in.css">
+              <pre>{`<link rel="stylesheet" href="https://www.gadgetswap.store/embed/tg-trade-in.css">
 <div id="tg-trade-in-root"
-     data-api="https://reclaim-hq.up.railway.app"
+     data-api="https://www.gadgetswap.store"
      `}<span className="tok">data-org="your-shop"</span>{`></div>
-<script src="https://reclaim-hq.up.railway.app/embed/tg-trade-in.js" defer></script>`}</pre>
+<script src="https://www.gadgetswap.store/embed/tg-trade-in.js" defer></script>`}</pre>
             </div>
           </div>
         </section>

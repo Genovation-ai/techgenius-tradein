@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resetPassword } from "./api";
-import "../marketing/reclaim.css";
+import "../marketing/brand.css";
 import "./admin.css";
 
 export function ResetPasswordPage() {

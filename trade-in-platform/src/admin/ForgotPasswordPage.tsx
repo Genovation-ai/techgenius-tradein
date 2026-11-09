@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { forgotPassword } from "./api";
-import "../marketing/reclaim.css";
+import "../marketing/brand.css";
 import "./admin.css";
 
 export function ForgotPasswordPage() {

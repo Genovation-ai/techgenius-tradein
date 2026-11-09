@@ -30,7 +30,7 @@ const arg = (flag: string, fallback: string) => {
   const i = process.argv.indexOf(flag);
   return i > 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 };
-const API = arg("--api", "https://reclaim-hq.up.railway.app");
+const API = arg("--api", "https://www.gadgetswap.store");
 const DELAY = Number(arg("--delay", "500"));
 const PER_PAIR = Number(arg("--per", "2"));
 const OUT = path.resolve("config/repair-market-prices.json");

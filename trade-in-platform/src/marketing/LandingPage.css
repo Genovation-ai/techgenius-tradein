@@ -13,7 +13,7 @@
  * reserved for the scene and the live state.
  *
  * Scoped to .rc, so sign-in and the admin keep the light values they take from
- * reclaim.css :root. */
+ * brand.css :root. */
 
 .rc {
   --rc-void: #000000;
