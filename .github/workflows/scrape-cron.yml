@@ -1,0 +1,98 @@
+# External scheduler for the Gadget Swap pricing scrape.
+#
+# The service already has an in-process timer that runs the full weekly
+# GoRecell catalogue sync on Sunday 03:00 local, which only fires when the
+# API server happens to be running at that minute. Railway restarts the
+# container on deploys, on sleeps and on crashes, and the timer resets each
+# time — so a week with two redeploys can miss its slot. This workflow is
+# the external backstop: GitHub's cron is independent of Railway's uptime,
+# hits the service over HTTPS, and leaves a run log in Actions that the
+# shop can read without opening a database.
+#
+# Setup (one-time, per repo):
+#   Settings → Secrets and variables → Actions → New repository secret
+#     TG_API_URL      = https://reclaimsr.up.railway.app  (or the custom host)
+#     TG_CRON_SECRET  = the value the API expects in x-cron-secret
+#
+# What it does:
+#   06:00 UTC daily  → POST /api/cron/daily   (map unmapped devices, quick scrape)
+#   08:00 UTC Sunday → POST /api/cron/weekly  (full catalogue sync)
+#
+# The daily job is cheap (~1 HTTP fetch + a small scrape), the weekly one
+# can take 10–20 minutes — GitHub's 6-hour job timeout is plenty.
+
+name: Gadget Swap scrape cron
+
+on:
+  schedule:
+    # Every day at 06:00 UTC (≈01:00 ET). Low-traffic window on both
+    # Gadget Swap's site and the competitors it reads.
+    - cron: "0 6 * * *"
+    # Sundays at 08:00 UTC — follows the daily so mappings are fresh
+    # before the catalogue sync iterates them.
+    - cron: "0 8 * * 0"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Which cron endpoint to hit"
+        required: true
+        default: "daily"
+        type: choice
+        options:
+          - daily
+          - weekly
+          - map-gorecell
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Decide which endpoint this run is for
+        id: pick
+        env:
+          INPUT_JOB: ${{ github.event.inputs.job }}
+          CRON: ${{ github.event.schedule }}
+        run: |
+          if [ -n "$INPUT_JOB" ]; then
+            echo "endpoint=$INPUT_JOB" >> "$GITHUB_OUTPUT"
+          elif [ "$CRON" = "0 8 * * 0" ]; then
+            echo "endpoint=weekly" >> "$GITHUB_OUTPUT"
+          else
+            echo "endpoint=daily" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Fail loudly if the secrets were not set
+        env:
+          API_URL: ${{ secrets.TG_API_URL }}
+          CRON_SECRET: ${{ secrets.TG_CRON_SECRET }}
+        run: |
+          if [ -z "$API_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "::error::TG_API_URL and TG_CRON_SECRET must be set in repo secrets"
+            exit 1
+          fi
+      - name: Hit the cron endpoint
+        env:
+          API_URL: ${{ secrets.TG_API_URL }}
+          CRON_SECRET: ${{ secrets.TG_CRON_SECRET }}
+          ENDPOINT: ${{ steps.pick.outputs.endpoint }}
+        run: |
+          # The service answers these in JSON; curl --fail turns an HTTP
+          # error into a non-zero exit so this workflow row goes red.
+          set -euo pipefail
+          url="${API_URL%/}/api/cron/${ENDPOINT}"
+          echo "POST $url"
+          http_code=$(
+            curl --silent --show-error --fail-with-body \
+                 --max-time 1700 \
+                 --retry 2 --retry-delay 30 \
+                 --write-out "%{http_code}" \
+                 --output response.json \
+                 -X POST "$url" \
+                 -H "x-cron-secret: ${CRON_SECRET}" \
+                 -H "content-type: application/json" \
+                 --data '{}'
+          )
+          echo "HTTP $http_code"
+          echo "--- response ---"
+          cat response.json || true
+          echo

@@ -7,6 +7,7 @@ import { quoteWithModel, listPricingModels } from "../pricing-engine/models/regi
 import type { ToScrape } from "../pricing-engine/types.js";
 import { STORE_TO_COMPETITOR, normalizeCondition } from "../pricing-engine/types.js";
 import { syncGorecellCatalogPrices } from "../services/catalogPriceSync.js";
+import { resolveGorecellProductMap } from "../services/gorecellProductMap.js";
 import { runWeeklyPriceRefresh } from "../jobs/weeklyScrape.js";
 import fs from "node:fs";
 import path from "node:path";
@@ -86,6 +87,57 @@ cronRouter.post("/sync-catalog", async (req, res) => {
   } catch (e) {
     res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
   }
+});
+
+/**
+ * POST /api/cron/map-gorecell — resolve as many enabled devices to a
+ * GoRecell product id as the step-flow catalogue allows, and write the new
+ * mappings into settings. Cheap (one HTTP GET + a small transaction), so
+ * safe to run daily. Pass {"dryRun": true} to see what would land without
+ * touching the database. The response's `stillUnmapped` and
+ * `unmappedExamples` are what the admin page reads when the Pricing
+ * freshness coverage number refuses to climb.
+ */
+cronRouter.post("/map-gorecell", async (req, res) => {
+  try {
+    const result = await resolveGorecellProductMap({
+      dryRun: req.body?.dryRun === true,
+    });
+    res.json(result);
+  } catch (e) {
+    res.status(500).json({ error: e instanceof Error ? e.message : String(e) });
+  }
+});
+
+/**
+ * POST /api/cron/daily — the externally-scheduled daily touch. Does the
+ * cheap safety-net work: refresh mappings, then a quick competitor scrape
+ * so stale sources don't sit a week. The long GoRecell catalogue sync
+ * stays on the weekly schedule to avoid hammering their site.
+ */
+cronRouter.post("/daily", async (_req, res) => {
+  const started = Date.now();
+  const out: Record<string, unknown> = { ok: true };
+  try {
+    out.map = await resolveGorecellProductMap();
+  } catch (e) {
+    out.map = { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+  try {
+    const devices = loadTargetsFromConfig();
+    const providers = loadProviders();
+    const known = loadKnownProductIds();
+    out.scrape = await runScraperPipeline(devices, {
+      providers,
+      dualMode: false,
+      knownProductIds: known.size > 0 ? known : undefined,
+      timeoutMs: 180_000,
+    });
+  } catch (e) {
+    out.scrape = { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+  out.durationMs = Date.now() - started;
+  res.json(out);
 });
 
 /** POST /api/cron/weekly — full weekly refresh (catalog + competitor targets) */
