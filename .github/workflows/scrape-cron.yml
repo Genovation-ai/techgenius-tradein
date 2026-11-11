@@ -97,7 +97,8 @@ jobs:
           try_endpoint() {
             local endpoint="$1"
             local url="${API_URL%/}/api/cron/${endpoint}"
-            echo "POST $url"
+            # Log to stderr so command substitution captures only the code.
+            echo "POST $url" >&2
             # curl without --fail-with-body: we want the body AND the status
             # so the step can decide whether to fall back.
             local code
@@ -112,10 +113,12 @@ jobs:
                    -H "content-type: application/json" \
                    --data '{}'
             )
-            echo "HTTP $code"
-            echo "--- response ---"
-            cat response.json || true
-            echo
+            {
+              echo "HTTP $code"
+              echo "--- response ---"
+              cat response.json || true
+              echo
+            } >&2
             printf '%s' "$code"
           }
 
