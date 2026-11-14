@@ -236,6 +236,21 @@ export function computeServerQuote(input: QuoteInput): QuoteResult | null {
 
   db.close();
 
+  // Never pay out more than the competitor we beat against for the same grade.
+  //
+  // resolveFrontendBasePrice already applied beat% to produce basePrice, but the
+  // boosters above (price_adjustments, Unlocked +4%, battery, promo, store-credit
+  // +5%) stack multiplicatively on top of that. In the common unlocked +
+  // store-credit path alone, gorecell × 0.98 × 1.04 × 1.05 lands ~7% ABOVE the
+  // competitor's own quote for that grade — and any enabled price_adjustments
+  // row makes it worse. That breaks the "beat by 2%" promise the pricing config
+  // encodes. Clamping the final number to the raw competitor reference keeps
+  // boosters useful (they lift a worse grade back toward parity) without ever
+  // crossing the line.
+  if (resolved.competitorPrice && resolved.competitorPrice > 0 && price > resolved.competitorPrice) {
+    price = resolved.competitorPrice;
+  }
+
   return {
     quotedPrice: Math.max(1, Math.round(price)),
     basePrice: resolved.basePrice,
