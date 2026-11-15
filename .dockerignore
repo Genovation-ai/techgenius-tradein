@@ -1,0 +1,16 @@
+# Keep the build context small and avoid shipping local artifacts.
+node_modules
+**/node_modules
+**/dist
+**/build
+**/.next
+.git
+.github
+*.log
+.env
+.env.*
+!.env.example
+coverage
+**/.vitest-cache
+.remember
+.nixpacks
