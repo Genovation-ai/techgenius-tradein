@@ -8,9 +8,13 @@
 providers = ["node", "python"]
 
 [phases.setup]
-# Python + a system chromium kept so Playwright can reuse it if the headless
-# shell download ever fails, and pip for installing scrapling.
-nixPkgs = ["nodejs_20", "python311", "python311Packages.pip"]
+# Python (ships pip) plus Node. Nixpacks resolves `python3` to the current
+# nixpkgs channel default, which keeps us off a pinned 3.11 that stopped
+# building on cache.nixos.org and started returning exit 100 at the
+# `nix-env -if` step. The old `python311Packages.pip` line was redundant —
+# pip is already inside `python311` — and the extra derivation was what
+# triggered the collision during environment aggregation.
+nixPkgs = ["nodejs_20", "python3"]
 
 [phases.install]
 # Node install happens via the default npm phase; add the python side on top.
