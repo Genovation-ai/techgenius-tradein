@@ -128,7 +128,14 @@ export function setFrontendPricingConfig(input: {
   if (input.source) stmt.run("frontend_price_source", input.source);
   if (input.mode) stmt.run("frontend_price_mode", input.mode);
   if (input.beatPercent != null) {
-    stmt.run("frontend_beat_percent", String(Math.max(0, Math.min(25, input.beatPercent))));
+    // A caller handing us Number("abc") = NaN used to be written as the
+    // literal string "NaN", which read back as the 2% default and silently
+    // shifted every quote. Reject non-finite inputs so a bad PUT stays
+    // visible at the write, not three days later in a quote audit.
+    const beat = Number(input.beatPercent);
+    if (Number.isFinite(beat)) {
+      stmt.run("frontend_beat_percent", String(Math.max(0, Math.min(25, beat))));
+    }
   }
   db.close();
 }

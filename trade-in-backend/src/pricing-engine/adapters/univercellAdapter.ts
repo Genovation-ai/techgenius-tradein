@@ -3,7 +3,7 @@ import { sanitizeScrapedPrice } from "../validate.js";
 import { capacitiesMatch, normalizeCapacity } from "../deviceMatch.js";
 
 const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
 /** Maps UniverCell sell-page grades → our competitor conditions. */
 const GRADE_MAP: Record<string, ScrapedPrice["condition"]> = {
@@ -29,36 +29,58 @@ function slugify(model: string): string {
     .replace(/^-|-$/g, "");
 }
 
-/** Extract sydCapacityPrices JSON array from Next.js RSC HTML. */
-export function parseSellPage(html: string): CapacityRow[] {
-  const idx = html.indexOf("sydCapacityPrices");
-  if (idx < 0) return [];
-  const start = html.indexOf("[", idx);
-  if (start < 0) return [];
+/**
+ * Extract the capacity×condition table from the Next.js RSC payload.
+ *
+ * UniverCell has shipped this under at least two names: the original
+ * `sydCapacityPrices` key and, after one app-router upgrade, a renamed
+ * `capacityPrices` on the same shape. The parser tries each, and because
+ * the key may appear more than once in a page (server + hydration copies),
+ * returns the first successful decode so a stray empty array near the top
+ * can't win over the real data.
+ */
+const CAPACITY_KEYS = ["sydCapacityPrices", "capacityPrices", "capacity_prices"] as const;
 
-  // Balanced-bracket scan so we don't truncate on nested objects / early `],`
-  let depth = 0;
-  let end = -1;
-  for (let i = start; i < html.length; i++) {
-    const ch = html[i];
-    if (ch === "[") depth += 1;
-    else if (ch === "]") {
-      depth -= 1;
-      if (depth === 0) {
-        end = i;
-        break;
+export function parseSellPage(html: string): CapacityRow[] {
+  for (const key of CAPACITY_KEYS) {
+    let from = 0;
+    while (from < html.length) {
+      const idx = html.indexOf(key, from);
+      if (idx < 0) break;
+      const start = html.indexOf("[", idx);
+      if (start < 0) break;
+
+      // Simple bracket counting: the RSC payload wraps every structural
+      // character in a JS string and escapes its quotes, so no bare `]` or
+      // `[` appears inside a value. Attempting string-aware scanning here
+      // would never leave the string (every `"` is `\"`) and the counter
+      // would run off the end.
+      let depth = 0;
+      let end = -1;
+      for (let i = start; i < html.length; i++) {
+        const ch = html[i];
+        if (ch === "[") depth += 1;
+        else if (ch === "]") {
+          depth -= 1;
+          if (depth === 0) {
+            end = i;
+            break;
+          }
+        }
       }
+      if (end < 0) break;
+
+      const raw = html.slice(start, end + 1).replace(/\\"/g, '"');
+      try {
+        const parsed = JSON.parse(raw) as CapacityRow[];
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        /* try the next occurrence or key */
+      }
+      from = end + 1;
     }
   }
-  if (end < 0) return [];
-
-  const raw = html.slice(start, end + 1).replace(/\\"/g, '"');
-  try {
-    const parsed = JSON.parse(raw) as CapacityRow[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  return [];
 }
 
 function findCapacityRow(capacities: CapacityRow[], variant: string): CapacityRow | null {

@@ -204,11 +204,20 @@ export function computeServerQuote(input: QuoteInput): QuoteResult | null {
 
   if (input.carrier === "Unlocked") price *= 1.04;
 
-  if (input.batteryHealth != null && Number.isFinite(input.batteryHealth)) {
-    const bh = Number(input.batteryHealth);
-    if (bh < 80) price *= 0.88;
-    else if (bh < 85) price *= 0.94;
-    else if (bh < 90) price *= 0.98;
+  if (input.batteryHealth != null) {
+    // Coerce first, then check — the widget's JSON sometimes sends the
+    // percentage as a string ("82"), and `Number.isFinite("82")` is false,
+    // so the earlier `Number.isFinite(input.batteryHealth)` gate silently
+    // skipped the discount for any string-encoded reading. The route
+    // signature is typed as `number | null`, but the type contract isn't
+    // carried into the HTTP boundary — a widget post with a string value
+    // used to slip through and silently neutralize the gate.
+    const bh = Number(input.batteryHealth as unknown as number | string);
+    if (Number.isFinite(bh)) {
+      if (bh < 80) price *= 0.88;
+      else if (bh < 85) price *= 0.94;
+      else if (bh < 90) price *= 0.98;
+    }
   }
 
   if (input.promoCode) {

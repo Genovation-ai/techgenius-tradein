@@ -23,16 +23,19 @@ import {
 } from "./competitorPricing.js";
 
 const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const STEP_FLOW = "https://gorecell.ca/step-flow/";
 const PRODUCT_BASE = "https://gorecell.ca/product/";
 
+// Mirrors the adapter's broadened map — synonyms GoRecell's step-flow theme
+// has shipped at least once. Keeping them in both places means a single
+// theme rebuild doesn't take down both scrape paths.
 const COND_MAP: Array<{ label: RegExp; condition: CompetitorCondition }> = [
-  { label: /^like\s*new$/i, condition: "excellent" },
-  { label: /^good$/i, condition: "good" },
-  { label: /^fair$/i, condition: "fair" },
-  { label: /^cracked/i, condition: "cracked" },
-  { label: /^defective$/i, condition: "broken" },
+  { label: /^(like\s*new|mint|pristine|new)$/i, condition: "excellent" },
+  { label: /^(good|great|very\s*good)$/i, condition: "good" },
+  { label: /^(fair|average|decent|okay)$/i, condition: "fair" },
+  { label: /^(cracked|damaged|issues?|screen\s*cracked)/i, condition: "cracked" },
+  { label: /^(defective|broken|non[-\s]?working|dead|not\s*working)$/i, condition: "broken" },
 ];
 
 interface StepProduct {
@@ -176,7 +179,13 @@ function parseBasePrice(html: string): number {
   const baseMatch =
     html.match(/class="[^"]*product-price[^"]*"[^>]*data-price="([^"]*)"/i) ||
     html.match(/data-price="([^"]*)"[^>]*class="[^"]*product-price/i);
-  return baseMatch ? Number(baseMatch[1]) || 0 : 0;
+  if (!baseMatch) return 0;
+  const n = Number(baseMatch[1]);
+  // Negative or non-finite base prices come up when the theme ships a broken
+  // template; the percent branch of computeQueryFlowPrice inverts on a
+  // negative seed, so silently coerce to 0 and let the storage fixed price
+  // drive the math.
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 function brandFromDevice(brandId: string | null, name: string): string {

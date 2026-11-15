@@ -3,7 +3,7 @@ import { sanitizeScrapedPrice } from "../validate.js";
 import { capacitiesMatch } from "../deviceMatch.js";
 
 const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const STEP_FLOW = "https://gorecell.ca/step-flow/";
 const PRODUCT_BASE = "https://gorecell.ca/product/";
 
@@ -37,12 +37,18 @@ interface QueryQuestion {
 
 type QueryData = Record<string, QueryQuestion>;
 
+// Keep the primary GoRecell labels first, then accept the common synonyms the
+// step-flow picker has shipped at least once (mint, pristine, damaged,
+// non-working, dead). Each tier matches the first regex to hit; the `used`
+// set in mapConditionRules keeps a secondary label from overwriting the real
+// one, so a page that still says "Defective" but also carries a "Broken" tier
+// takes "Defective" and ignores the duplicate.
 const COND_MAP: Array<{ label: RegExp; condition: ScrapedPrice["condition"] }> = [
-  { label: /^like\s*new$/i, condition: "excellent" },
-  { label: /^good$/i, condition: "good" },
-  { label: /^fair$/i, condition: "fair" },
-  { label: /^cracked/i, condition: "cracked" },
-  { label: /^defective$/i, condition: "broken" },
+  { label: /^(like\s*new|mint|pristine|new)$/i, condition: "excellent" },
+  { label: /^(good|great|very\s*good)$/i, condition: "good" },
+  { label: /^(fair|average|decent|okay)$/i, condition: "fair" },
+  { label: /^(cracked|damaged|issues?|screen\s*cracked)/i, condition: "cracked" },
+  { label: /^(defective|broken|non[-\s]?working|dead|not\s*working)$/i, condition: "broken" },
 ];
 
 function slugifyModel(model: string): string {
@@ -57,20 +63,76 @@ function productUrlFromModel(model: string): string {
   return `${PRODUCT_BASE}${slugifyModel(model)}/`;
 }
 
-/** Parse `var query_data = JSON.parse('...')` from product HTML. */
+/**
+ * Parse the wc-query-flow configuration out of the product page.
+ *
+ * The plugin has shipped at least three ways of writing this: the original
+ * `var query_data = JSON.parse('…')` on a single-quoted escaped string, a
+ * double-quoted variant, and a plain `let query_data = { … };` literal. The
+ * adapter was tied to the first spelling, so every GoRecell theme rebuild
+ * that touched the inline script silently zeroed the scrape. The parser now
+ * tries each shape in order and returns the first that yields a valid object.
+ */
 export function parseQueryData(html: string): QueryData | null {
-  const m = html.match(/var\s+query_data\s*=\s*JSON\.parse\(\s*'((?:\\'|[^'])*)'\s*\)/);
-  if (!m?.[1]) return null;
-  try {
-    // HTML embeds JSON inside a single-quoted JS string; quotes appear as \"
-    const restored = m[1]
+  // 1. The historical form — JSON.parse of a single-quoted escaped string.
+  const quoted =
+    html.match(/(?:var|let|const)\s+query_data\s*=\s*JSON\.parse\(\s*'((?:\\'|[^'])*)'\s*\)/) ||
+    html.match(/(?:var|let|const)\s+query_data\s*=\s*JSON\.parse\(\s*"((?:\\"|[^"])*)"\s*\)/);
+  if (quoted?.[1]) {
+    const restored = quoted[1]
       .replace(/\\'/g, "'")
       .replace(/\\\//g, "/")
       .replace(/\\"/g, '"');
-    return JSON.parse(restored) as QueryData;
-  } catch {
-    return null;
+    try {
+      const data = JSON.parse(restored) as QueryData;
+      if (data && typeof data === "object") return data;
+    } catch {
+      /* fall through to literal form */
+    }
   }
+
+  // 2. Inline object literal: `var query_data = { ... };`
+  // Match the first balanced `{...}` after the assignment so trailing script
+  // code can't swallow the capture.
+  const literalStart = html.search(/(?:var|let|const)\s+query_data\s*=\s*\{/);
+  if (literalStart >= 0) {
+    const braceStart = html.indexOf("{", literalStart);
+    let depth = 0;
+    let inStr: string | null = null;
+    let escape = false;
+    for (let i = braceStart; i < html.length; i++) {
+      const ch = html[i];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (inStr) {
+        if (ch === "\\") escape = true;
+        else if (ch === inStr) inStr = null;
+        continue;
+      }
+      if (ch === "'" || ch === '"') {
+        inStr = ch;
+        continue;
+      }
+      if (ch === "{") depth += 1;
+      else if (ch === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          const raw = html.slice(braceStart, i + 1);
+          try {
+            const data = JSON.parse(raw) as QueryData;
+            if (data && typeof data === "object") return data;
+          } catch {
+            /* literal uses JS, not JSON — bail rather than ship a wrong parse */
+          }
+          break;
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 function findStorageQuestion(data: QueryData): QueryQuestion | null {
@@ -103,9 +165,19 @@ function findStorageRule(q: QueryQuestion, variant: string): QueryRule | null {
 
 /**
  * Reproduce wc-query-flow price math for one storage + one condition selection.
+ *
+ * `pageBasePrice` is parsed out of the product page's `data-price` attribute;
+ * that attribute has been seen as blank, as `"0"`, and, after one broken theme
+ * push, as a negative number. A negative base silently flips the condition
+ * percent into an ADD rather than a subtract — a "−40%" cracked tier then
+ * computes as flawless × 1.4 instead of flawless × 0.6, and the sync writes
+ * those inflated numbers as if they were the live quote. Clamping to ≥ 0 and
+ * dropping non-finite inputs matches the plugin's own JS (which coerces with
+ * `Number(…) || 0`) and keeps that whole class of theme-break off the catalog.
  */
 export function computeQueryFlowPrice(storage: QueryRule, condition: QueryRule, pageBasePrice = 0): number {
-  let basePrice = Number(pageBasePrice) || 0;
+  const seed = Number(pageBasePrice);
+  let basePrice = Number.isFinite(seed) && seed > 0 ? seed : 0;
   let calcPrice = 0;
 
   for (const queryobj of [storage, condition]) {
@@ -115,11 +187,13 @@ export function computeQueryFlowPrice(storage: QueryRule, condition: QueryRule, 
       calcPrice += Number.isFinite(price) ? price : 0;
     } else {
       // percent — mirrors wc-query-flow/assets/js/publics/main.js
-      if (basePrice === 0) basePrice = calcPrice;
+      if (basePrice === 0) basePrice = calcPrice > 0 ? calcPrice : 0;
+      if (!Number.isFinite(price) || basePrice === 0) continue;
       const pct = Number(Number(price).toFixed(3));
-      calcPrice += Number((Number(basePrice) / 100) * pct);
+      calcPrice += (basePrice / 100) * pct;
     }
   }
+  if (!Number.isFinite(calcPrice) || calcPrice <= 0) return 0;
   return Math.floor(calcPrice);
 }
 
@@ -218,7 +292,8 @@ export function createGorecellStepFlowAdapter(opts?: { name?: string }): Provide
             }
             const baseMatch = html.match(/class="[^"]*product-price[^"]*"[^>]*data-price="([^"]*)"/i)
               || html.match(/data-price="([^"]*)"[^>]*class="[^"]*product-price/i);
-            const basePrice = baseMatch ? Number(baseMatch[1]) || 0 : 0;
+            const parsedBase = baseMatch ? Number(baseMatch[1]) : 0;
+            const basePrice = Number.isFinite(parsedBase) && parsedBase > 0 ? parsedBase : 0;
             cached = { data, basePrice };
             pageCache.set(url, cached);
           }

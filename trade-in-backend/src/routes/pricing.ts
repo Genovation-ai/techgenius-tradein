@@ -232,10 +232,20 @@ pricingRouter.put("/frontend-source", (req, res) => {
   if (mode && mode !== "match" && mode !== "beat") {
     return res.status(400).json({ error: "mode must be match or beat" });
   }
+  let beatPercent: number | undefined;
+  if (beat_percent != null && beat_percent !== "") {
+    const parsed = Number(beat_percent);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 25) {
+      return res
+        .status(400)
+        .json({ error: "beat_percent must be a finite number between 0 and 25" });
+    }
+    beatPercent = parsed;
+  }
   setFrontendPricingConfig({
     source: source as FrontendPriceSource | undefined,
     mode: mode as FrontendPriceMode | undefined,
-    beatPercent: beat_percent != null ? Number(beat_percent) : undefined,
+    beatPercent,
   });
   res.json({ ok: true, ...getFrontendPricingConfig() });
 });

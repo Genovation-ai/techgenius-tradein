@@ -3,7 +3,7 @@ import { sanitizeScrapedPrice } from "../validate.js";
 import { pickBestTitleMatch, sleep } from "../deviceMatch.js";
 
 const UA =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const SBE_BASE = "https://ws1-bell.sbeglobalcare.com/gc-ws-connect-1.9/rest/gcWsConnect/";
 const TRADE_IN_URL = "https://www.bell.ca/Mobility/Trade-in-program";
 
