@@ -8,13 +8,14 @@
 providers = ["node", "python"]
 
 [phases.setup]
-# Python (ships pip) plus Node. Nixpacks resolves `python3` to the current
-# nixpkgs channel default, which keeps us off a pinned 3.11 that stopped
-# building on cache.nixos.org and started returning exit 100 at the
-# `nix-env -if` step. The old `python311Packages.pip` line was redundant —
-# pip is already inside `python311` — and the extra derivation was what
-# triggered the collision during environment aggregation.
-nixPkgs = ["nodejs_20", "python3"]
+# The `python` provider already brings a Python derivation (with pip) into
+# the environment, so we only add Node here. Listing `python3` as an extra
+# nixPkg was the 2nd failure cause: Nixpacks' provider-default python3 and
+# the explicit python3 both ship `lib/pkgconfig/python3-embed.pc`, and Nix
+# refuses to merge environments with the same file from two store paths.
+# The first failure was the same collision between python311 and
+# python311Packages.pip — pip is inside python311 already.
+nixPkgs = ["nodejs_20"]
 
 [phases.install]
 # Node install happens via the default npm phase; add the python side on top.
