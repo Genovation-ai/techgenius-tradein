@@ -7,11 +7,28 @@ import { nanoid } from "nanoid";
 import { notifyOfferStatusChange, recordOfferNotification } from "../services/notifications.js";
 import { ensureInvoiceForCompletedOffer } from "./invoices.js";
 import { requireCapability } from "../middleware/auth.js";
-import { orgFilter, ownsRow } from "../middleware/orgScope.js";
+import { orgFilter, ownsOffer, ownsRow } from "../middleware/orgScope.js";
+import { asyncRoute } from "../middleware/asyncRoute.js";
 import { computeServerQuote } from "../services/quoteEngine.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 
 export const offersRouter = Router();
+
+// Every /:id route on an offer — status, edits, regrade, labels, history —
+// answers 404 to a caller from another tenant, the same as an unknown id.
+// Guarding here instead of per handler means a new /:id route is covered by
+// default. Leads have their own table and ids, so they are left to their route.
+offersRouter.param("id", (req, res, next, id: string) => {
+  if (req.path.startsWith("/leads/")) return next();
+  const db = getDb();
+  try {
+    const exists = db.prepare("SELECT 1 FROM offers WHERE id = ?").get(id);
+    if (exists && !ownsOffer(db, req, id)) return res.status(404).json({ error: "Not found" });
+  } finally {
+    db.close();
+  }
+  next();
+});
 
 const ALLOWED_STATUSES = new Set([
   "active_lead",
@@ -166,7 +183,7 @@ offersRouter.get("/:id", requireCapability("offers:read"), (req, res) => {
 });
 
 /** Staff hand-off: create walk-in / drop-off offer from admin. */
-offersRouter.post("/handoff", requireCapability("offers:handoff"), async (req, res) => {
+offersRouter.post("/handoff", requireCapability("offers:handoff"), asyncRoute(async (req, res) => {
   const contact = req.body?.contact || {};
   const itemsIn = (req.body?.items || []) as Array<{
     device_id?: string;
@@ -289,7 +306,7 @@ offersRouter.post("/handoff", requireCapability("offers:handoff"), async (req, r
   });
 
   res.status(201).json({ id, total_value: total, status: "active_lead" });
-});
+}));
 
 offersRouter.post("/", requireCapability("offers:write"), (req, res) => {
   const db = getDb();
@@ -390,11 +407,14 @@ offersRouter.patch("/:id/status", requireCapability("offers:write"), (req, res) 
         condition_grade?: string;
         quoted_price: number;
       }>;
-      const storeRow = db.prepare("SELECT store_id FROM offers WHERE id = ?").get(req.params.id) as {
+      const storeRow = db.prepare("SELECT store_id, org_id FROM offers WHERE id = ?").get(req.params.id) as {
         store_id?: string;
+        org_id?: string | null;
       };
+      // org_id was missing here, so every device bought through a completed
+      // offer was stored tenantless and never showed on the shop's Inventory.
       const insert = db.prepare(
-        "INSERT INTO inventory (id, offer_item_id, device_name, imei, condition_grade, cost, status, store_id) VALUES (?, ?, ?, ?, ?, ?, 'available', ?)",
+        "INSERT INTO inventory (id, offer_item_id, device_name, imei, condition_grade, cost, status, store_id, org_id) VALUES (?, ?, ?, ?, ?, ?, 'available', ?, ?)",
       );
       for (const item of items) {
         insert.run(
@@ -405,6 +425,7 @@ offersRouter.patch("/:id/status", requireCapability("offers:write"), (req, res) 
           item.condition_grade || null,
           item.quoted_price,
           storeRow?.store_id || "tg-burlington",
+          storeRow?.org_id || null,
         );
         inventoryCreated += 1;
       }

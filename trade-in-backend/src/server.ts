@@ -29,6 +29,7 @@ import { uploadsRouter } from "./routes/uploads.js";
 import { integrationsRouter } from "./routes/integrations.js";
 import { cronRouter, pricingEngineRouter } from "./routes/cron.js";
 import { requireCapability } from "./middleware/auth.js";
+import { homeOrgForWrites, requireHomeOrg } from "./middleware/orgScope.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { geoRouter } from "./routes/geo.js";
 import { startSubscriptionLifecycle } from "./services/subscriptionLifecycle.js";
@@ -327,8 +328,15 @@ app.use("/api/auth", authLimiter, authRouter);
 app.use("/api/geo", geoRouter);
 app.use("/api/saas", saasRouter);
 
+// Quote previews are reads in effect; every other write on the shared pricing
+// tables belongs to the home shop and needs pricing:write.
+const pricingWriteGuard: express.RequestHandler = (req, res, next) => {
+  if (req.method === "GET" || req.path === "/quote") return next();
+  requireCapability("pricing:write")(req, res, () => requireHomeOrg(req, res, next));
+};
+
 // Pricing engine (model quotes + baselines) — API key protected
-app.use("/api/pricing-engine", apiKeyAuth, pricingEngineRouter);
+app.use("/api/pricing-engine", apiKeyAuth, pricingWriteGuard, pricingEngineRouter);
 
 // Cron / scheduled jobs — constant-time secret auth, long timeout
 app.use("/api/cron", cronRouter);
@@ -339,10 +347,10 @@ app.use("/api/repair", repairPublicRouter);
 app.use("/api/repairs", apiKeyAuth, repairsRouter);
 app.use("/api/customers", apiKeyAuth, customersRouter);
 app.use("/api/inventory", apiKeyAuth, inventoryRouter);
-app.use("/api/pricing", apiKeyAuth, requireCapability("pricing:read"), pricingRouter);
-app.use("/api/settings", apiKeyAuth, settingsRouter);
+app.use("/api/pricing", apiKeyAuth, requireCapability("pricing:read"), pricingWriteGuard, pricingRouter);
+app.use("/api/settings", apiKeyAuth, homeOrgForWrites, settingsRouter);
 app.use("/api/dashboard", apiKeyAuth, requireCapability("dashboard:read"), dashboardRouter);
-app.use("/api/scraper", apiKeyAuth, requireCapability("scraper:run"), scraperRouter);
+app.use("/api/scraper", apiKeyAuth, requireCapability("scraper:run"), requireHomeOrg, scraperRouter);
 app.use("/api/reports", apiKeyAuth, requireCapability("reports:read"), reportsRouter);
 app.use("/api/notifications", apiKeyAuth, requireCapability("notifications:read"), notificationsRouter);
 app.use("/api/search", apiKeyAuth, requireCapability("search:read"), searchRouter);

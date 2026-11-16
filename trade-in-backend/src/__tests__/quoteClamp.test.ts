@@ -141,4 +141,17 @@ describe("the final quote never crosses the competitor it is beating", () => {
     });
     expect(q!.quotedPrice).toBeLessThanOrEqual(460);
   });
+
+  it("a non-numeric adjustment row cannot turn every quote into null", async () => {
+    const db = new Database(process.env.TG_DB_PATH!);
+    db.prepare(
+      `INSERT INTO price_adjustments (scope, scope_id, adjust_percent, enabled) VALUES ('global', NULL, 'abc', 1)`,
+    ).run();
+    db.close();
+
+    const mod = await load();
+    const q = mod.computeServerQuote({ deviceId: "iphone-15", storage: "128GB", conditionGrade: "flawless" });
+    expect(Number.isFinite(q!.quotedPrice)).toBe(true);
+    expect(q!.quotedPrice).toBeGreaterThan(0);
+  });
 });

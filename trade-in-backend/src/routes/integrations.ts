@@ -4,7 +4,8 @@ import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 import { emailStatusSummary, flushBlockedEmails } from "../services/email.js";
-import { orgIdOf } from "../middleware/orgScope.js";
+import { orgIdOf, ownsRow } from "../middleware/orgScope.js";
+import { asyncRoute } from "../middleware/asyncRoute.js";
 import { emailIdentityFor } from "../services/emailIdentity.js";
 
 export const integrationsRouter = Router();
@@ -37,7 +38,7 @@ integrationsRouter.get("/status", requireCapability("settings:read"), (req, res)
   });
 });
 
-integrationsRouter.post("/crm/dispatch", requireCapability("crm:dispatch"), async (req, res) => {
+integrationsRouter.post("/crm/dispatch", requireCapability("crm:dispatch"), asyncRoute(async (req, res) => {
   const offerId = String(req.body?.offer_id || "");
   if (!offerId) return res.status(400).json({ error: "offer_id required" });
   const db = getDb();
@@ -49,7 +50,7 @@ integrationsRouter.post("/crm/dispatch", requireCapability("crm:dispatch"), asyn
     .get(offerId) as Record<string, unknown> | undefined;
   const items = db.prepare("SELECT * FROM offer_items WHERE offer_id = ?").all(offerId);
   db.close();
-  if (!offer) return res.status(404).json({ error: "Offer not found" });
+  if (!offer || !ownsRow(req, offer)) return res.status(404).json({ error: "Offer not found" });
 
   const result = await dispatchCrmWebhook(offerId, {
     type: req.body?.type || "offer.sync",
@@ -58,7 +59,7 @@ integrationsRouter.post("/crm/dispatch", requireCapability("crm:dispatch"), asyn
     source: "manual_dispatch",
   });
   res.json(result);
-});
+}));
 
 integrationsRouter.get("/crm/outbox", requireCapability("crm:dispatch"), (_req, res) => {
   const db = getDb();
@@ -87,7 +88,7 @@ integrationsRouter.get("/crm/outbox", requireCapability("crm:dispatch"), (_req, 
  * the shop decides when a stack of late receipts should land in people's
  * inboxes, rather than having them all arrive the moment a key is pasted in.
  */
-integrationsRouter.post("/email/flush", requireCapability("settings:write"), async (req, res) => {
+integrationsRouter.post("/email/flush", requireCapability("settings:write"), asyncRoute(async (req, res) => {
   const limit = Number((req.body as { limit?: number })?.limit ?? 50);
   const result = await flushBlockedEmails({
     orgId: orgIdOf(req),
@@ -95,7 +96,7 @@ integrationsRouter.post("/email/flush", requireCapability("settings:write"), asy
   });
   if (result.skipped) return res.status(409).json({ error: result.skipped, ...result });
   res.json(result);
-});
+}));
 
 /** What snapshots exist, newest first. */
 integrationsRouter.get("/backups", requireCapability("settings:read"), (_req, res) => {

@@ -3,9 +3,22 @@ import { getDb } from "../db/migrate.js";
 import { logActivityWith, type Actor } from "../services/activityLog.js";
 import type { Request } from "express";
 import { requireCapability } from "../middleware/auth.js";
+import { ownsOffer } from "../middleware/orgScope.js";
 import { notifyOfferStatusChange, recordOfferNotification } from "../services/notifications.js";
 
 export const payoutsRouter = Router();
+
+// Payout changes move money; a tenant can only touch its own offers.
+payoutsRouter.param("offerId", (req, res, next, offerId: string) => {
+  const db = getDb();
+  try {
+    const exists = db.prepare("SELECT 1 FROM offers WHERE id = ?").get(offerId);
+    if (!exists || !ownsOffer(db, req, offerId)) return res.status(404).json({ error: "Offer not found" });
+  } finally {
+    db.close();
+  }
+  next();
+});
 
 const PAYOUT_STATUSES = new Set(["pending", "ready", "processing", "paid", "failed", "cancelled"]);
 

@@ -5,8 +5,35 @@ import type { Request } from "express";
 import { nanoid } from "nanoid";
 import { requireCapability } from "../middleware/auth.js";
 import { recordOfferNotification } from "../services/notifications.js";
+import { ownsOffer, ownsRow } from "../middleware/orgScope.js";
+import { DEFAULT_ORG_ID } from "../services/tenancy.js";
 
 export const inventoryRouter = Router();
+
+// Edits, sales and history on one item are limited to the item's own tenant.
+inventoryRouter.param("id", (req, res, next, id: string) => {
+  const db = getDb();
+  try {
+    const row = db.prepare("SELECT org_id FROM inventory WHERE id = ?").get(id) as
+      | { org_id: string | null }
+      | undefined;
+    if (row && !ownsRow(req, row)) return res.status(404).json({ error: "Not found" });
+  } finally {
+    db.close();
+  }
+  next();
+});
+
+inventoryRouter.param("offerId", (req, res, next, offerId: string) => {
+  const db = getDb();
+  try {
+    const exists = db.prepare("SELECT 1 FROM offers WHERE id = ?").get(offerId);
+    if (!exists || !ownsOffer(db, req, offerId)) return res.status(404).json({ error: "Offer not found" });
+  } finally {
+    db.close();
+  }
+  next();
+});
 
 inventoryRouter.get("/", requireCapability("inventory:read"), (req, res) => {
   const db = getDb();
@@ -42,7 +69,7 @@ inventoryRouter.post("/", requireCapability("inventory:write"), (req, res) => {
   const { offer_item_id, device_name, imei, condition_grade, cost, sell_price, store_id } = req.body;
   const id = nanoid(12);
   db.prepare(
-    "INSERT INTO inventory (id, offer_item_id, device_name, imei, condition_grade, cost, sell_price, store_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+    "INSERT INTO inventory (id, offer_item_id, device_name, imei, condition_grade, cost, sell_price, store_id, org_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
   ).run(
     id,
     offer_item_id || null,
@@ -52,6 +79,7 @@ inventoryRouter.post("/", requireCapability("inventory:write"), (req, res) => {
     cost || 0,
     sell_price || null,
     store_id || "tg-burlington",
+    req.tgAuth?.orgId || DEFAULT_ORG_ID,
   );
   db.close();
   res.status(201).json({ id });
@@ -216,12 +244,12 @@ inventoryRouter.post("/from-offer/:offerId", requireCapability("inventory:write"
     condition_grade?: string;
     quoted_price: number;
   }>;
-  const storeRow = db.prepare("SELECT store_id FROM offers WHERE id = ?").get(req.params.offerId) as
-    | { store_id?: string }
+  const storeRow = db.prepare("SELECT store_id, org_id FROM offers WHERE id = ?").get(req.params.offerId) as
+    | { store_id?: string; org_id?: string | null }
     | undefined;
 
   const insert = db.prepare(
-    "INSERT INTO inventory (id, offer_item_id, device_name, imei, condition_grade, cost, status, store_id) VALUES (?, ?, ?, ?, ?, ?, 'available', ?)",
+    "INSERT INTO inventory (id, offer_item_id, device_name, imei, condition_grade, cost, status, store_id, org_id) VALUES (?, ?, ?, ?, ?, ?, 'available', ?, ?)",
   );
   const ids: string[] = [];
   for (const item of items) {
@@ -234,6 +262,7 @@ inventoryRouter.post("/from-offer/:offerId", requireCapability("inventory:write"
       item.condition_grade || null,
       item.quoted_price,
       storeRow?.store_id || "tg-burlington",
+      storeRow?.org_id || null,
     );
     ids.push(id);
   }

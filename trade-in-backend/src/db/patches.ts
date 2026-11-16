@@ -263,6 +263,55 @@ export function applySchemaPatches(db: Database): void {
   dedupeScrapedPrices(db);
   seedGorecellProductMap(db);
   remapOrphanGorecellEntries(db);
+  repairInvoiceTenants(db);
+  repairInventoryTenants(db);
+  disableNonNumericAdjustments(db);
+}
+
+/** Inventory from completed offers was written without org_id; inherit it. */
+function repairInventoryTenants(db: Database): void {
+  const r = db
+    .prepare(
+      `UPDATE inventory SET org_id = (
+         SELECT o.org_id FROM offer_items oi JOIN offers o ON o.id = oi.offer_id
+          WHERE oi.id = inventory.offer_item_id)
+        WHERE org_id IS NULL
+          AND offer_item_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM offer_items oi JOIN offers o ON o.id = oi.offer_id
+                       WHERE oi.id = inventory.offer_item_id AND o.org_id IS NOT NULL)`,
+    )
+    .run();
+  if (r.changes) console.log(`[patch] inventory: set org_id on ${r.changes} row(s)`);
+}
+
+/** Auto-issued invoices were written without org_id; inherit it from the offer. */
+function repairInvoiceTenants(db: Database): void {
+  const r = db
+    .prepare(
+      `UPDATE invoices SET org_id = (SELECT o.org_id FROM offers o WHERE o.id = invoices.offer_id)
+        WHERE org_id IS NULL
+          AND EXISTS (SELECT 1 FROM offers o WHERE o.id = invoices.offer_id AND o.org_id IS NOT NULL)`,
+    )
+    .run();
+  if (r.changes) console.log(`[patch] invoices: set org_id on ${r.changes} row(s)`);
+}
+
+/**
+ * The adjustments endpoint once stored whatever it was sent. A single text
+ * value ("abc", "10%") makes the quote engine multiply by NaN, and every quote
+ * on the site comes back null. Switch such rows off rather than delete them,
+ * so the shop can see what was entered.
+ */
+function disableNonNumericAdjustments(db: Database): void {
+  const r = db
+    .prepare(
+      `UPDATE price_adjustments SET enabled = 0
+        WHERE enabled = 1
+          AND (typeof(adjust_percent) NOT IN ('integer', 'real', 'null')
+               OR typeof(adjust_amount) NOT IN ('integer', 'real', 'null'))`,
+    )
+    .run();
+  if (r.changes) console.log(`[patch] price_adjustments: disabled ${r.changes} non-numeric row(s)`);
 }
 
 /**

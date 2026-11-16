@@ -1,4 +1,6 @@
-import type { Request } from "express";
+import type { NextFunction, Request, Response } from "express";
+import type { Database } from "better-sqlite3";
+import { DEFAULT_ORG_ID } from "../services/tenancy.js";
 
 /**
  * Tenant scoping for raw SQL.
@@ -52,4 +54,35 @@ export function ownsRow(req: Request, row: { org_id?: unknown } | undefined): bo
   if (!orgId) return true; // master key
   const rowOrg = row.org_id == null ? null : String(row.org_id);
   return rowOrg === orgId;
+}
+
+/**
+ * Ownership check for an offer addressed by id. Child records (labels,
+ * invoices, payouts, history) inherit the offer's tenant, so every route that
+ * takes an offer id goes through this before reading or writing.
+ */
+export function ownsOffer(db: Database, req: Request, offerId: string): boolean {
+  const row = db.prepare("SELECT org_id FROM offers WHERE id = ?").get(offerId) as
+    | { org_id: string | null }
+    | undefined;
+  return ownsRow(req, row);
+}
+
+/**
+ * Pricing rules, the price table, shop settings, the catalogue and the
+ * scrapers have no org_id: they belong to the home shop. Free signup hands any
+ * visitor an admin session on their own tenant, and that session carried
+ * pricing:write and settings:write, so a stranger could rewrite the live
+ * pricing rule or the shop's ship-to address. Writes to those shared tables are
+ * reserved for the home org (its staff sessions and the master key).
+ */
+export function requireHomeOrg(req: Request, res: Response, next: NextFunction) {
+  if (req.tgAuth?.orgId === DEFAULT_ORG_ID) return next();
+  return res.status(403).json({ error: "This setting is managed by the platform operator." });
+}
+
+/** requireHomeOrg for anything that is not a read. */
+export function homeOrgForWrites(req: Request, res: Response, next: NextFunction) {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return next();
+  return requireHomeOrg(req, res, next);
 }

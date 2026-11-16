@@ -2,9 +2,44 @@ import { Router } from "express";
 import { nanoid } from "nanoid";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
-import { orgFilter, ownsRow } from "../middleware/orgScope.js";
+import { orgFilter, ownsOffer, ownsRow } from "../middleware/orgScope.js";
 
 export const invoicesRouter = Router();
+
+// Print and PATCH loaded the invoice by id with no tenant check, so another
+// shop could print a customer's name, email and payout, or void the invoice.
+invoicesRouter.param("id", (req, res, next, id: string) => {
+  const db = getDb();
+  try {
+    const row = db.prepare("SELECT org_id FROM invoices WHERE id = ?").get(id) as
+      | { org_id: string | null }
+      | undefined;
+    if (row && !ownsRow(req, row)) return res.status(404).json({ error: "Not found" });
+  } finally {
+    db.close();
+  }
+  next();
+});
+
+invoicesRouter.param("offerId", (req, res, next, offerId: string) => {
+  const db = getDb();
+  try {
+    const exists = db.prepare("SELECT 1 FROM offers WHERE id = ?").get(offerId);
+    if (exists && !ownsOffer(db, req, offerId)) return res.status(404).json({ error: "Offer not found" });
+  } finally {
+    db.close();
+  }
+  next();
+});
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 function buildInvoiceFromOffer(db: ReturnType<typeof getDb>, offerId: string) {
   const offer = db
@@ -89,7 +124,11 @@ invoicesRouter.get("/:id/print", requireCapability("invoices:read"), (req, res) 
     amount: number;
   }>;
   const company = String(row.company_name_setting || "Tech Genius Burlington");
-  const html = `<!doctype html><html><head><meta charset="utf-8"/><title>${row.id}</title>
+  // Names, emails and device names come straight from the public widget, so
+  // everything interpolated below is escaped — unescaped, a "first name" of
+  // <img onerror=…> ran in the staff member's browser when they printed.
+  const e = escapeHtml;
+  const html = `<!doctype html><html><head><meta charset="utf-8"/><title>${e(row.id)}</title>
   <style>
     body{font-family:Georgia,serif;max-width:720px;margin:2rem auto;color:#222}
     h1{font-size:1.4rem;margin:0} .muted{color:#666;font-size:.9rem}
@@ -99,15 +138,15 @@ invoicesRouter.get("/:id/print", requireCapability("invoices:read"), (req, res) 
     @media print{button{display:none}}
   </style></head><body>
   <button onclick="print()">Print</button>
-  <h1>${company}</h1>
-  <p class="muted">Trade-in Invoice ${row.id}<br/>Issued ${row.issued_at} · Status ${row.status}</p>
-  <p>Bill to: ${row.first_name || ""} ${row.last_name || ""}<br/>${row.email || ""} · ${row.phone || ""}</p>
-  <p class="muted">Offer ${row.offer_id} · Store ${row.store_id}</p>
+  <h1>${e(company)}</h1>
+  <p class="muted">Trade-in Invoice ${e(row.id)}<br/>Issued ${e(row.issued_at)} · Status ${e(row.status)}</p>
+  <p>Bill to: ${e(row.first_name)} ${e(row.last_name)}<br/>${e(row.email)} · ${e(row.phone)}</p>
+  <p class="muted">Offer ${e(row.offer_id)} · Store ${e(row.store_id)}</p>
   <table><thead><tr><th>Item</th><th>Amount (CAD)</th></tr></thead><tbody>
-  ${lines.map((l) => `<tr><td>${l.description}</td><td>$${Number(l.amount).toFixed(2)}</td></tr>`).join("")}
+  ${lines.map((l) => `<tr><td>${e(l.description)}</td><td>$${Number(l.amount).toFixed(2)}</td></tr>`).join("")}
   <tr><td class="total">Total payout</td><td class="total">$${Number(row.amount || 0).toFixed(2)}</td></tr>
   </tbody></table>
-  <p class="muted">${row.notes || ""}</p>
+  <p class="muted">${e(row.notes)}</p>
   </body></html>`;
   res.type("html").send(html);
 });
@@ -128,8 +167,8 @@ invoicesRouter.post("/from-offer/:offerId", requireCapability("invoices:write"),
   }
   const id = `INV-${Date.now().toString(36).toUpperCase()}-${nanoid(4).toUpperCase()}`;
   db.prepare(
-    `INSERT INTO invoices (id, offer_id, customer_id, amount, status, line_items_json, notes, store_id)
-     VALUES (?, ?, ?, ?, 'issued', ?, ?, ?)`,
+    `INSERT INTO invoices (id, offer_id, customer_id, amount, status, line_items_json, notes, store_id, org_id)
+     VALUES (?, ?, ?, ?, 'issued', ?, ?, ?, ?)`,
   ).run(
     id,
     req.params.offerId,
@@ -138,15 +177,19 @@ invoicesRouter.post("/from-offer/:offerId", requireCapability("invoices:write"),
     JSON.stringify(built.lineItems),
     req.body?.notes || null,
     built.offer.store_id || "tg-burlington",
+    built.offer.org_id || null,
   );
   db.close();
   res.status(201).json({ id, amount: built.amount, status: "issued" });
 });
 
 invoicesRouter.patch("/:id", requireCapability("invoices:write"), (req, res) => {
-  const db = getDb();
   const status = req.body?.status != null ? String(req.body.status) : null;
-  const notes = req.body?.notes != null ? String(req.body.notes) : null;
+  if (status != null && !["issued", "paid", "void"].includes(status)) {
+    return res.status(400).json({ error: "status must be issued, paid or void" });
+  }
+  const db = getDb();
+  const notes = req.body?.notes != null ? String(req.body.notes).slice(0, 2000) : null;
   db.prepare(
     `UPDATE invoices SET
       status = COALESCE(?, status),
@@ -167,9 +210,12 @@ export function ensureInvoiceForCompletedOffer(db: ReturnType<typeof getDb>, off
   const built = buildInvoiceFromOffer(db, offerId);
   if (!built) return null;
   const id = `INV-${Date.now().toString(36).toUpperCase()}-${nanoid(4).toUpperCase()}`;
+  // org_id was left out here, so every auto-issued invoice was NULL-tenant:
+  // invisible to the shop that issued it and editable by nobody's ownership
+  // check.
   db.prepare(
-    `INSERT INTO invoices (id, offer_id, customer_id, amount, status, line_items_json, store_id)
-     VALUES (?, ?, ?, ?, 'issued', ?, ?)`,
+    `INSERT INTO invoices (id, offer_id, customer_id, amount, status, line_items_json, store_id, org_id)
+     VALUES (?, ?, ?, ?, 'issued', ?, ?, ?)`,
   ).run(
     id,
     offerId,
@@ -177,6 +223,7 @@ export function ensureInvoiceForCompletedOffer(db: ReturnType<typeof getDb>, off
     built.amount,
     JSON.stringify(built.lineItems),
     built.offer.store_id || "tg-burlington",
+    built.offer.org_id || null,
   );
   return id;
 }

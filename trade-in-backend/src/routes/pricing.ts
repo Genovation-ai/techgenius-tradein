@@ -25,10 +25,37 @@ pricingRouter.get("/device/:deviceId", (req, res) => {
   res.json(rows);
 });
 
+const STORE_GRADES = new Set(["flawless", "good", "average", "fair", "defective"]);
+const MAX_PRICE = 20000;
+
+/** One price row from a request body, or the reason it is unusable. */
+function parsePriceRow(p: unknown): { ok: true; row: { device_id: string; storage: string; condition_grade: string; base_price: number; source?: string } } | { ok: false; error: string } {
+  const r = (p || {}) as Record<string, unknown>;
+  const device_id = typeof r.device_id === "string" ? r.device_id.trim() : "";
+  const storage = typeof r.storage === "string" ? r.storage.trim() : "";
+  const condition_grade = typeof r.condition_grade === "string" ? r.condition_grade.trim() : "";
+  const base_price = Number(r.base_price);
+  if (!device_id || !storage) return { ok: false, error: "device_id and storage are required" };
+  if (!STORE_GRADES.has(condition_grade)) {
+    return { ok: false, error: `condition_grade must be one of ${[...STORE_GRADES].join(", ")}` };
+  }
+  // A negative or text price was stored as-is, and the quote engine then paid
+  // out that number (or NaN) to customers.
+  if (r.base_price === "" || r.base_price == null || !Number.isFinite(base_price) || base_price < 0 || base_price > MAX_PRICE) {
+    return { ok: false, error: `base_price must be a number between 0 and ${MAX_PRICE}` };
+  }
+  return {
+    ok: true,
+    row: { device_id, storage, condition_grade, base_price, source: typeof r.source === "string" ? r.source.slice(0, 40) : undefined },
+  };
+}
+
 // Set/update a price point
 pricingRouter.put("/", (req, res) => {
+  const parsed = parsePriceRow(req.body);
+  if (!parsed.ok) return res.status(400).json({ error: parsed.error });
   const db = getDb();
-  const { device_id, storage, condition_grade, base_price, source } = req.body;
+  const { device_id, storage, condition_grade, base_price, source } = parsed.row;
   db.prepare(
     `INSERT INTO prices (device_id, storage, condition_grade, base_price, source, updated_at)
      VALUES (?, ?, ?, ?, ?, datetime('now'))
@@ -41,16 +68,18 @@ pricingRouter.put("/", (req, res) => {
 
 // Bulk set prices (for scraper output)
 pricingRouter.post("/bulk", (req, res) => {
+  const input = (req.body || {}).prices;
+  if (!Array.isArray(input) || input.length === 0) {
+    return res.status(400).json({ error: "prices must be a non-empty array" });
+  }
+  if (input.length > 10000) return res.status(400).json({ error: "At most 10000 prices per request" });
+  const prices: Array<{ device_id: string; storage: string; condition_grade: string; base_price: number; source?: string }> = [];
+  for (let i = 0; i < input.length; i++) {
+    const parsed = parsePriceRow(input[i]);
+    if (!parsed.ok) return res.status(400).json({ error: `prices[${i}]: ${parsed.error}` });
+    prices.push(parsed.row);
+  }
   const db = getDb();
-  const { prices } = req.body as {
-    prices: Array<{
-      device_id: string;
-      storage: string;
-      condition_grade: string;
-      base_price: number;
-      source?: string;
-    }>;
-  };
   const stmt = db.prepare(
     `INSERT INTO prices (device_id, storage, condition_grade, base_price, source, updated_at)
      VALUES (?, ?, ?, ?, ?, datetime('now'))
@@ -77,8 +106,22 @@ pricingRouter.get("/adjustments", (_req, res) => {
 
 // Create/update adjustment
 pricingRouter.post("/adjustments", (req, res) => {
+  const { scope, scope_id, condition_grade } = req.body || {};
+  // Every enabled row multiplies every quote. A text value here turned the
+  // whole site's quotes into null, so only finite, bounded numbers get in.
+  const toNum = (v: unknown) => (v == null || v === "" ? 0 : Number(v));
+  const adjust_percent = toNum(req.body?.adjust_percent);
+  const adjust_amount = toNum(req.body?.adjust_amount);
+  if (!Number.isFinite(adjust_percent) || adjust_percent < -90 || adjust_percent > 100) {
+    return res.status(400).json({ error: "adjust_percent must be a number between -90 and 100" });
+  }
+  if (!Number.isFinite(adjust_amount) || Math.abs(adjust_amount) > 1000) {
+    return res.status(400).json({ error: "adjust_amount must be a number between -1000 and 1000" });
+  }
+  if (condition_grade != null && condition_grade !== "" && !STORE_GRADES.has(String(condition_grade))) {
+    return res.status(400).json({ error: `condition_grade must be one of ${[...STORE_GRADES].join(", ")}` });
+  }
   const db = getDb();
-  const { scope, scope_id, adjust_percent, adjust_amount, condition_grade } = req.body;
   db.prepare(
     `INSERT INTO price_adjustments (scope, scope_id, adjust_percent, adjust_amount, condition_grade)
      VALUES (?, ?, ?, ?, ?)`,

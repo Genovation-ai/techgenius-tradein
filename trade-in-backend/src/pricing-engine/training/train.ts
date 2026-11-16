@@ -165,6 +165,9 @@ function deriveConditionMultipliers(
     excellent: [1],
     good: [],
     fair: [],
+    // The loop below also walks "cracked"; without this key the push threw
+    // and POST /api/cron/train answered 500 on every call.
+    cracked: [],
     broken: [],
   };
 

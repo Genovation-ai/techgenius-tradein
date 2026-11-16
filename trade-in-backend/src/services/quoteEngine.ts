@@ -197,9 +197,13 @@ export function computeServerQuote(input: QuoteInput): QuoteResult | null {
     )
     .all(input.conditionGrade) as Array<{ adjust_percent: number; adjust_amount: number }>;
 
+  // A single text value in this table ("abc", "10%") used to make every quote
+  // on the site NaN, which the API serialised as null. Ignore non-numeric rows.
   for (const adj of adjustments) {
-    price *= 1 + adj.adjust_percent / 100;
-    price += adj.adjust_amount;
+    const pct = Number(adj.adjust_percent);
+    const amt = Number(adj.adjust_amount);
+    if (Number.isFinite(pct)) price *= 1 + pct / 100;
+    if (Number.isFinite(amt)) price += amt;
   }
 
   if (input.carrier === "Unlocked") price *= 1.04;
@@ -232,8 +236,10 @@ export function computeServerQuote(input: QuoteInput): QuoteResult | null {
       | undefined;
     if (promo) {
       // Field name is historical: values are customer offer boosts (+%), not markdowns.
-      price *= 1 + promo.discount_percent / 100;
-      price += promo.discount_amount;
+      const pct = Number(promo.discount_percent);
+      const amt = Number(promo.discount_amount);
+      if (Number.isFinite(pct)) price *= 1 + pct / 100;
+      if (Number.isFinite(amt)) price += amt;
       promoApplied = true;
     }
   }
@@ -259,6 +265,7 @@ export function computeServerQuote(input: QuoteInput): QuoteResult | null {
   if (resolved.competitorPrice && resolved.competitorPrice > 0 && price > resolved.competitorPrice) {
     price = resolved.competitorPrice;
   }
+  if (!Number.isFinite(price)) price = resolved.basePrice;
 
   return {
     quotedPrice: Math.max(1, Math.round(price)),
