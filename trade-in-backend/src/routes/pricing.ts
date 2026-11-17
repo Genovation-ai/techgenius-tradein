@@ -115,11 +115,19 @@ pricingRouter.post("/adjustments", (req, res) => {
   const toNum = (v: unknown) => (v == null || v === "" ? 0 : Number(v));
   const adjust_percent = toNum(req.body?.adjust_percent);
   const adjust_amount = toNum(req.body?.adjust_amount);
-  if (!Number.isFinite(adjust_percent) || adjust_percent < -90 || adjust_percent > 100) {
-    return res.status(400).json({ error: "adjust_percent must be a number between -90 and 100" });
+  // Tight on purpose: these apply to every device at once. A flat +$431 was
+  // entered here once (meant as one device's price) and lifted every quote on
+  // the site to the competitor ceiling.
+  if (!Number.isFinite(adjust_percent) || adjust_percent < -50 || adjust_percent > 25) {
+    return res.status(400).json({ error: "adjust_percent must be a number between -50 and 25" });
   }
-  if (!Number.isFinite(adjust_amount) || Math.abs(adjust_amount) > 1000) {
-    return res.status(400).json({ error: "adjust_amount must be a number between -1000 and 1000" });
+  if (!Number.isFinite(adjust_amount) || Math.abs(adjust_amount) > 100) {
+    return res.status(400).json({
+      error: "adjust_amount must be between -100 and 100. It is added to every quote; to fix one device's price, enter a competitor price for that device instead.",
+    });
+  }
+  if (adjust_percent === 0 && adjust_amount === 0) {
+    return res.status(400).json({ error: "A zero adjustment changes nothing" });
   }
   if (condition_grade != null && condition_grade !== "" && !STORE_GRADES.has(String(condition_grade))) {
     return res.status(400).json({ error: `condition_grade must be one of ${[...STORE_GRADES].join(", ")}` });

@@ -157,13 +157,27 @@ export function PricingPage() {
     e.preventDefault();
     setMessage(null);
     setError(null);
+    const pct = parseFloat(percent) || 0;
+    const amt = parseFloat(amount) || 0;
+    if (pct === 0 && amt === 0) {
+      setError("Enter a percent or an amount — a zero adjustment changes nothing.");
+      return;
+    }
+    // This field is easy to mistake for "set the price": a $431 entered here
+    // was added to every quote on the site. Spell out the effect first.
+    const parts = [pct ? `${pct > 0 ? "+" : ""}${pct}%` : "", amt ? `${amt > 0 ? "+" : "-"}$${Math.abs(amt)}` : ""]
+      .filter(Boolean)
+      .join(" and ");
+    if (!window.confirm(`Change EVERY quote on the site by ${parts}?\n\nThis applies to every device and condition (a $45 phone included). Quotes stay capped at the competitor's price.`)) {
+      return;
+    }
     try {
       await adminFetch("/api/pricing/adjustments", {
         method: "POST",
         body: JSON.stringify({
           scope: "global",
-          adjust_percent: parseFloat(percent) || 0,
-          adjust_amount: parseFloat(amount) || 0,
+          adjust_percent: pct,
+          adjust_amount: amt,
         }),
       });
       setMessage("Adjustment saved");
@@ -371,16 +385,17 @@ export function PricingPage() {
         <form className="admin-pricing-form" onSubmit={(e) => void addAdjustment(e)}>
           <h2>Adjust every quote</h2>
           <p style={{ margin: 0, fontSize: "0.85rem", color: "#6b7280" }}>
-            Applied after the rule above, to every device. Use it to run a promotion
-            or to protect margin without re-pricing the catalogue.
+            Added on top of the rule above, to <strong>every device and condition</strong>. Use it to
+            run a promotion or protect margin. This does not set a device's price — to fix one
+            device, use the competitor table below.
           </p>
           <label>
-            Percent (%)
-            <input value={percent} onChange={(e) => setPercent(e.target.value)} type="number" step="0.1" />
+            Percent (%) — between −50 and +25
+            <input value={percent} onChange={(e) => setPercent(e.target.value)} type="number" step="0.1" min={-50} max={25} />
           </label>
           <label>
-            Amount (CAD)
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" step="1" />
+            Amount added to every quote (CAD) — between −$100 and +$100
+            <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" step="1" min={-100} max={100} />
           </label>
           <button type="submit" className="admin-btn">
             Save adjustment
@@ -586,12 +601,13 @@ export function PricingPage() {
               <th>Percent</th>
               <th>Amount</th>
               <th>Grade</th>
+              <th />
             </tr>
           </thead>
           <tbody>
             {adjustments.length === 0 ? (
               <tr>
-                <td colSpan={4}>
+                <td colSpan={5}>
                   <div className="admin-empty">No adjustments yet — every quote uses the rule above</div>
                 </td>
               </tr>
@@ -602,6 +618,23 @@ export function PricingPage() {
                   <td>{a.adjust_percent}%</td>
                   <td>${a.adjust_amount}</td>
                   <td>{a.condition_grade ?? "all"}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn--sm"
+                      onClick={() => {
+                        if (!window.confirm("Remove this adjustment? Quotes change immediately.")) return;
+                        void adminFetch(`/api/pricing/adjustments/${a.id}`, { method: "DELETE" })
+                          .then(() => {
+                            setMessage("Adjustment removed");
+                            loadAdjustments();
+                          })
+                          .catch((err) => setError(err instanceof Error ? err.message : "Failed to remove"));
+                      }}
+                    >
+                      Remove
+                    </button>
+                  </td>
                 </tr>
               ))
             )}

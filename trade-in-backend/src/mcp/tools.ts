@@ -342,8 +342,8 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
         "Add a percent and/or flat adjustment applied to every quote, optionally only for one grade. Quotes are still " +
         "capped at the competitor's own price. Changes live quotes.",
       inputSchema: {
-        adjust_percent: z.number().min(-90).max(100).optional(),
-        adjust_amount: z.number().min(-1000).max(1000).optional(),
+        adjust_percent: z.number().min(-50).max(25).optional(),
+        adjust_amount: z.number().min(-100).max(100).optional().describe("Added to EVERY quote; never use this to price one device"),
         condition_grade: GRADE.optional(),
       },
       annotations: { ...MONEY, idempotentHint: false },
