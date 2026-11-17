@@ -89,7 +89,7 @@ scraperRouter.post("/sync-catalog", async (req, res) => {
       delayMs: typeof req.body?.delayMs === "number" ? req.body.delayMs : 100,
       applyBeat: req.body?.applyBeat !== false,
       beatPercent: typeof req.body?.beatPercent === "number" ? req.body.beatPercent : 2,
-      setFrontend: req.body?.setFrontend !== false,
+      setFrontend: req.body?.setFrontend === true,
     });
     res.json({
       message: `Catalog sync finished. ${result.devicesOk}/${result.devicesAttempted} devices, ${result.scrapedRows} scraped rows.`,

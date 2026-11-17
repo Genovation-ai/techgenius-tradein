@@ -12,6 +12,9 @@ import {
   type FrontendPriceSource,
 } from "../services/competitorPricing.js";
 import { computeServerQuote } from "../services/quoteEngine.js";
+import { persistScrapedRows } from "../pricing-engine/orchestrator.js";
+import { STORE_TO_COMPETITOR, type CompetitorCondition, type StoreCondition } from "../pricing-engine/types.js";
+import { logActivityWith } from "../services/activityLog.js";
 
 export const pricingRouter = Router();
 
@@ -342,5 +345,221 @@ pricingRouter.post("/quote", (req, res) => {
     store_credit_boost: result.storeCreditBoost,
     multi_spec: result.multiSpec,
     limiting_spec: result.limitingSpec,
+  });
+});
+
+const COMPETITOR_IDS = new Set<string>(COMPETITOR_SOURCES.map((c) => c.id));
+const GRADE_ORDER: StoreCondition[] = ["flawless", "good", "average", "fair", "defective"];
+
+/**
+ * Where live pricing has gone quiet: device/storage pairs whose newest price
+ * from one competitor is missing or older than `stale_days`.
+ *
+ * Scrapers fail quietly — a theme change zeroes one product page and the run
+ * still reports success. This is the list a person (or an assistant) works
+ * through: re-scrape it if the device is mapped, otherwise enter the price.
+ */
+pricingRouter.get("/gaps", (req, res) => {
+  const competitor = String(req.query.competitor || "gorecell");
+  if (!COMPETITOR_IDS.has(competitor)) return res.status(400).json({ error: "Unknown competitor" });
+  const staleDays = Math.min(Math.max(Number(req.query.stale_days) || 8, 1), 365);
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 1000);
+  const q = req.query.q ? `%${String(req.query.q).slice(0, 80)}%` : null;
+  const cutoff = new Date(Date.now() - staleDays * 86_400_000).toISOString();
+
+  const db = getDb();
+  try {
+    const rows = db
+      .prepare(
+        `SELECT d.id AS device_id, d.name, d.category_id, s.value AS storage,
+                (SELECT MAX(sp.scraped_at) FROM scraped_prices sp
+                  WHERE sp.competitor_name = ? AND sp.product_id = d.id
+                    AND LOWER(sp.variant) = LOWER(s.value)) AS newest,
+                (SELECT sp.engine FROM scraped_prices sp
+                  WHERE sp.competitor_name = ? AND sp.product_id = d.id
+                    AND LOWER(sp.variant) = LOWER(s.value)
+                  ORDER BY sp.scraped_at DESC LIMIT 1) AS engine,
+                EXISTS (SELECT 1 FROM settings st WHERE st.key = 'gorecell_product_map:' || d.id
+                         AND st.value IS NOT NULL AND st.value != '') AS mapped
+           FROM devices d, json_each(CASE WHEN json_valid(d.storages) THEN d.storages ELSE '[]' END) s
+          WHERE d.enabled = 1 ${q ? "AND (d.name LIKE ? OR d.id LIKE ?)" : ""}`,
+      )
+      .all(...([competitor, competitor, ...(q ? [q, q] : [])] as string[])) as Array<{
+      device_id: string;
+      name: string;
+      category_id: string;
+      storage: string;
+      newest: string | null;
+      engine: string | null;
+      mapped: number;
+    }>;
+
+    const gaps = rows
+      .filter((r) => !r.newest || r.newest < cutoff)
+      .map((r) => ({
+        ...r,
+        mapped: Boolean(r.mapped),
+        state: r.newest ? "stale" : "missing",
+        age_days: r.newest ? Math.round((Date.now() - Date.parse(r.newest)) / 86_400_000) : null,
+        suggested_fix:
+          competitor === "gorecell" && r.mapped
+            ? "rescrape_device (it is mapped to a GoRecell product)"
+            : `set_competitor_price with the current ${competitor} price`,
+      }))
+      .sort((a, b) => (a.newest ?? "").localeCompare(b.newest ?? ""));
+
+    const lastRun = db
+      .prepare("SELECT id, started_at, finished_at, rows_persisted, errors_json FROM scrape_runs ORDER BY id DESC LIMIT 1")
+      .get() as { errors_json?: string } | undefined;
+    let lastRunErrors: unknown = [];
+    try {
+      lastRunErrors = JSON.parse(lastRun?.errors_json || "[]");
+    } catch {
+      lastRunErrors = [];
+    }
+
+    res.json({
+      competitor,
+      stale_days: staleDays,
+      total_pairs: rows.length,
+      gap_count: gaps.length,
+      gaps: gaps.slice(0, limit),
+      last_scrape_run: lastRun ? { ...lastRun, errors_json: undefined, errors: lastRunErrors } : null,
+    });
+  } finally {
+    db.close();
+  }
+});
+
+/**
+ * Enter a competitor's price by hand, for when a scraper cannot reach it.
+ *
+ * Written into scraped_prices exactly like a scrape (engine "manual"), so it
+ * goes through the same path as live data: beat %, the grade ladder and the
+ * storage caps still apply, and the next successful scrape simply replaces it.
+ * Returns the customer quote before and after so the effect is visible.
+ *
+ * Body: { competitor, product_id, variant, prices: { flawless: 450, good: 400, … }, note }
+ *   or  { competitor, product_id, variant, condition, price, note }
+ */
+pricingRouter.post("/competitor-price", (req, res) => {
+  const b = (req.body || {}) as Record<string, unknown>;
+  const competitor = String(b.competitor || "");
+  const productId = String(b.product_id || "").trim();
+  const variantIn = String(b.variant || "").trim();
+  const note = b.note != null ? String(b.note).slice(0, 300) : null;
+  if (!COMPETITOR_IDS.has(competitor)) {
+    return res.status(400).json({ error: `competitor must be one of ${[...COMPETITOR_IDS].join(", ")}` });
+  }
+  if (!productId || !variantIn) return res.status(400).json({ error: "product_id and variant are required" });
+
+  const asGrade = (g: unknown): StoreCondition | null => {
+    const v = String(g || "").toLowerCase();
+    if ((GRADE_ORDER as string[]).includes(v)) return v as StoreCondition;
+    const fromCompetitor: Record<string, StoreCondition> = { excellent: "flawless", cracked: "fair", broken: "defective" };
+    return fromCompetitor[v] ?? null;
+  };
+  const entries: Array<[StoreCondition, number]> = [];
+  if (b.prices && typeof b.prices === "object") {
+    for (const [g, v] of Object.entries(b.prices as Record<string, unknown>)) {
+      const grade = asGrade(g);
+      if (!grade) return res.status(400).json({ error: `Unknown grade "${g}". Use ${GRADE_ORDER.join(", ")}` });
+      entries.push([grade, Number(v)]);
+    }
+  } else {
+    const grade = asGrade(b.condition);
+    if (!grade) return res.status(400).json({ error: `condition must be one of ${GRADE_ORDER.join(", ")}` });
+    entries.push([grade, Number(b.price)]);
+  }
+  if (!entries.length) return res.status(400).json({ error: "No prices given" });
+  for (const [g, v] of entries) {
+    if (!Number.isFinite(v) || v < 5 || v > MAX_PRICE) {
+      return res.status(400).json({ error: `${g}: price must be between 5 and ${MAX_PRICE}` });
+    }
+  }
+  // Within what was entered, a better grade must not be worth less than a worse one.
+  const sorted = [...entries].sort((x, y) => GRADE_ORDER.indexOf(x[0]) - GRADE_ORDER.indexOf(y[0]));
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i][1] > sorted[i - 1][1]) {
+      return res.status(400).json({
+        error: `${sorted[i][0]} ($${sorted[i][1]}) cannot be above ${sorted[i - 1][0]} ($${sorted[i - 1][1]})`,
+      });
+    }
+  }
+
+  const db = getDb();
+  let device: { id: string; name: string; brand_id: string | null; storages: string } | undefined;
+  try {
+    device = db
+      .prepare("SELECT id, name, brand_id, storages FROM devices WHERE id = ? AND enabled = 1")
+      .get(productId) as typeof device;
+  } finally {
+    db.close();
+  }
+  if (!device) return res.status(404).json({ error: "Unknown or disabled device" });
+  let storages: string[] = [];
+  try {
+    storages = JSON.parse(device.storages || "[]");
+  } catch {
+    storages = [];
+  }
+  const variant = storages.find((s) => s.toLowerCase() === variantIn.toLowerCase());
+  if (!variant) return res.status(400).json({ error: `variant must be one of: ${storages.join(", ") || "(none)"}` });
+
+  const quoteAt = (grade: StoreCondition) =>
+    computeServerQuote({ deviceId: productId, storage: variant, conditionGrade: grade })?.quotedPrice ?? null;
+  const before = Object.fromEntries(entries.map(([g]) => [g, quoteAt(g)]));
+
+  const actor = req.tgAuth?.name ?? req.tgAuth?.email ?? req.tgAuth?.userId ?? "unknown";
+  const make = (device.brand_id || device.name.split(" ")[0] || "Unknown").split("-")[0];
+  const now = new Date().toISOString();
+  persistScrapedRows(
+    entries.map(([grade, price]) => ({
+      competitor_name: competitor,
+      make,
+      model: device!.name,
+      product_id: productId,
+      variant,
+      condition: STORE_TO_COMPETITOR[grade] as CompetitorCondition,
+      trade_in_price: Math.round(price),
+      sell_price: null,
+      currency: "CAD",
+      raw: { source: `manual:${actor}`, engine: "manual", payload: { note, entered_by: actor } },
+      scraped_at: now,
+    })),
+    "manual",
+  );
+
+  const after = Object.fromEntries(entries.map(([g]) => [g, quoteAt(g)]));
+  const db2 = getDb();
+  try {
+    for (const [g, v] of entries) {
+      logActivityWith(
+        db2,
+        {
+          entityType: "price",
+          entityId: `${productId}|${variant}|${g}`,
+          action: "competitor_price_entered",
+          field: competitor,
+          oldValue: before[g] == null ? null : String(before[g]),
+          newValue: String(Math.round(v)),
+          note: note ?? undefined,
+        },
+        { name: actor, role: req.tgAuth?.role ?? null, orgId: req.tgAuth?.orgId ?? null },
+      );
+    }
+  } finally {
+    db2.close();
+  }
+
+  res.status(201).json({
+    ok: true,
+    competitor,
+    product_id: productId,
+    variant,
+    entered: Object.fromEntries(entries.map(([g, v]) => [g, Math.round(v)])),
+    customer_quote_before: before,
+    customer_quote_after: after,
+    note: "Saved as a manual competitor price. The next successful scrape replaces it.",
   });
 });

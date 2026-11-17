@@ -227,6 +227,141 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
     async (a) => run("PUT", "/api/pricing/frontend-source", { body: a }),
   );
 
+  // ---------- Fixing prices when a scraper fails ----------
+  server.registerTool(
+    "find_pricing_gaps",
+    {
+      title: "Find stale or missing prices",
+      description:
+        "Device/storage pairs whose price from a competitor is missing or older than stale_days, with the last " +
+        "scrape run's errors and a suggested fix for each (rescrape_device, or set_competitor_price). Start here " +
+        "when a scraper has failed.",
+      inputSchema: {
+        competitor: z.enum(["gorecell", "univercell", "bell", "telus"]).optional().describe("Default gorecell"),
+        stale_days: z.number().int().min(1).max(365).optional().describe("Default 8"),
+        q: z.string().optional().describe("Limit to devices matching this name/id"),
+        limit: z.number().int().min(1).max(500).optional(),
+      },
+      annotations: LOOKUP,
+    },
+    async (a) => run("GET", "/api/pricing/gaps", { query: { ...a, limit: a.limit ?? 50 } }),
+  );
+
+  server.registerTool(
+    "get_device_prices",
+    {
+      title: "Device price table",
+      description: "The shop's stored price rows for one device (every storage x grade) and where each came from.",
+      inputSchema: { device_id: z.string() },
+      annotations: LOOKUP,
+    },
+    async (a) => run("GET", `/api/pricing/device/${enc(a.device_id)}`),
+  );
+
+  server.registerTool(
+    "set_competitor_price",
+    {
+      title: "Enter a competitor price",
+      description:
+        "Record a competitor's current trade-in price by hand when its scraper cannot reach it. Treated exactly like " +
+        "a scrape: the shop's beat %, grade ladder and storage caps still apply, and the next good scrape replaces " +
+        "it. Returns the customer quote before and after. Only enter numbers you have verified on the competitor's " +
+        "site (or the user gave you); say where they came from in `note`. Changes live quotes.",
+      inputSchema: {
+        competitor: z.enum(["gorecell", "univercell", "bell", "telus"]),
+        product_id: z.string().describe("Device id"),
+        variant: z.string().describe("Storage exactly as listed on the device, e.g. 256GB"),
+        prices: z
+          .object({
+            flawless: z.number().optional(),
+            good: z.number().optional(),
+            average: z.number().optional(),
+            fair: z.number().optional(),
+            defective: z.number().optional(),
+          })
+          .describe(
+            "Competitor's price per store grade. GoRecell tiers map: Like New=flawless, Good=good, Fair=average, " +
+              "Cracked=fair, Defective=defective.",
+          ),
+        note: z.string().max(300).describe("Where the numbers came from, e.g. 'gorecell.ca product page 2026-11-17'"),
+      },
+      annotations: MONEY,
+    },
+    async (a) => run("POST", "/api/pricing/competitor-price", { body: a }),
+  );
+
+  server.registerTool(
+    "set_device_price",
+    {
+      title: "Set shop price row",
+      description:
+        "Write one row of the shop's own price table. Used directly when the pricing rule source is 'manual', and " +
+        "as the fallback when no competitor price exists. Changes live quotes.",
+      inputSchema: {
+        device_id: z.string(),
+        storage: z.string(),
+        condition_grade: GRADE,
+        base_price: z.number().min(0).max(20000),
+      },
+      annotations: MONEY,
+    },
+    async (a) => run("PUT", "/api/pricing", { body: { ...a, source: "manual" } }),
+  );
+
+  server.registerTool(
+    "rescrape_device",
+    {
+      title: "Re-scrape one device",
+      description:
+        "Re-fetch GoRecell prices for one mapped device right now (all storages and grades). Does not change the " +
+        "pricing rule. Use when find_pricing_gaps says the device is mapped.",
+      inputSchema: { device_id: z.string() },
+      annotations: { ...CHANGE, openWorldHint: true },
+    },
+    async (a) =>
+      run("POST", "/api/scraper/sync-catalog", { body: { filter: `id:${a.device_id}`, setFrontend: false, delayMs: 0 } }),
+  );
+
+  server.registerTool(
+    "run_competitor_scrape",
+    {
+      title: "Run competitor scrape",
+      description:
+        "Run the UniverCell/Bell/TELUS/GoRecell scrape for the configured target devices now (can take a few " +
+        "minutes). Returns per-competitor row counts and errors.",
+      annotations: { ...CHANGE, openWorldHint: true },
+    },
+    async () => run("POST", "/api/scraper/run-live", { body: {} }),
+  );
+
+  server.registerTool(
+    "add_price_adjustment",
+    {
+      title: "Add price adjustment",
+      description:
+        "Add a percent and/or flat adjustment applied to every quote, optionally only for one grade. Quotes are still " +
+        "capped at the competitor's own price. Changes live quotes.",
+      inputSchema: {
+        adjust_percent: z.number().min(-90).max(100).optional(),
+        adjust_amount: z.number().min(-1000).max(1000).optional(),
+        condition_grade: GRADE.optional(),
+      },
+      annotations: { ...MONEY, idempotentHint: false },
+    },
+    async (a) => run("POST", "/api/pricing/adjustments", { body: { scope: "global", ...a } }),
+  );
+
+  server.registerTool(
+    "remove_price_adjustment",
+    {
+      title: "Remove price adjustment",
+      description: "Delete one price adjustment by id (see list_price_adjustments).",
+      inputSchema: { adjustment_id: z.number().int() },
+      annotations: MONEY,
+    },
+    async (a) => run("DELETE", `/api/pricing/adjustments/${a.adjustment_id}`),
+  );
+
   server.registerTool(
     "list_price_adjustments",
     {
@@ -606,6 +741,37 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
         ],
       };
     },
+  );
+
+  server.registerPrompt(
+    "fix_stale_prices",
+    {
+      title: "Fix stale or missing competitor prices",
+      description: "Step-by-step routine for when a scraper has failed.",
+      argsSchema: {
+        competitor: z.string().optional().describe("gorecell (default), univercell, bell or telus"),
+        stale_days: z.string().optional().describe("How old counts as stale, default 8"),
+      },
+    },
+    ({ competitor, stale_days }) => ({
+      messages: [
+        {
+          role: "user" as const,
+          content: {
+            type: "text" as const,
+            text: [
+              `Check and repair ${competitor || "gorecell"} pricing for Gadget Swap.`,
+              `1. Call get_pricing_rule and pricing_health to see which source quotes follow and what is stale.`,
+              `2. Call find_pricing_gaps with competitor=${competitor || "gorecell"} stale_days=${stale_days || "8"}. Read last_scrape_run.errors for the cause.`,
+              `3. For each gap marked "rescrape_device", call rescrape_device, then re-check it with compare_competitors.`,
+              `4. For gaps that still fail, find the competitor's current price per grade (from the user, or their website if you can browse). Show me the numbers and wait for my OK.`,
+              `5. After I approve, enter them with set_competitor_price (note = where they came from) and report the customer_quote_before/after for each.`,
+              `Never invent a price. Group devices so I can approve a batch at once. Finish with a short table of what changed.`,
+            ].join("\n"),
+          },
+        },
+      ],
+    }),
   );
 
   return server;

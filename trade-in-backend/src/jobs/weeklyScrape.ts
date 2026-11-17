@@ -58,7 +58,8 @@ export async function runWeeklyPriceRefresh(): Promise<{
       delayMs: 100,
       applyBeat: true,
       beatPercent: Number(process.env.TG_BEAT_PERCENT || 2),
-      setFrontend: true,
+      // Refresh prices only; the pricing rule is the shop's decision.
+      setFrontend: false,
       onProgress: (p) => {
         if (p.done % 25 === 0 || p.done === p.total) {
           console.log(`[weekly-scrape] catalog ${p.done}/${p.total} (${p.deviceId} ${p.ok ? "ok" : "fail"})`);

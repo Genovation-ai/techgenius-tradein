@@ -33,7 +33,7 @@ async function main() {
   console.log("== HTTP transport ==");
   const c = await httpClient(KEY);
   const { tools } = await c.listTools();
-  ok("lists tools", tools.length >= 35, `${tools.length} tools`);
+  ok("lists tools", tools.length >= 45, `${tools.length} tools`);
   ok("tools carry read/write hints", tools.every((t) => t.annotations && "readOnlyHint" in t.annotations));
 
   const dev = (await c.callTool({ name: "search_devices", arguments: { q: "iphone 15", limit: 3 } })) as ToolResult;
@@ -82,6 +82,54 @@ async function main() {
 
   const badArgs = (await c.callTool({ name: "get_quote", arguments: { device_id: "x" } })) as ToolResult;
   ok("schema rejects missing arguments", !!badArgs.isError);
+
+  console.log("== fixing prices when a scraper fails ==");
+  const gaps = (await c.callTool({ name: "find_pricing_gaps", arguments: { stale_days: 1, limit: 5 } })) as ToolResult;
+  const g = JSON.parse(text(gaps));
+  ok("find_pricing_gaps", !gaps.isError && typeof g.gap_count === "number", `${g.gap_count} gaps of ${g.total_pairs}`);
+  const prices = (await c.callTool({ name: "get_device_prices", arguments: { device_id: d0.id } })) as ToolResult;
+  ok("get_device_prices", !prices.isError);
+
+  const rule = JSON.parse(text((await c.callTool({ name: "get_pricing_rule", arguments: {} })) as ToolResult));
+  const set = (await c.callTool({
+    name: "set_competitor_price",
+    arguments: {
+      competitor: rule.source === "best" || rule.source === "manual" ? "gorecell" : rule.source,
+      product_id: d0.id,
+      variant: d0.storages[0],
+      prices: { flawless: 999, good: 900 },
+      note: "e2e test",
+    },
+  })) as ToolResult;
+  const sr = set.isError ? {} : JSON.parse(text(set));
+  ok(
+    "set_competitor_price moves the live quote",
+    !set.isError && sr.customer_quote_after?.flawless > sr.customer_quote_before?.flawless,
+    `flawless ${sr.customer_quote_before?.flawless} -> ${sr.customer_quote_after?.flawless}`,
+  );
+  const q2 = JSON.parse(
+    text((await c.callTool({
+      name: "get_quote",
+      arguments: { device_id: d0.id, storage: d0.storages[0], condition_grade: "flawless", payout_method: "store-credit" },
+    })) as ToolResult),
+  );
+  ok("quote still capped at the entered competitor price", q2.quoted_price <= 999, `${q2.quoted_price}`);
+  const inverted = (await c.callTool({
+    name: "set_competitor_price",
+    arguments: { competitor: "gorecell", product_id: d0.id, variant: d0.storages[0], prices: { flawless: 100, good: 300 }, note: "x" },
+  })) as ToolResult;
+  ok("a ladder where good > flawless is refused", !!inverted.isError && text(inverted).includes("400"));
+  const badVariant = (await c.callTool({
+    name: "set_competitor_price",
+    arguments: { competitor: "gorecell", product_id: d0.id, variant: "9TB", prices: { flawless: 100 }, note: "x" },
+  })) as ToolResult;
+  ok("an unknown storage is refused", !!badVariant.isError && text(badVariant).includes("variant must be one of"));
+  const hist = (await c.callTool({ name: "search_everything", arguments: { q: d0.id } })) as ToolResult;
+  ok("search still works after writes", !hist.isError);
+  const prompts = await c.listPrompts();
+  ok("fix_stale_prices prompt is offered", prompts.prompts.some((p) => p.name === "fix_stale_prices"));
+  const pr = await c.getPrompt({ name: "fix_stale_prices", arguments: { competitor: "gorecell" } });
+  ok("prompt renders", JSON.stringify(pr.messages).includes("find_pricing_gaps"));
   await c.close();
 
   console.log("== auth ==");
@@ -98,6 +146,11 @@ async function main() {
     const o = await httpClient(OP);
     const r = (await o.callTool({ name: "set_pricing_rule", arguments: { mode: "match" } })) as ToolResult;
     ok("operator key cannot change pricing through MCP", !!r.isError && text(r).includes("403"), text(r).slice(0, 80));
+    const r2 = (await o.callTool({
+      name: "set_competitor_price",
+      arguments: { competitor: "gorecell", product_id: "iphone-15", variant: "128GB", prices: { flawless: 5000 }, note: "x" },
+    })) as ToolResult;
+    ok("operator key cannot enter competitor prices", !!r2.isError && text(r2).includes("403"));
     await o.close();
   }
 
@@ -111,7 +164,7 @@ async function main() {
     }),
   );
   const st = await sc.listTools();
-  ok("stdio lists tools", st.tools.length >= 35, `${st.tools.length}`);
+  ok("stdio lists tools", st.tools.length >= 45, `${st.tools.length}`);
   const sq = (await sc.callTool({ name: "get_pricing_rule", arguments: {} })) as ToolResult;
   ok("stdio tool call", !sq.isError, text(sq).slice(0, 80));
   await sc.close();

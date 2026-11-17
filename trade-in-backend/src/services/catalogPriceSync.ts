@@ -464,7 +464,9 @@ export async function syncGorecellCatalogPrices(
 
   const scrapedRows = scraped.length ? persistScrapedRows(scraped, "gorecell-query-flow") : 0;
 
-  if (opts.setFrontend !== false) {
+  // Opt-in only. This used to default to on, so every weekly sync and every
+  // "sync catalog" press reset the shop's chosen rule to gorecell / beat 2%.
+  if (opts.setFrontend === true) {
     const beat = opts.beatPercent ?? 2;
     setFrontendPricingConfig({
       source: "gorecell",
