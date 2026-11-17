@@ -30,6 +30,7 @@ import { integrationsRouter } from "./routes/integrations.js";
 import { cronRouter, pricingEngineRouter } from "./routes/cron.js";
 import { requireCapability } from "./middleware/auth.js";
 import { homeOrgForWrites, requireHomeOrg } from "./middleware/orgScope.js";
+import { handleMcpRequest, mcpMethodNotAllowed } from "./mcp/http.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { geoRouter } from "./routes/geo.js";
 import { startSubscriptionLifecycle } from "./services/subscriptionLifecycle.js";
@@ -116,6 +117,9 @@ const PUBLIC_CORS_PATHS = [
   "/api/saas/slug-available",
   "/devices",
   "/embed",
+  // AI tools (MCP Inspector, browser-based clients) call this cross-origin. It is
+  // header-authenticated like everything else, so an open origin adds no access.
+  "/mcp",
 ];
 const openCors = cors();
 const restrictedCors = corsOrigins.length > 0 ? cors({ origin: corsOrigins }) : cors();
@@ -340,6 +344,15 @@ app.use("/api/pricing-engine", apiKeyAuth, pricingWriteGuard, pricingEngineRoute
 
 // Cron / scheduled jobs — constant-time secret auth, long timeout
 app.use("/api/cron", cronRouter);
+
+// MCP: AI assistants (Claude, Cursor, …) connect here with an API key. Each
+// tool replays the call against this same API with that key, so permissions
+// and tenant scoping are exactly the admin console's.
+const mcpLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
+const mcpPort = parseInt(process.env.PORT || "4100", 10);
+app.post("/mcp", mcpLimiter, apiKeyAuth, (req, res) => void handleMcpRequest(req, res, mcpPort));
+app.get("/mcp", mcpMethodNotAllowed);
+app.delete("/mcp", mcpMethodNotAllowed);
 
 // Protected endpoints (admin panel / integrations)
 app.use("/api/offers", apiKeyAuth, offersRouter);
