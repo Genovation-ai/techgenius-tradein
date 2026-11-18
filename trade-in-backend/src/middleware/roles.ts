@@ -14,6 +14,7 @@ export type Capability =
   | "inventory:write"
   | "inventory:sell"
   | "catalog:read"
+  | "catalog:write"
   | "pricing:read"
   | "pricing:write"
   | "reports:read"
@@ -44,6 +45,7 @@ const ALL: Capability[] = [
   "inventory:write",
   "inventory:sell",
   "catalog:read",
+  "catalog:write",
   "pricing:read",
   "pricing:write",
   "reports:read",

@@ -1,5 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { registerAdminTools } from "./adminTools.js";
 
 /**
  * Gadget Swap as an MCP server: what an AI assistant can look up and do.
@@ -78,7 +79,8 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
         "Gadget Swap trade-in and repair platform. Use search_devices to find a device id, then get_quote " +
         "for what the shop pays. Offers move active_lead -> in_transit -> delivered -> being_inspected -> " +
         "completed (completion issues an invoice and adds inventory). Prices are CAD. Tools that change data " +
-        "are permission-checked against the API key in use.",
+        "are permission-checked against the API key in use: an admin key can manage the whole platform (catalogue, " +
+        "pricing, settings, team), and api_request reaches any /api endpoint not covered by a dedicated tool.",
     },
   );
 
@@ -742,6 +744,8 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
       };
     },
   );
+
+  registerAdminTools(server, run);
 
   server.registerPrompt(
     "fix_stale_prices",

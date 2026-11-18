@@ -97,7 +97,7 @@ async function main() {
       competitor: rule.source === "best" || rule.source === "manual" ? "gorecell" : rule.source,
       product_id: d0.id,
       variant: d0.storages[0],
-      prices: { flawless: 999, good: 900 },
+      prices: { flawless: 900 + (Date.now() % 90), good: 800 },
       note: "e2e test",
     },
   })) as ToolResult;
@@ -113,7 +113,7 @@ async function main() {
       arguments: { device_id: d0.id, storage: d0.storages[0], condition_grade: "flawless", payout_method: "store-credit" },
     })) as ToolResult),
   );
-  ok("quote still capped at the entered competitor price", q2.quoted_price <= 999, `${q2.quoted_price}`);
+  ok("quote still capped at the entered competitor price", q2.quoted_price <= sr.entered?.flawless, `${q2.quoted_price} <= ${sr.entered?.flawless}`);
   const inverted = (await c.callTool({
     name: "set_competitor_price",
     arguments: { competitor: "gorecell", product_id: d0.id, variant: d0.storages[0], prices: { flawless: 100, good: 300 }, note: "x" },

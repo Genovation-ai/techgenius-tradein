@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { getDb } from "../db/migrate.js";
 import { nanoid } from "nanoid";
-import { apiKeyAuth } from "../middleware/auth.js";
+import { apiKeyAuth, requireCapability } from "../middleware/auth.js";
 import { requireHomeOrg } from "../middleware/orgScope.js";
 import { getFrontendPricingConfig } from "../services/competitorPricing.js";
 import {
@@ -19,7 +19,7 @@ catalogRouter.get("/categories", (_req, res) => {
   res.json(rows);
 });
 
-catalogRouter.post("/categories", apiKeyAuth, requireHomeOrg, (req, res) => {
+catalogRouter.post("/categories", apiKeyAuth, requireCapability("catalog:write"), requireHomeOrg, (req, res) => {
   const db = getDb();
   const { name, icon } = req.body;
   const id = nanoid(12);
@@ -39,7 +39,7 @@ catalogRouter.get("/brands", (req, res) => {
   res.json(rows);
 });
 
-catalogRouter.post("/brands", apiKeyAuth, requireHomeOrg, (req, res) => {
+catalogRouter.post("/brands", apiKeyAuth, requireCapability("catalog:write"), requireHomeOrg, (req, res) => {
   const db = getDb();
   const { name, category_id } = req.body;
   const id = nanoid(12);
@@ -174,7 +174,7 @@ catalogRouter.get("/devices", (req, res) => {
   res.json(rows);
 });
 
-catalogRouter.post("/devices", apiKeyAuth, requireHomeOrg, (req, res) => {
+catalogRouter.post("/devices", apiKeyAuth, requireCapability("catalog:write"), requireHomeOrg, (req, res) => {
   const db = getDb();
   const { name, category_id, brand_id, storages, image_url } = req.body;
   const id = nanoid(12);
@@ -189,7 +189,7 @@ catalogRouter.post("/devices", apiKeyAuth, requireHomeOrg, (req, res) => {
  * SaaS bootstrap: create (or reuse) a catalog device from a product name only.
  * Builds a product image under /devices/{slug}.png and seeds starter prices.
  */
-catalogRouter.post("/devices/from-name", apiKeyAuth, requireHomeOrg, async (req, res) => {
+catalogRouter.post("/devices/from-name", apiKeyAuth, requireCapability("catalog:write"), requireHomeOrg, async (req, res) => {
   try {
     const name = String(req.body?.name || "").trim();
     if (!name) return res.status(400).json({ error: "name is required" });
@@ -227,12 +227,19 @@ catalogRouter.post("/devices/ensure", async (req, res) => {
   }
 });
 
-catalogRouter.put("/devices/:id", apiKeyAuth, requireHomeOrg, (req, res) => {
+catalogRouter.put("/devices/:id", apiKeyAuth, requireCapability("catalog:write"), requireHomeOrg, (req, res) => {
   const db = getDb();
   const { name, storages, image_url, enabled } = req.body;
   db.prepare(
     "UPDATE devices SET name = COALESCE(?, name), storages = COALESCE(?, storages), image_url = COALESCE(?, image_url), enabled = COALESCE(?, enabled) WHERE id = ?"
-  ).run(name, storages ? JSON.stringify(storages) : null, image_url, enabled, req.params.id);
+  ).run(
+    name ?? null,
+    Array.isArray(storages) ? JSON.stringify(storages) : null,
+    image_url ?? null,
+    // The driver rejects JS booleans, so `enabled: false` used to 500.
+    enabled == null ? null : enabled === true || enabled === 1 || enabled === "1" || enabled === "true" ? 1 : 0,
+    req.params.id,
+  );
   db.close();
   res.json({ ok: true });
 });
@@ -246,7 +253,7 @@ catalogRouter.get("/conditions", (_req, res) => {
   res.json({ groups, conditions });
 });
 
-catalogRouter.post("/conditions/groups", apiKeyAuth, requireHomeOrg, (req, res) => {
+catalogRouter.post("/conditions/groups", apiKeyAuth, requireCapability("catalog:write"), requireHomeOrg, (req, res) => {
   const db = getDb();
   const { name, category_id } = req.body;
   const id = nanoid(12);
@@ -255,7 +262,7 @@ catalogRouter.post("/conditions/groups", apiKeyAuth, requireHomeOrg, (req, res) 
   res.status(201).json({ id, name });
 });
 
-catalogRouter.post("/conditions", apiKeyAuth, requireHomeOrg, (req, res) => {
+catalogRouter.post("/conditions", apiKeyAuth, requireCapability("catalog:write"), requireHomeOrg, (req, res) => {
   const db = getDb();
   const { group_id, grade, label, description, sort_order } = req.body;
   const id = nanoid(12);
