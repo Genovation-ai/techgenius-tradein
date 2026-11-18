@@ -6,6 +6,7 @@ import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 import { emailStatusSummary, flushBlockedEmails } from "../services/email.js";
 import { orgIdOf, ownsRow } from "../middleware/orgScope.js";
 import { asyncRoute } from "../middleware/asyncRoute.js";
+import { listOAuthGrants, revokeOAuthGrant } from "../oauth/provider.js";
 import { emailIdentityFor } from "../services/emailIdentity.js";
 
 export const integrationsRouter = Router();
@@ -132,6 +133,17 @@ integrationsRouter.get("/mcp-activity", requireCapability("settings:read"), (req
   } finally {
     db.close();
   }
+});
+
+/** Assistants connected by sign-in (OAuth), per staff member. */
+integrationsRouter.get("/ai-connections", requireCapability("settings:read"), (req, res) => {
+  res.json(listOAuthGrants(orgIdOf(req)));
+});
+
+integrationsRouter.delete("/ai-connections/:clientId/:userId", requireCapability("settings:write"), (req, res) => {
+  const n = revokeOAuthGrant(req.params.clientId, req.params.userId, orgIdOf(req));
+  if (!n) return res.status(404).json({ error: "Connection not found" });
+  res.json({ ok: true, revoked_tokens: n });
 });
 
 /** What snapshots exist, newest first. */

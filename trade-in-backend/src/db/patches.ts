@@ -1,10 +1,12 @@
 import type { Database } from "better-sqlite3";
+import { ensureOAuthSchema } from "../oauth/tokens.js";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { ensureSaasSchema } from "../services/tenancy.js";
 
 /** Additive schema patches for existing DBs (CREATE IF NOT EXISTS / ALTER safe). */
 export function applySchemaPatches(db: Database): void {
+  ensureOAuthSchema(db);
   /*
    * Where a tenant sells, and in what currency.
    *

@@ -36,6 +36,47 @@ function verifyPassword(password: string, stored: string): boolean {
   }
 }
 
+export interface StaffIdentity {
+  id: string;
+  email: string;
+  name: string;
+  role: string;
+  org_id: string;
+}
+
+/**
+ * The admin login's credential check, for other sign-in surfaces (the OAuth
+ * consent page). Same password hashing, same disabled-account rule, and the
+ * same lockout after repeated failures, so a second door is not a softer one.
+ */
+export function checkStaffCredentials(
+  rawEmail: string,
+  password: string,
+): { ok: true; user: StaffIdentity } | { ok: false; locked: boolean } {
+  const email = String(rawEmail || "").trim().toLowerCase();
+  if (!email || !password || email.length > 254 || password.length > 256) return { ok: false, locked: false };
+  if (isLocked(email)) return { ok: false, locked: true };
+  const db = getDb();
+  try {
+    const user = db
+      .prepare("SELECT id, email, name, role, password_hash, enabled, org_id FROM admin_users WHERE email = ?")
+      .get(email) as
+      | { id: string; email: string; name: string; role: string; password_hash: string; enabled: number; org_id: string | null }
+      | undefined;
+    if (!user || !user.enabled || !verifyPassword(password, user.password_hash)) {
+      recordFailure(email);
+      return { ok: false, locked: false };
+    }
+    clearFailures(email);
+    return {
+      ok: true,
+      user: { id: user.id, email: user.email, name: user.name, role: user.role || "admin", org_id: user.org_id || "org-tech-genius" },
+    };
+  } finally {
+    db.close();
+  }
+}
+
 function makeSessionToken(): string {
   return `tg_sess_${randomBytes(24).toString("hex")}`;
 }

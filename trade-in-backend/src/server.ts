@@ -31,6 +31,8 @@ import { cronRouter, pricingEngineRouter } from "./routes/cron.js";
 import { requireCapability } from "./middleware/auth.js";
 import { homeOrgForWrites, requireHomeOrg } from "./middleware/orgScope.js";
 import { handleMcpRequest, mcpMethodNotAllowed } from "./mcp/http.js";
+import { mcpAuthRouter, getOAuthProtectedResourceMetadataUrl } from "@modelcontextprotocol/sdk/server/auth/router.js";
+import { consentRouter, gadgetSwapOAuthProvider, SUPPORTED_SCOPES } from "./oauth/provider.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { geoRouter } from "./routes/geo.js";
 import { startSubscriptionLifecycle } from "./services/subscriptionLifecycle.js";
@@ -120,6 +122,11 @@ const PUBLIC_CORS_PATHS = [
   // AI tools (MCP Inspector, browser-based clients) call this cross-origin. It is
   // header-authenticated like everything else, so an open origin adds no access.
   "/mcp",
+  // OAuth discovery, registration and token exchange are public by design.
+  "/.well-known/oauth",
+  "/register",
+  "/token",
+  "/revoke",
 ];
 const openCors = cors();
 const restrictedCors = corsOrigins.length > 0 ? cors({ origin: corsOrigins }) : cors();
@@ -350,7 +357,36 @@ app.use("/api/cron", cronRouter);
 // and tenant scoping are exactly the admin console's.
 const mcpLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
 const mcpPort = parseInt(process.env.PORT || "4100", 10);
-app.post("/mcp", mcpLimiter, apiKeyAuth, (req, res) => void handleMcpRequest(req, res, mcpPort));
+
+// OAuth 2.1 for MCP clients that sign in instead of pasting a key (claude.ai
+// custom connectors, ChatGPT, MCP Inspector): discovery documents, dynamic
+// client registration, /authorize with a staff sign-in + consent page, /token
+// with PKCE and rotating refresh tokens, and /revoke.
+const publicBase = new URL((process.env.TG_APP_URL || "https://www.gadgetswap.store").replace(/\/+$/, ""));
+const mcpResource = new URL("/mcp", publicBase);
+const resourceMetadataUrl = getOAuthProtectedResourceMetadataUrl(mcpResource);
+app.use(
+  mcpAuthRouter({
+    provider: gadgetSwapOAuthProvider,
+    issuerUrl: publicBase,
+    resourceServerUrl: mcpResource,
+    scopesSupported: SUPPORTED_SCOPES,
+    resourceName: "Gadget Swap",
+    serviceDocumentationUrl: new URL("/admin/settings", publicBase),
+  }),
+);
+app.use("/oauth/consent", authLimiter, consentRouter());
+
+// A 401 from /mcp names where to find the sign-in, which is how claude.ai
+// discovers that this server supports OAuth.
+const mcpChallenge: express.RequestHandler = (_req, res, next) => {
+  res.setHeader("WWW-Authenticate", `Bearer resource_metadata="${resourceMetadataUrl}"`);
+  next();
+};
+app.post("/mcp", mcpLimiter, mcpChallenge, apiKeyAuth, (req, res) => {
+  res.removeHeader("WWW-Authenticate");
+  void handleMcpRequest(req, res, mcpPort);
+});
 app.get("/mcp", mcpMethodNotAllowed);
 app.delete("/mcp", mcpMethodNotAllowed);
 

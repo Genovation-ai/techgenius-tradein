@@ -13,6 +13,17 @@ interface ApiKeyRow {
   last_used_at: string | null;
 }
 
+interface AiConnection {
+  client_id: string;
+  user_id: string;
+  email: string;
+  name: string;
+  level: string;
+  client_name: string;
+  connected_at: string;
+  last_used_at: string | null;
+}
+
 interface McpActivityRow {
   id: number;
   actor: string;
@@ -47,6 +58,7 @@ const ROLE_LABEL: Record<string, string> = {
 export function AiAccessPanel() {
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [activity, setActivity] = useState<McpActivityRow[]>([]);
+  const [connections, setConnections] = useState<AiConnection[]>([]);
   const [name, setName] = useState("Claude assistant");
   const [role, setRole] = useState<KeyRole>("viewer");
   const [fresh, setFresh] = useState<{ key: string; role: string } | null>(null);
@@ -57,12 +69,14 @@ export function AiAccessPanel() {
   const mcpUrl = `${window.location.origin}/mcp`;
 
   const load = async () => {
-    const [k, a] = await Promise.all([
+    const [k, a, c] = await Promise.all([
       adminFetch<ApiKeyRow[]>("/api/saas/org/api-keys").catch(() => []),
       adminFetch<McpActivityRow[]>("/api/integrations/mcp-activity?limit=50").catch(() => []),
+      adminFetch<AiConnection[]>("/api/integrations/ai-connections").catch(() => []),
     ]);
     setKeys(k);
     setActivity(a);
+    setConnections(c);
   };
 
   useEffect(() => {
@@ -96,6 +110,20 @@ export function AiAccessPanel() {
     }
   };
 
+  const disconnect = async (c: AiConnection) => {
+    if (!window.confirm(`Disconnect ${c.client_name} for ${c.email}? It will need to sign in again.`)) return;
+    try {
+      await adminFetch(
+        `/api/integrations/ai-connections/${encodeURIComponent(c.client_id)}/${encodeURIComponent(c.user_id)}`,
+        { method: "DELETE" },
+      );
+      setMsg(`Disconnected ${c.client_name}`);
+      await load();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Could not disconnect");
+    }
+  };
+
   const copy = async (label: string, text: string) => {
     try {
       await navigator.clipboard.writeText(text);
@@ -125,6 +153,63 @@ export function AiAccessPanel() {
       {msg ? <p className="admin-ok">{msg}</p> : null}
       {err ? <p className="admin-error">{err}</p> : null}
 
+      <div className="admin-pricing-form" style={{ maxWidth: 720, display: "grid", gap: "0.4rem" }}>
+        <strong>claude.ai, ChatGPT and other sign-in connectors</strong>
+        <p style={{ margin: 0, fontSize: "0.9rem" }}>
+          No key needed. In claude.ai open <em>Settings → Connectors → Add custom connector</em>, paste the URL
+          below, then sign in with your staff login and choose what it may do. Access can never exceed your own role.
+        </p>
+        <div className="admin-toolbar">
+          <code className="admin-input" style={{ flex: 1 }}>{mcpUrl}</code>
+          <button type="button" className="admin-btn admin-btn--sm" onClick={() => void copy("url", mcpUrl)}>
+            {copied === "url" ? "Copied" : "Copy URL"}
+          </button>
+        </div>
+      </div>
+
+      <h3 className="admin-section-title" style={{ marginTop: "1rem", fontSize: "1rem" }}>
+        Connected assistants
+      </h3>
+      <div className="admin-table-wrap">
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Assistant</th>
+              <th>Signed in as</th>
+              <th>Access</th>
+              <th>Last used (UTC)</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {connections.length === 0 ? (
+              <tr>
+                <td colSpan={5}>
+                  <div className="admin-empty">No assistant has signed in yet</div>
+                </td>
+              </tr>
+            ) : (
+              connections.map((c) => (
+                <tr key={`${c.client_id}:${c.user_id}`}>
+                  <td>{c.client_name}</td>
+                  <td>{c.email}</td>
+                  <td>{ROLE_LABEL[c.level] ?? c.level}</td>
+                  <td>{c.last_used_at ?? "not yet"}</td>
+                  <td>
+                    <button type="button" className="admin-btn admin-btn--sm" onClick={() => void disconnect(c)}>
+                      Disconnect
+                    </button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 className="admin-section-title" style={{ marginTop: "1rem", fontSize: "1rem" }}>
+        API keys (Claude Code, Claude Desktop, Cursor, integrations)
+      </h3>
       <div className="admin-pricing-form" style={{ maxWidth: 720, display: "grid", gap: "0.5rem" }}>
         <label>
           Key name

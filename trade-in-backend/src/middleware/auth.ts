@@ -3,6 +3,7 @@ import { timingSafeEqual } from "node:crypto";
 import { getDb } from "../db/migrate.js";
 import { type Capability, roleHasCapability } from "./roles.js";
 import { DEFAULT_ORG_ID, findOrgApiKey } from "../services/tenancy.js";
+import { resolveOAuthAccessToken } from "../oauth/tokens.js";
 
 /**
  * Read when used, not when this module loads.
@@ -14,7 +15,7 @@ import { DEFAULT_ORG_ID, findOrgApiKey } from "../services/tenancy.js";
 const masterKey = (): string => process.env.TG_API_KEY || "tg-dev-key-2026";
 
 export interface TgAuthContext {
-  type: "master" | "session" | "api_key" | "org_key";
+  type: "master" | "session" | "api_key" | "org_key" | "oauth";
   userId?: string;
   email?: string;
   name?: string;
@@ -94,6 +95,22 @@ export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
     }
   }
 
+  // OAuth access tokens from the MCP sign-in flow (claude.ai connectors etc.).
+  // They act as the staff member who approved them, at the level they chose,
+  // never above that member's current role.
+  if (key.startsWith("tg_oat_")) {
+    const id = resolveOAuthAccessToken(key);
+    db.close();
+    if (!id) {
+      if (!res.getHeader("WWW-Authenticate")) {
+        res.set("WWW-Authenticate", 'Bearer error="invalid_token", error_description="The access token expired or was revoked"');
+      }
+      return res.status(401).json({ error: "Access token expired or revoked. Reconnect the assistant." });
+    }
+    req.tgAuth = { type: "oauth", userId: id.userId, email: id.email, name: id.name, role: id.role, orgId: id.orgId };
+    return next();
+  }
+
   if (key.startsWith("tg_sess_")) {
     const row = db
       .prepare(
@@ -157,7 +174,7 @@ export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
   db.close();
   // A wrong, expired or revoked key is a failed sign-in (401), not a permission
   // refusal (403): clients use 401 to ask for new credentials.
-  res.set("WWW-Authenticate", 'Bearer realm="gadget-swap"');
+  if (!res.getHeader("WWW-Authenticate")) res.set("WWW-Authenticate", 'Bearer realm="gadget-swap"');
   return res.status(401).json({ error: "Invalid or revoked credentials." });
 }
 
