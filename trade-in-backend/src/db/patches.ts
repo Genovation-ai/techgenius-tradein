@@ -263,6 +263,22 @@ export function applySchemaPatches(db: Database): void {
   dedupeScrapedPrices(db);
   seedGorecellProductMap(db);
   remapOrphanGorecellEntries(db);
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS mcp_audit (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      org_id TEXT,
+      actor TEXT,
+      auth_type TEXT,
+      role TEXT,
+      tool TEXT NOT NULL,
+      args_json TEXT,
+      ok INTEGER NOT NULL,
+      error TEXT,
+      duration_ms INTEGER,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_mcp_audit_org ON mcp_audit(org_id, id DESC);
+  `);
   repairInvoiceTenants(db);
   repairInventoryTenants(db);
   disableNonNumericAdjustments(db);

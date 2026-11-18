@@ -84,7 +84,8 @@ export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
     if (hit) {
       req.tgAuth = {
         type: "org_key",
-        role: hit.role === "admin" ? "admin" : "manager",
+        // Keys carry their own scope. Legacy "integration" keys stay manager.
+        role: ["admin", "manager", "operator", "viewer"].includes(String(hit.role)) ? String(hit.role) : "manager",
         name: hit.name,
         orgId: hit.org_id,
       };
@@ -154,7 +155,10 @@ export function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
   }
 
   db.close();
-  return res.status(403).json({ error: "Invalid credentials." });
+  // A wrong, expired or revoked key is a failed sign-in (401), not a permission
+  // refusal (403): clients use 401 to ask for new credentials.
+  res.set("WWW-Authenticate", 'Bearer realm="gadget-swap"');
+  return res.status(401).json({ error: "Invalid or revoked credentials." });
 }
 
 export function requireCapability(...caps: Capability[]) {

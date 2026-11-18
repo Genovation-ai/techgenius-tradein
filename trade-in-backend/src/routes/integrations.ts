@@ -98,6 +98,42 @@ integrationsRouter.post("/email/flush", requireCapability("settings:write"), asy
   res.json(result);
 }));
 
+/** Every tool an AI assistant called over MCP: who, what, result, time. */
+integrationsRouter.get("/mcp-activity", requireCapability("settings:read"), (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 100, 1), 500);
+  const tool = req.query.tool ? String(req.query.tool) : null;
+  const orgId = orgIdOf(req);
+  const db = getDb();
+  try {
+    let sql = "SELECT id, actor, auth_type, role, tool, args_json, ok, error, duration_ms, created_at FROM mcp_audit WHERE 1=1";
+    const params: unknown[] = [];
+    if (orgId) {
+      sql += " AND org_id = ?";
+      params.push(orgId);
+    }
+    if (tool) {
+      sql += " AND tool = ?";
+      params.push(tool);
+    }
+    sql += " ORDER BY id DESC LIMIT ?";
+    params.push(limit);
+    const rows = db.prepare(sql).all(...params) as Array<Record<string, unknown>>;
+    res.json(
+      rows.map((r) => {
+        let args: unknown = null;
+        try {
+          args = JSON.parse(String(r.args_json || "null"));
+        } catch {
+          args = null;
+        }
+        return { ...r, args_json: undefined, args, ok: Boolean(r.ok) };
+      }),
+    );
+  } finally {
+    db.close();
+  }
+});
+
 /** What snapshots exist, newest first. */
 integrationsRouter.get("/backups", requireCapability("settings:read"), (_req, res) => {
   res.json({ snapshots: listSnapshots() });

@@ -474,19 +474,30 @@ saasRouter.get("/org/api-keys", apiKeyAuth, requireCapability("settings:write"),
 
 saasRouter.post("/org/api-keys", apiKeyAuth, requireCapability("settings:write"), requireOrg, (req, res) => {
   const name = String(req.body?.name || "Integration key").slice(0, 80);
+  // Scope per key: viewer (read-only), operator, manager (default), admin.
+  const role = String(req.body?.role || "manager");
+  if (!["viewer", "operator", "manager", "admin"].includes(role)) {
+    return res.status(400).json({ error: "role must be viewer, operator, manager or admin" });
+  }
+  const callerRole = req.tgAuth?.role;
+  if (role === "admin" && callerRole !== "admin" && callerRole !== "master") {
+    return res.status(403).json({ error: "Only an admin can create an admin key" });
+  }
   const key = generateApiKey();
   const id = nanoid(12);
   const db = getDb();
   db.prepare(
     `INSERT INTO org_api_keys (id, org_id, name, key_prefix, key_hash, role, enabled)
-     VALUES (?, ?, ?, ?, ?, 'integration', 1)`,
-  ).run(id, req.tgAuth!.orgId, name, key.prefix, key.hash);
+     VALUES (?, ?, ?, ?, ?, ?, 1)`,
+  ).run(id, req.tgAuth!.orgId, name, key.prefix, key.hash, role);
   db.close();
   res.status(201).json({
     id,
     name,
+    role,
     key_prefix: key.prefix,
     api_key: key.raw,
+    mcp_url: "/mcp",
     message: "Copy this key now — it will not be shown again.",
   });
 });

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { AiAccessPanel } from "./AiAccessPanel";
 import { HowThisWorks } from "../HowThisWorks";
 import { adminFetch } from "../api";
 
@@ -127,8 +128,6 @@ function OrgSaasPanel() {
   const [slug, setSlug] = useState("");
   const [stores, setStores] = useState<Array<{ id: string; name: string; phone?: string | null }>>([]);
   const [newStore, setNewStore] = useState("");
-  const [keys, setKeys] = useState<Array<{ id: string; name: string; key_prefix: string; enabled: number }>>([]);
-  const [freshKey, setFreshKey] = useState<string | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -185,10 +184,6 @@ function OrgSaasPanel() {
     setShipCity(org.settings?.ship_city || "");
     setShipState(org.settings?.ship_state || "");
     setShipZip(org.settings?.ship_zip || "");
-    const keyRows = await adminFetch<Array<{ id: string; name: string; key_prefix: string; enabled: number }>>(
-      "/api/saas/org/api-keys",
-    ).catch(() => []);
-    setKeys(keyRows);
   };
 
   useEffect(() => {
@@ -258,14 +253,6 @@ function OrgSaasPanel() {
     await load();
   };
 
-  const createKey = async () => {
-    const res = await adminFetch<{ api_key: string }>("/api/saas/org/api-keys", {
-      method: "POST",
-      body: JSON.stringify({ name: "Widget key" }),
-    });
-    setFreshKey(res.api_key);
-    await load();
-  };
 
   return (
     <>
@@ -401,40 +388,7 @@ function OrgSaasPanel() {
         </button>
       </div>
 
-      <h2 className="admin-section-title" style={{ marginTop: "1.25rem" }}>
-        API keys
-      </h2>
-      <p className="admin-section-lead">Per-shop keys for embeds and integrations (`tg_live_…`).</p>
-      {freshKey ? (
-        <code className="admin-input" style={{ display: "block", wordBreak: "break-all", marginBottom: "0.5rem" }}>
-          {freshKey}
-        </code>
-      ) : null}
-      <button type="button" className="admin-btn admin-btn--ghost" onClick={() => void createKey()}>
-        Create API key
-      </button>
-      <div className="admin-table-wrap" style={{ marginTop: "0.75rem" }}>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Prefix</th>
-              <th>Active</th>
-            </tr>
-          </thead>
-          <tbody>
-            {keys.map((k) => (
-              <tr key={k.id}>
-                <td>{k.name}</td>
-                <td>
-                  <code>{k.key_prefix}…</code>
-                </td>
-                <td>{k.enabled ? "Yes" : "No"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <AiAccessPanel />
     </>
   );
 }

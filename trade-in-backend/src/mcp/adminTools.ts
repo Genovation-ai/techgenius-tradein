@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import type { RunFn } from "./tools.js";
 
 /**
  * Everything else an admin can do in the console: catalogue, bulk pricing,
@@ -10,11 +11,7 @@ import { z } from "zod";
  * caller's key, so an operator key is refused where the console refuses it.
  */
 
-type Run = (
-  method: string,
-  path: string,
-  opts?: { query?: Record<string, string | number | boolean | undefined | null>; body?: unknown },
-) => Promise<{ isError?: boolean; content: Array<{ type: "text"; text: string }> }>;
+type Run = RunFn;
 
 const LOOKUP = { readOnlyHint: true, openWorldHint: false } as const;
 const CHANGE = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
@@ -167,7 +164,7 @@ export function registerAdminTools(server: McpServer, run: Run): void {
       inputSchema: { limit: z.number().int().min(1).optional().describe("Only the first N devices") },
       annotations: { ...CHANGE, openWorldHint: true },
     },
-    async (a) => run("POST", "/api/scraper/sync-catalog", { body: { ...a, setFrontend: false } }),
+    async (a) => run("POST", "/api/scraper/sync-catalog", { body: { ...a, setFrontend: false }, background: true }),
   );
 
   // ---------- Settings, promos, workflow, widget ----------
@@ -430,7 +427,7 @@ export function registerAdminTools(server: McpServer, run: Run): void {
       description: "Re-scrape part prices from suppliers.",
       annotations: { ...CHANGE, openWorldHint: true },
     },
-    async () => run("POST", "/api/repairs/pricing/market/refresh", { body: {} }),
+    async () => run("POST", "/api/repairs/pricing/market/refresh", { body: {}, background: true }),
   );
 
   // ---------- Team, org, stores ----------

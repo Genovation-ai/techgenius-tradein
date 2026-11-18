@@ -17,9 +17,50 @@ export interface McpApiConfig {
   baseUrl: string;
   /** Session token (tg_sess_…), org key (tg_live_…) or master key. */
   apiKey: string;
+  /** Only register tools that never change data (read-only keys). */
+  readOnly?: boolean;
+  /** Called after every tool call, for the audit trail. */
+  onToolCall?: (event: ToolCallEvent) => void;
+  /** Tag added to REST calls so server logs show they came through MCP. */
+  clientTag?: string;
+}
+
+export interface ToolCallEvent {
+  tool: string;
+  args: unknown;
+  ok: boolean;
+  error: string | null;
+  durationMs: number;
 }
 
 type Query = Record<string, string | number | boolean | undefined | null>;
+export interface RunOptions {
+  query?: Query;
+  body?: unknown;
+  /** Abort after this long (default 120 s). */
+  timeoutMs?: number;
+  /** Start the call and return at once; for jobs that run for many minutes. */
+  background?: boolean;
+}
+export type RunFn = (
+  method: string,
+  path: string,
+  opts?: RunOptions,
+) => Promise<{ isError?: boolean; content: Array<{ type: "text"; text: string }> }>;
+
+/** Fields never written to the audit log. */
+const SECRET_KEYS = /pass(word)?|secret|token|api[_-]?key|authorization/i;
+export function redactArgs(value: unknown, depth = 0): unknown {
+  if (depth > 6 || value == null) return value;
+  if (Array.isArray(value)) return value.slice(0, 50).map((v) => redactArgs(v, depth + 1));
+  if (typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([k, v]) => [k, SECRET_KEYS.test(k) ? "[redacted]" : redactArgs(v, depth + 1)]),
+    );
+  }
+  if (typeof value === "string" && value.length > 500) return `${value.slice(0, 500)}…`;
+  return value;
+}
 
 const LOOKUP = { readOnlyHint: true, openWorldHint: false } as const;
 const CHANGE = { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
@@ -32,7 +73,7 @@ const GRADE = z
 export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
   const base = cfg.baseUrl.replace(/\/$/, "");
 
-  async function api(method: string, path: string, opts: { query?: Query; body?: unknown } = {}) {
+  async function api(method: string, path: string, opts: RunOptions = {}) {
     const url = new URL(base + path);
     for (const [k, v] of Object.entries(opts.query || {})) {
       if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));
@@ -41,10 +82,12 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
       method,
       headers: {
         "x-api-key": cfg.apiKey,
+        "x-client": cfg.clientTag || "mcp",
         accept: "application/json, text/html",
         ...(opts.body !== undefined ? { "content-type": "application/json" } : {}),
       },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      signal: opts.background ? undefined : AbortSignal.timeout(opts.timeoutMs ?? 120_000),
     });
     const text = await res.text();
     let data: unknown = text;
@@ -57,8 +100,39 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
   }
 
   /** Turn an API response into a tool result; HTTP errors become tool errors the model can read. */
-  async function run(method: string, path: string, opts: { query?: Query; body?: unknown } = {}) {
-    const r = await api(method, path, opts);
+  const run: RunFn = async (method, path, opts = {}) => {
+    if (opts.background) {
+      // Long jobs (full catalogue sync, live scrape) outlive any HTTP client's
+      // patience. Start it on the server and report back immediately.
+      void api(method, path, opts)
+        .then((r) => console.log(`[mcp] background ${method} ${path} finished: HTTP ${r.status}`))
+        .catch((e) => console.warn(`[mcp] background ${method} ${path} failed:`, e instanceof Error ? e.message : e));
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: `Started ${method} ${path} in the background. It can take several minutes; check progress with pricing_health or system_status.`,
+          },
+        ],
+      };
+    }
+    let r: Awaited<ReturnType<typeof api>>;
+    try {
+      r = await api(method, path, opts);
+    } catch (e) {
+      const timedOut = e instanceof Error && (e.name === "TimeoutError" || e.name === "AbortError");
+      return {
+        isError: true,
+        content: [
+          {
+            type: "text" as const,
+            text: timedOut
+              ? `${method} ${path} did not answer within ${Math.round((opts.timeoutMs ?? 120_000) / 1000)} s.`
+              : `${method} ${path} failed: ${e instanceof Error ? e.message : String(e)}`,
+          },
+        ],
+      };
+    }
     const payload = typeof r.data === "string" ? r.data : JSON.stringify(r.data, null, 2);
     if (!r.ok) {
       return {
@@ -69,7 +143,7 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
     // Large lists are clipped so one call cannot flood the model's context.
     const clipped = payload.length > 60_000 ? `${payload.slice(0, 60_000)}\n…(truncated, narrow the query)` : payload;
     return { content: [{ type: "text" as const, text: clipped }] };
-  }
+  };
 
   const enc = encodeURIComponent;
   const server = new McpServer(
@@ -80,9 +154,47 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
         "for what the shop pays. Offers move active_lead -> in_transit -> delivered -> being_inspected -> " +
         "completed (completion issues an invoice and adds inventory). Prices are CAD. Tools that change data " +
         "are permission-checked against the API key in use: an admin key can manage the whole platform (catalogue, " +
-        "pricing, settings, team), and api_request reaches any /api endpoint not covered by a dedicated tool.",
+        "pricing, settings, team), and api_request reaches any /api endpoint not covered by a dedicated tool. " +
+        "Before any tool that changes prices, payouts or staff, tell the user what will change and get a yes.",
     },
   );
+
+  // One choke point for every tool: read-only keys never see a tool that can
+  // change data, and every call is timed and handed to the audit hook.
+  const register = server.registerTool.bind(server) as (...a: unknown[]) => unknown;
+  (server as unknown as { registerTool: (...a: unknown[]) => unknown }).registerTool = (
+    name: unknown,
+    config: unknown,
+    handler: unknown,
+  ) => {
+    const annotations = (config as { annotations?: { readOnlyHint?: boolean } }).annotations;
+    if (cfg.readOnly && annotations?.readOnlyHint !== true) return undefined;
+    const fn = handler as (...args: unknown[]) => Promise<{ isError?: boolean; content: Array<{ text?: string }> }>;
+    return register(name, config, async (...args: unknown[]) => {
+      const started = Date.now();
+      const toolArgs = args.length > 1 ? args[0] : undefined;
+      try {
+        const result = await fn(...args);
+        cfg.onToolCall?.({
+          tool: String(name),
+          args: redactArgs(toolArgs),
+          ok: !result.isError,
+          error: result.isError ? (result.content?.[0]?.text ?? "error").slice(0, 500) : null,
+          durationMs: Date.now() - started,
+        });
+        return result;
+      } catch (e) {
+        cfg.onToolCall?.({
+          tool: String(name),
+          args: redactArgs(toolArgs),
+          ok: false,
+          error: (e instanceof Error ? e.message : String(e)).slice(0, 500),
+          durationMs: Date.now() - started,
+        });
+        throw e;
+      }
+    });
+  };
 
   // ---------- Catalogue & quoting (what a customer sees) ----------
   server.registerTool(
@@ -321,7 +433,21 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
       annotations: { ...CHANGE, openWorldHint: true },
     },
     async (a) =>
-      run("POST", "/api/scraper/sync-catalog", { body: { filter: `id:${a.device_id}`, setFrontend: false, delayMs: 0 } }),
+      run("POST", "/api/scraper/sync-catalog", {
+        body: { filter: `id:${a.device_id}`, setFrontend: false, delayMs: 0 },
+        timeoutMs: 180_000,
+      }),
+  );
+
+  server.registerTool(
+    "ai_activity",
+    {
+      title: "AI assistant activity",
+      description: "Audit log of tool calls made over MCP: which key, which tool, arguments (secrets redacted), result.",
+      inputSchema: { tool: z.string().optional(), limit: z.number().int().min(1).max(500).optional() },
+      annotations: LOOKUP,
+    },
+    async (a) => run("GET", "/api/integrations/mcp-activity", { query: a }),
   );
 
   server.registerTool(
@@ -333,7 +459,7 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
         "minutes). Returns per-competitor row counts and errors.",
       annotations: { ...CHANGE, openWorldHint: true },
     },
-    async () => run("POST", "/api/scraper/run-live", { body: {} }),
+    async () => run("POST", "/api/scraper/run-live", { body: {}, background: true }),
   );
 
   server.registerTool(

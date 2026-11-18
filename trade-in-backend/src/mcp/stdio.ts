@@ -18,6 +18,6 @@ if (!apiKey) {
   process.exit(1);
 }
 
-const server = createGadgetSwapMcp({ baseUrl, apiKey });
+const server = createGadgetSwapMcp({ baseUrl, apiKey, clientTag: "mcp-stdio" });
 await server.connect(new StdioServerTransport());
 console.error(`[gadget-swap mcp] connected to ${baseUrl}`);

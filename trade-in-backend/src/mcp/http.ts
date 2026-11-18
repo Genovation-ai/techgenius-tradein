@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createGadgetSwapMcp } from "./tools.js";
+import { getDb } from "../db/migrate.js";
+import { createGadgetSwapMcp, type ToolCallEvent } from "./tools.js";
 
 /**
  * POST /mcp — Streamable HTTP MCP endpoint, stateless.
@@ -20,7 +21,16 @@ export async function handleMcpRequest(req: Request, res: Response, port: number
         ? auth.slice(7).trim()
         : "";
 
-  const server = createGadgetSwapMcp({ baseUrl: `http://127.0.0.1:${port}`, apiKey: token });
+  const who = req.tgAuth;
+  const actor = who?.email || who?.name || who?.userId || who?.type || "unknown";
+  const server = createGadgetSwapMcp({
+    baseUrl: `http://127.0.0.1:${port}`,
+    apiKey: token,
+    readOnly: who?.role === "viewer",
+    clientTag: "mcp-http",
+    onToolCall: (ev) =>
+      recordToolCall(ev, { orgId: who?.orgId ?? null, actor, authType: who?.type ?? null, role: who?.role ?? null }),
+  });
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   res.on("close", () => {
     void transport.close();
@@ -34,6 +44,36 @@ export async function handleMcpRequest(req: Request, res: Response, port: number
     if (!res.headersSent) {
       res.status(500).json({ jsonrpc: "2.0", error: { code: -32603, message: "Internal error" }, id: null });
     }
+  }
+}
+
+/** Audit row per tool call. Never allowed to break the call itself. */
+function recordToolCall(
+  ev: ToolCallEvent,
+  who: { orgId: string | null; actor: string; authType: string | null; role: string | null },
+): void {
+  try {
+    const db = getDb();
+    try {
+      db.prepare(
+        `INSERT INTO mcp_audit (org_id, actor, auth_type, role, tool, args_json, ok, error, duration_ms)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ).run(
+        who.orgId,
+        who.actor.slice(0, 200),
+        who.authType,
+        who.role,
+        ev.tool,
+        JSON.stringify(ev.args ?? null).slice(0, 4000),
+        ev.ok ? 1 : 0,
+        ev.error,
+        ev.durationMs,
+      );
+    } finally {
+      db.close();
+    }
+  } catch (e) {
+    console.warn("[mcp] audit write failed:", e instanceof Error ? e.message : e);
   }
 }
 
