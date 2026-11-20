@@ -75,8 +75,14 @@ async function main() {
   const list = await rpc({ "x-api-key": KEY }, { jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
   const tools = ((list.json.result as { tools?: unknown[] })?.tools ?? []).length;
   ok("raw tools/list without a session (stateless)", list.status === 200 && tools > 80, `${tools} tools`);
-  const call = await rpc({ "x-api-key": KEY }, { jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "get_pricing_rule", arguments: {} } });
-  ok("raw tools/call", call.status === 200 && JSON.stringify(call.json).includes("beatPercent"));
+  // get_quote works for every role, so this check does not depend on the key's scope.
+  const call = await rpc({ "x-api-key": KEY }, {
+    jsonrpc: "2.0",
+    id: 3,
+    method: "tools/call",
+    params: { name: "get_quote", arguments: { device_id: "iphone-15", storage: "128GB", condition_grade: "good" } },
+  });
+  ok("raw tools/call", call.status === 200 && JSON.stringify(call.json).includes("quoted_price"));
   const batch = await rpc({ "x-api-key": KEY }, [
     { jsonrpc: "2.0", id: 4, method: "tools/list", params: {} },
     { jsonrpc: "2.0", id: 5, method: "resources/list", params: {} },
