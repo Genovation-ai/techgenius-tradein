@@ -103,8 +103,10 @@ async function main() {
   })) as ToolResult;
   const sr = set.isError ? {} : JSON.parse(text(set));
   ok(
-    "set_competitor_price moves the live quote",
-    !set.isError && sr.customer_quote_after?.flawless > sr.customer_quote_before?.flawless,
+    "set_competitor_price moves the live quote to the entered price",
+    !set.isError &&
+      sr.customer_quote_after?.flawless <= sr.entered?.flawless &&
+      sr.customer_quote_after?.flawless >= Math.floor(sr.entered?.flawless * 0.9),
     `flawless ${sr.customer_quote_before?.flawless} -> ${sr.customer_quote_after?.flawless}`,
   );
   const q2 = JSON.parse(

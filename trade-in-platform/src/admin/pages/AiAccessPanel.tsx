@@ -24,6 +24,27 @@ interface AiConnection {
   last_used_at: string | null;
 }
 
+interface ClientGuide {
+  id: string;
+  name: string;
+  auth: "signin" | "key" | "either";
+  steps: string[];
+  config?: { file?: string; language: string; body: string };
+}
+
+/** One-click installers for the tools that support them. */
+function installLink(id: string, mcpUrl: string, key: string): string | null {
+  const headers = { "x-api-key": key };
+  if (id === "cursor") {
+    const cfg = btoa(JSON.stringify({ url: mcpUrl, headers }));
+    return `cursor://anysphere.cursor-deeplink/mcp/install?name=gadget-swap&config=${encodeURIComponent(cfg)}`;
+  }
+  if (id === "vscode") {
+    return `vscode:mcp/install?${encodeURIComponent(JSON.stringify({ name: "gadget-swap", type: "http", url: mcpUrl, headers }))}`;
+  }
+  return null;
+}
+
 interface McpActivityRow {
   id: number;
   actor: string;
@@ -59,6 +80,8 @@ export function AiAccessPanel() {
   const [keys, setKeys] = useState<ApiKeyRow[]>([]);
   const [activity, setActivity] = useState<McpActivityRow[]>([]);
   const [connections, setConnections] = useState<AiConnection[]>([]);
+  const [guides, setGuides] = useState<ClientGuide[]>([]);
+  const [tool, setTool] = useState("claude-ai");
   const [name, setName] = useState("Claude assistant");
   const [role, setRole] = useState<KeyRole>("viewer");
   const [fresh, setFresh] = useState<{ key: string; role: string } | null>(null);
@@ -81,6 +104,10 @@ export function AiAccessPanel() {
 
   useEffect(() => {
     void load();
+    fetch("/connect.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { clients?: ClientGuide[] } | null) => setGuides(d?.clients ?? []))
+      .catch(() => setGuides([]));
   }, []);
 
   const create = async () => {
@@ -134,12 +161,15 @@ export function AiAccessPanel() {
     }
   };
 
-  const claudeCode = fresh
-    ? `claude mcp add --transport http gadget-swap ${mcpUrl} --header "x-api-key: ${fresh.key}"`
-    : "";
-  const jsonConfig = fresh
-    ? JSON.stringify({ mcpServers: { "gadget-swap": { url: mcpUrl, headers: { "x-api-key": fresh.key } } } }, null, 2)
-    : "";
+  const sseUrl = `${window.location.origin}/sse`;
+  const fill = (text: string) =>
+    text
+      .split("{{URL}}").join(mcpUrl)
+      .split("{{SSE}}").join(sseUrl)
+      .split("{{KEY}}").join(fresh?.key ?? "YOUR_API_KEY");
+  const guide = guides.find((g) => g.id === tool);
+  const configText = guide?.config ? fill(guide.config.body) : "";
+  const oneClick = fresh && guide ? installLink(guide.id, mcpUrl, fresh.key) : null;
 
   return (
     <>
@@ -153,18 +183,66 @@ export function AiAccessPanel() {
       {msg ? <p className="admin-ok">{msg}</p> : null}
       {err ? <p className="admin-error">{err}</p> : null}
 
-      <div className="admin-pricing-form" style={{ maxWidth: 720, display: "grid", gap: "0.4rem" }}>
-        <strong>claude.ai, ChatGPT and other sign-in connectors</strong>
-        <p style={{ margin: 0, fontSize: "0.9rem" }}>
-          No key needed. In claude.ai open <em>Settings → Connectors → Add custom connector</em>, paste the URL
-          below, then sign in with your staff login and choose what it may do. Access can never exceed your own role.
-        </p>
+      <div className="admin-pricing-form" style={{ maxWidth: 720, display: "grid", gap: "0.5rem" }}>
+        <strong>Connect an AI tool</strong>
         <div className="admin-toolbar">
-          <code className="admin-input" style={{ flex: 1 }}>{mcpUrl}</code>
+          <code className="admin-input" style={{ flex: 1, wordBreak: "break-all" }}>{mcpUrl}</code>
           <button type="button" className="admin-btn admin-btn--sm" onClick={() => void copy("url", mcpUrl)}>
             {copied === "url" ? "Copied" : "Copy URL"}
           </button>
         </div>
+        <label>
+          Which tool?
+          <select className="admin-input" value={tool} onChange={(e) => setTool(e.target.value)}>
+            {guides.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        {guide ? (
+          <>
+            <p style={{ margin: 0, fontSize: "0.85rem", color: "#6b7280" }}>
+              {guide.auth === "signin"
+                ? "Sign in with your staff login — no key needed."
+                : guide.auth === "either"
+                  ? "Sign in, or use an API key (create one below and it is filled in here)."
+                  : "Needs an API key — create one below and it is filled in here."}
+            </p>
+            <ol style={{ margin: 0, paddingLeft: "1.2rem" }}>
+              {guide.steps.map((step, i) => (
+                <li key={i}>{fill(step)}</li>
+              ))}
+            </ol>
+            {guide.config ? (
+              <>
+                {guide.config.file ? <code style={{ fontSize: "0.8rem" }}>{guide.config.file}</code> : null}
+                <pre className="admin-input" style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", margin: 0 }}>
+                  {configText}
+                </pre>
+                <div className="admin-toolbar">
+                  <button type="button" className="admin-btn admin-btn--sm" onClick={() => void copy("cfg", configText)}>
+                    {copied === "cfg" ? "Copied" : "Copy"}
+                  </button>
+                  {oneClick ? (
+                    <a className="admin-btn admin-btn--sm" href={oneClick}>
+                      Install in {guide.id === "cursor" ? "Cursor" : "VS Code"}
+                    </a>
+                  ) : null}
+                </div>
+                {!fresh && guide.auth !== "signin" ? (
+                  <p style={{ margin: 0, fontSize: "0.8rem", color: "#6b7280" }}>
+                    Create a key below and this config fills in with it{guide.id === "cursor" || guide.id === "vscode" ? ", with a one-click install button" : ""}.
+                  </p>
+                ) : null}
+              </>
+            ) : null}
+          </>
+        ) : null}
+        <a href="/connect" target="_blank" rel="noreferrer" style={{ fontSize: "0.85rem" }}>
+          Open the full setup guide (shareable, no key on it)
+        </a>
       </div>
 
       <h3 className="admin-section-title" style={{ marginTop: "1rem", fontSize: "1rem" }}>
@@ -208,7 +286,7 @@ export function AiAccessPanel() {
       </div>
 
       <h3 className="admin-section-title" style={{ marginTop: "1rem", fontSize: "1rem" }}>
-        API keys (Claude Code, Claude Desktop, Cursor, integrations)
+        API keys (for tools that do not sign in, and integrations)
       </h3>
       <div className="admin-pricing-form" style={{ maxWidth: 720, display: "grid", gap: "0.5rem" }}>
         <label>
@@ -242,16 +320,10 @@ export function AiAccessPanel() {
             <button type="button" className="admin-btn admin-btn--sm" onClick={() => void copy("key", fresh.key)}>
               {copied === "key" ? "Copied" : "Copy key"}
             </button>
-            <button type="button" className="admin-btn admin-btn--sm" onClick={() => void copy("cc", claudeCode)}>
-              {copied === "cc" ? "Copied" : "Copy Claude Code command"}
-            </button>
-            <button type="button" className="admin-btn admin-btn--sm" onClick={() => void copy("json", jsonConfig)}>
-              {copied === "json" ? "Copied" : "Copy Claude Desktop / Cursor config"}
-            </button>
           </div>
-          <pre className="admin-input" style={{ whiteSpace: "pre-wrap", fontSize: "0.8rem", margin: 0 }}>
-            {jsonConfig}
-          </pre>
+          <p style={{ margin: 0, fontSize: "0.85rem" }}>
+            The setup for <strong>{guide?.name ?? "your tool"}</strong> above now includes this key. Pick a different tool there to get its config.
+          </p>
         </div>
       ) : null}
 

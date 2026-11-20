@@ -30,10 +30,11 @@ import { integrationsRouter } from "./routes/integrations.js";
 import { cronRouter, pricingEngineRouter } from "./routes/cron.js";
 import { requireCapability } from "./middleware/auth.js";
 import { homeOrgForWrites, requireHomeOrg } from "./middleware/orgScope.js";
-import { handleMcpRequest, mcpMethodNotAllowed } from "./mcp/http.js";
-import { mcpAuthRouter, getOAuthProtectedResourceMetadataUrl } from "@modelcontextprotocol/sdk/server/auth/router.js";
+import { handleMcpGet, handleMcpRequest, handleSseConnect, handleSseMessage, mcpMethodNotAllowed } from "./mcp/http.js";
+import { CLIENT_GUIDES, renderConnectPage } from "./mcp/clients.js";
+import { createOAuthMetadata, mcpAuthRouter, getOAuthProtectedResourceMetadataUrl } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import { consentRouter, gadgetSwapOAuthProvider, SUPPORTED_SCOPES } from "./oauth/provider.js";
-import { rateLimit } from "./middleware/rateLimit.js";
+import { credentialKey, rateLimit } from "./middleware/rateLimit.js";
 import { geoRouter } from "./routes/geo.js";
 import { startSubscriptionLifecycle } from "./services/subscriptionLifecycle.js";
 import { startBackupSchedule } from "./services/backup.js";
@@ -128,6 +129,9 @@ const PUBLIC_CORS_PATHS = [
   "/register",
   "/token",
   "/revoke",
+  "/sse",
+  "/messages",
+  "/connect",
 ];
 const openCors = cors();
 const restrictedCors = corsOrigins.length > 0 ? cors({ origin: corsOrigins }) : cors();
@@ -356,7 +360,9 @@ app.use("/api/cron", cronRouter);
 // MCP: AI assistants (Claude, Cursor, …) connect here with an API key. Each
 // tool replays the call against this same API with that key, so permissions
 // and tenant scoping are exactly the admin console's.
-const mcpLimiter = rateLimit({ windowMs: 60 * 1000, max: 120 });
+// Per key / sign-in, not per IP: an office of assistants behind one IP should
+// not throttle each other, and a bulk price repair runs hundreds of calls.
+const mcpLimiter = rateLimit({ windowMs: 60 * 1000, max: 600, keyBy: credentialKey });
 const mcpPort = parseInt(process.env.PORT || "4100", 10);
 
 // OAuth 2.1 for MCP clients that sign in instead of pasting a key (claude.ai
@@ -373,7 +379,7 @@ app.use(
     resourceServerUrl: mcpResource,
     scopesSupported: SUPPORTED_SCOPES,
     resourceName: "Gadget Swap",
-    serviceDocumentationUrl: new URL("/admin/settings", publicBase),
+    serviceDocumentationUrl: new URL("/connect", publicBase),
   }),
 );
 app.use("/oauth/consent", authLimiter, consentRouter());
@@ -388,7 +394,44 @@ app.post("/mcp", mcpLimiter, mcpChallenge, apiKeyAuth, (req, res) => {
   res.removeHeader("WWW-Authenticate");
   void handleMcpRequest(req, res, mcpPort);
 });
-app.get("/mcp", mcpMethodNotAllowed);
+app.get("/mcp", handleMcpGet(publicBase));
+
+// Older HTTP+SSE transport for clients that have not moved to Streamable HTTP.
+app.get("/sse", mcpLimiter, mcpChallenge, apiKeyAuth, (req, res) => {
+  res.removeHeader("WWW-Authenticate");
+  void handleSseConnect(req, res, mcpPort);
+});
+app.post("/messages", mcpLimiter, apiKeyAuth, (req, res) => void handleSseMessage(req, res));
+
+// Setup page and the same guide as data, for people and for the admin panel.
+const mcpUrlStr = mcpResource.href;
+const sseUrlStr = new URL("/sse", publicBase).href;
+app.get("/connect", (_req, res) => {
+  res.setHeader("Cache-Control", "no-store");
+  res.type("html").send(renderConnectPage(mcpUrlStr, sseUrlStr, new URL("/admin/settings", publicBase).href));
+});
+app.get("/connect.json", (_req, res) => {
+  res.json({ mcp_url: mcpUrlStr, sse_url: sseUrlStr, clients: CLIENT_GUIDES });
+});
+
+// Discovery aliases. The SDK serves the path-specific documents; some clients
+// look at the bare well-known path, and some only know OpenID discovery.
+const oauthMetadata = createOAuthMetadata({
+  provider: gadgetSwapOAuthProvider,
+  issuerUrl: publicBase,
+  scopesSupported: SUPPORTED_SCOPES,
+  serviceDocumentationUrl: new URL("/connect", publicBase),
+});
+const protectedResource = {
+  resource: mcpUrlStr,
+  authorization_servers: [publicBase.href],
+  scopes_supported: SUPPORTED_SCOPES,
+  bearer_methods_supported: ["header"],
+  resource_name: "Gadget Swap",
+  resource_documentation: new URL("/connect", publicBase).href,
+};
+app.get("/.well-known/oauth-protected-resource", (_req, res) => res.json(protectedResource));
+app.get("/.well-known/openid-configuration", (_req, res) => res.json(oauthMetadata));
 app.delete("/mcp", mcpMethodNotAllowed);
 
 // Protected endpoints (admin panel / integrations)
