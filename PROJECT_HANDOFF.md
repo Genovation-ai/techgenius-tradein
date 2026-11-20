@@ -232,9 +232,9 @@ Customers **never** see competitor names/prices — only Tech Genius offer.
 |------|--------|
 | Backend URL | `http://127.0.0.1:4100` |
 | Admin email | `admin@techgenius.ca` |
-| Admin password | `TechGenius2026!` |
-| Manager | `manager@techgenius.ca` / `Manager2026!` |
-| Operator | `operator@techgenius.ca` / `Operator2026!` |
+| Admin password | (set with `TG_ADMIN_PASSWORD`; local dev only has a built-in default) |
+| Manager | `manager@techgenius.ca` (local dev only; password from `TG_MANAGER_PASSWORD`) |
+| Operator | `operator@techgenius.ca` (local dev only; password from `TG_OPERATOR_PASSWORD`) |
 | Dev API key | `tg-dev-key-2026` |
 | Cron secret (dev) | often same as API key unless `TG_CRON_SECRET` set |
 

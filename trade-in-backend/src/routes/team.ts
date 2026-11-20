@@ -3,7 +3,13 @@ import { nanoid } from "nanoid";
 import { randomBytes, scryptSync } from "node:crypto";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
-import { STAFF_ROLES, capabilitiesForRole, normalizeRole } from "../middleware/roles.js";
+import { STAFF_ROLES, capabilitiesForRole, normalizeRole, parseRole } from "../middleware/roles.js";
+import { DEFAULT_ORG_ID } from "../services/tenancy.js";
+
+/** The shop whose staff this caller manages. Master key and legacy keys act for the home shop. */
+function callerOrg(req: { tgAuth?: { orgId?: string } }): string {
+  return req.tgAuth?.orgId || DEFAULT_ORG_ID;
+}
 
 export const teamRouter = Router();
 
@@ -16,13 +22,16 @@ function makePasswordRecord(password: string): string {
   return `${salt}:${hashPassword(password, salt)}`;
 }
 
-teamRouter.get("/", requireCapability("team:read"), (_req, res) => {
+teamRouter.get("/", requireCapability("team:read"), (req, res) => {
+  // Every shop's staff list used to come back to any shop's admin — names,
+  // emails and roles across the whole platform.
   const db = getDb();
   const rows = db
     .prepare(
-      `SELECT id, email, name, role, enabled, created_at FROM admin_users ORDER BY created_at ASC`,
+      `SELECT id, email, name, role, enabled, created_at FROM admin_users
+        WHERE COALESCE(org_id, ?) = ? ORDER BY created_at ASC`,
     )
-    .all();
+    .all(DEFAULT_ORG_ID, callerOrg(req));
   db.close();
   res.json({
     users: rows,
@@ -46,7 +55,9 @@ teamRouter.post("/", requireCapability("team:write"), (req, res) => {
     .toLowerCase();
   const name = String(req.body?.name || "").trim().slice(0, 120);
   const password = String(req.body?.password || "");
-  const role = normalizeRole(req.body?.role);
+  // An unknown role used to fall through to admin.
+  const role = req.body?.role == null || req.body.role === "" ? "operator" : parseRole(req.body.role);
+  if (!role) return res.status(400).json({ error: `role must be one of ${STAFF_ROLES.join(", ")}` });
 
   if (!email || !name || password.length < 8) {
     return res.status(400).json({ error: "email, name, and password (min 8) are required" });
@@ -64,7 +75,7 @@ teamRouter.post("/", requireCapability("team:write"), (req, res) => {
   const id = nanoid(12);
   db.prepare(
     "INSERT INTO admin_users (id, email, password_hash, name, role, org_id) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run(id, email, makePasswordRecord(password), name, role, req.tgAuth?.orgId || "org-tech-genius");
+  ).run(id, email, makePasswordRecord(password), name, role, callerOrg(req));
   db.close();
   res.status(201).json({ id, email, name, role });
 });
@@ -72,14 +83,23 @@ teamRouter.post("/", requireCapability("team:write"), (req, res) => {
 teamRouter.patch("/:id", requireCapability("team:write"), (req, res) => {
   const db = getDb();
   const user = db
-    .prepare("SELECT id, role FROM admin_users WHERE id = ?")
-    .get(req.params.id) as { id: string; role: string } | undefined;
-  if (!user) {
+    .prepare("SELECT id, role, COALESCE(org_id, ?) AS org_id FROM admin_users WHERE id = ?")
+    .get(DEFAULT_ORG_ID, req.params.id) as { id: string; role: string; org_id: string } | undefined;
+  // A shop can only edit its own staff. This loaded any user on the platform,
+  // so another shop's admin could reset this shop's admin password.
+  if (!user || user.org_id !== callerOrg(req)) {
     db.close();
     return res.status(404).json({ error: "Not found" });
   }
 
-  const nextRole = req.body?.role != null ? normalizeRole(req.body.role) : null;
+  let nextRole: string | null = null;
+  if (req.body?.role != null) {
+    nextRole = parseRole(req.body.role);
+    if (!nextRole) {
+      db.close();
+      return res.status(400).json({ error: `role must be one of ${STAFF_ROLES.join(", ")}` });
+    }
+  }
   if (nextRole === "admin" && req.tgAuth?.role === "manager") {
     db.close();
     return res.status(403).json({ error: "Managers cannot promote to admin" });
@@ -87,8 +107,8 @@ teamRouter.patch("/:id", requireCapability("team:write"), (req, res) => {
 
   if (req.body?.enabled === 0 || req.body?.enabled === false) {
     const admins = db
-      .prepare("SELECT COUNT(*) AS c FROM admin_users WHERE role = 'admin' AND enabled = 1")
-      .get() as { c: number };
+      .prepare("SELECT COUNT(*) AS c FROM admin_users WHERE role = 'admin' AND enabled = 1 AND COALESCE(org_id, ?) = ?")
+      .get(DEFAULT_ORG_ID, user.org_id) as { c: number };
     if (user.role === "admin" && admins.c <= 1) {
       db.close();
       return res.status(400).json({ error: "Cannot disable the last admin" });
@@ -108,6 +128,10 @@ teamRouter.patch("/:id", requireCapability("team:write"), (req, res) => {
     req.params.id,
   );
 
+  if (req.body?.password != null && String(req.body.password).length > 0 && String(req.body.password).length < 8) {
+    db.close();
+    return res.status(400).json({ error: "password must be at least 8 characters" });
+  }
   if (req.body?.password && String(req.body.password).length >= 8) {
     db.prepare("UPDATE admin_users SET password_hash = ? WHERE id = ?").run(
       makePasswordRecord(String(req.body.password)),
@@ -119,8 +143,17 @@ teamRouter.patch("/:id", requireCapability("team:write"), (req, res) => {
   res.json({ ok: true });
 });
 
-/** Seed default operator + manager for local/dev demos when missing */
+/**
+ * Seed an operator and a manager for local development.
+ *
+ * Production only seeds them when real passwords are supplied: the built-in
+ * ones are in this public repository, and with them anyone could sign in as
+ * the manager and change prices.
+ */
 export function seedStaffRoles() {
+  if (process.env.NODE_ENV === "production" && !process.env.TG_OPERATOR_PASSWORD && !process.env.TG_MANAGER_PASSWORD) {
+    return;
+  }
   const db = getDb();
   const opEmail = (process.env.TG_OPERATOR_EMAIL || "operator@techgenius.ca").toLowerCase();
   const existing = db.prepare("SELECT id FROM admin_users WHERE email = ?").get(opEmail);

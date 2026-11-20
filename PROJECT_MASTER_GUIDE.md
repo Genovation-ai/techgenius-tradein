@@ -77,7 +77,7 @@ Build a **complete Reusely-style trade-in / buyback operations system** for **Te
 |------|--------|
 | Backend port | `4100` |
 | Admin email | `admin@techgenius.ca` |
-| Admin password | `TechGenius2026!` |
+| Admin password | (set with `TG_ADMIN_PASSWORD`; local dev only has a built-in default) |
 | Dev API key | `tg-dev-key-2026` |
 | Cron secret (dev) | same as API key unless `TG_CRON_SECRET` set |
 
@@ -243,7 +243,7 @@ npm run dev
 
 - URL: `/admin`
 - Email: `admin@techgenius.ca`
-- Password: `TechGenius2026!`
+- Password: (set with `TG_ADMIN_PASSWORD`; local dev only has a built-in default)
 
 ### Build embed for Shopify
 

@@ -106,6 +106,36 @@ function clearFailures(email: string) {
   failures.delete(email);
 }
 
+/** Passwords that appear in this repository's source and docs. */
+const PUBLISHED_DEFAULT_PASSWORDS = ["TechGenius2026!", "Operator2026!", "Manager2026!"];
+
+/**
+ * In production, switch off any staff login still using a password that was
+ * published with the source code. The repository is public, so those logins
+ * are open to anyone. An admin turns one back on by setting a new password
+ * on the Team page. Returns the emails it disabled.
+ */
+export function retirePublishedDefaultPasswords(): string[] {
+  if (process.env.NODE_ENV !== "production") return [];
+  const db = getDb();
+  try {
+    const rows = db
+      .prepare("SELECT id, email, password_hash FROM admin_users WHERE enabled = 1")
+      .all() as Array<{ id: string; email: string; password_hash: string }>;
+    const hit = rows.filter((r) => PUBLISHED_DEFAULT_PASSWORDS.some((p) => verifyPassword(p, r.password_hash)));
+    const off = db.prepare("UPDATE admin_users SET enabled = 0 WHERE id = ?");
+    const kill = db.prepare("DELETE FROM admin_sessions WHERE user_id = ?");
+    for (const r of hit) {
+      off.run(r.id);
+      kill.run(r.id);
+      console.warn(`[security] disabled ${r.email}: it still used a password published in the public repo. Re-enable it with a new password on the Team page.`);
+    }
+    return hit.map((r) => r.email);
+  } finally {
+    db.close();
+  }
+}
+
 /** Ensure default admin exists (like first Reusely account) */
 export function seedAdminUser() {
   const db = getDb();

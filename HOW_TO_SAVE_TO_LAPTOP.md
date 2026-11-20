@@ -43,7 +43,7 @@ Open the Vite URL shown in the terminal, then go to **`/admin`**.
 **Login**
 
 - Email: `admin@techgenius.ca`
-- Password: `TechGenius2026!`
+- Password: (set with `TG_ADMIN_PASSWORD`; local dev only has a built-in default)
 
 ## Windows (PowerShell)
 

@@ -1,6 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { registerAdminTools } from "./adminTools.js";
+import { registerResourcesAndPrompts } from "./resources.js";
 
 /**
  * Gadget Swap as an MCP server: what an AI assistant can look up and do.
@@ -792,6 +793,28 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
   );
 
   server.registerTool(
+    "book_repair",
+    {
+      title: "Book a repair",
+      description: "Book a repair job for a customer (device + problem). Returns the job id and quoted price.",
+      inputSchema: {
+        contact: z.object({
+          first_name: z.string(),
+          last_name: z.string().optional(),
+          email: z.string().optional(),
+          phone: z.string().optional(),
+        }),
+        device_id: z.string(),
+        problem: z.string().describe("Problem id from repair_problems"),
+        fulfilment: z.enum(["drop-off", "mail-in"]).optional(),
+        notes: z.string().max(500).optional(),
+      },
+      annotations: { ...CHANGE, idempotentHint: false },
+    },
+    async (a) => run("POST", "/api/repair/book", { body: a }),
+  );
+
+  server.registerTool(
     "list_repairs",
     {
       title: "List repair jobs",
@@ -872,6 +895,7 @@ export function createGadgetSwapMcp(cfg: McpApiConfig): McpServer {
   );
 
   registerAdminTools(server, run);
+  registerResourcesAndPrompts(server, api, run);
 
   server.registerPrompt(
     "fix_stale_prices",

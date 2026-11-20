@@ -102,7 +102,7 @@ TG_CRM_WEBHOOK_TOKEN=…
 NODE_ENV=production
 ```
 
-Dev staff seeds: admin / manager (`Manager2026!`) / operator (`Operator2026!`).
+Dev staff seeds: admin / manager / operator (local dev only; production seeds none without env passwords).
 
 ---
 

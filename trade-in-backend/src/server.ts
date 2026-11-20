@@ -16,7 +16,7 @@ import { settingsRouter } from "./routes/settings.js";
 import { dashboardRouter } from "./routes/dashboard.js";
 import { scraperRouter } from "./routes/scraper.js";
 import { widgetRouter } from "./routes/widget.js";
-import { authRouter, seedAdminUser } from "./routes/auth.js";
+import { authRouter, retirePublishedDefaultPasswords, seedAdminUser } from "./routes/auth.js";
 import { saasRouter } from "./routes/saas.js";
 import { reportsRouter } from "./routes/reports.js";
 import { notificationsRouter } from "./routes/notifications.js";
@@ -61,6 +61,7 @@ seedCatalog();
 }
 seedAdminUser();
 seedStaffRoles();
+retirePublishedDefaultPasswords();
 ensureCompetitorSourcesSeeded();
 warnOnInsecureDefaults();
 

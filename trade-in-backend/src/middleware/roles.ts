@@ -1,6 +1,6 @@
-export type StaffRole = "admin" | "manager" | "operator";
+export type StaffRole = "admin" | "manager" | "operator" | "viewer";
 
-export const STAFF_ROLES: StaffRole[] = ["admin", "manager", "operator"];
+export const STAFF_ROLES: StaffRole[] = ["admin", "manager", "operator", "viewer"];
 
 /** Capability keys used by requireCapability middleware. */
 export type Capability =
@@ -66,8 +66,12 @@ const ALL: Capability[] = [
   "crm:dispatch",
 ];
 
+const READ_ONLY_CAPS = new Set<Capability>(ALL.filter((c) => c.endsWith(":read")));
+
 const ROLE_CAPS: Record<StaffRole, Set<Capability>> = {
   admin: new Set(ALL),
+  // Look at everything, change nothing. For demo logins, analysts and auditors.
+  viewer: READ_ONLY_CAPS,
   manager: new Set(
     ALL.filter((c) => c !== "team:write"), // managers cannot create/disable admins
   ),
@@ -100,11 +104,18 @@ const ROLE_CAPS: Record<StaffRole, Set<Capability>> = {
  * *:read capability and nothing that changes data. Checked before
  * normalizeRole, which maps unknown roles to admin for legacy staff rows.
  */
-const VIEWER_CAPS = new Set<Capability>(ALL.filter((c) => c.endsWith(":read")));
+const VIEWER_CAPS = READ_ONLY_CAPS;
 
 export function normalizeRole(role: string | undefined | null): StaffRole {
-  if (role === "manager" || role === "operator" || role === "admin") return role;
+  if (role === "manager" || role === "operator" || role === "admin" || role === "viewer") return role;
+  // Legacy rows written before roles existed are admins. New input never
+  // reaches this fallback: it goes through parseRole.
   return "admin";
+}
+
+/** Strict parse for role values coming from a request. */
+export function parseRole(role: unknown): StaffRole | null {
+  return typeof role === "string" && (STAFF_ROLES as string[]).includes(role) ? (role as StaffRole) : null;
 }
 
 export function roleHasCapability(role: string | undefined | null, cap: Capability): boolean {
