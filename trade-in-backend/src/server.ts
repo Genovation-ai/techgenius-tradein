@@ -144,6 +144,30 @@ app.use((req, res, next) => {
 });
 app.use(securityHeaders);
 /*
+ * The bare domain sends people to the www address, keeping the path.
+ *
+ * Sign-in links, OAuth and cookies are all issued for one host, so the site
+ * answers on one. The registrar's redirect this replaces had no certificate
+ * (https://gadgetswap.store failed outright) and dropped the path.
+ */
+{
+  const canonical = (() => {
+    try {
+      return new URL(process.env.TG_APP_URL || "https://www.gadgetswap.store");
+    } catch {
+      return null;
+    }
+  })();
+  const bare = canonical?.hostname.startsWith("www.") ? canonical.hostname.slice(4) : null;
+  if (canonical && bare) {
+    app.use((req, res, next) => {
+      const host = String(req.headers.host || "").split(":")[0].toLowerCase();
+      if (host !== bare) return next();
+      res.redirect(301, `${canonical.origin}${req.originalUrl}`);
+    });
+  }
+}
+/*
  * Keep the exact bytes of a webhook body.
  *
  * A payment provider signs the raw payload. JSON.parse then re-serialise does
