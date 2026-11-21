@@ -209,8 +209,9 @@ inventoryRouter.post("/:id/sell", requireCapability("inventory:sell"), (req, res
     `UPDATE inventory SET status = 'sold', sell_price = ?, sold_at = datetime('now'), sold_note = ? WHERE id = ?`,
   ).run(sellPrice, note, req.params.id);
   db.prepare(
-    `INSERT INTO sales (id, inventory_id, sell_price, note, sold_by) VALUES (?, ?, ?, ?, ?)`,
-  ).run(saleId, req.params.id, sellPrice, note, req.tgAuth?.userId || null);
+    `INSERT INTO sales (id, inventory_id, sell_price, note, sold_by, org_id)
+     SELECT ?, ?, ?, ?, ?, org_id FROM inventory WHERE id = ?`,
+  ).run(saleId, req.params.id, sellPrice, note, req.tgAuth?.userId || null, req.params.id);
 
   logActivityWith(db, {
     entityType: "inventory", entityId: req.params.id, action: "sold",

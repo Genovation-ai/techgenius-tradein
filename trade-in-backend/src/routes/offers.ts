@@ -11,6 +11,7 @@ import { orgFilter, ownsOffer, ownsRow } from "../middleware/orgScope.js";
 import { asyncRoute } from "../middleware/asyncRoute.js";
 import { computeServerQuote } from "../services/quoteEngine.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
+import { resolveStoreId } from "../services/tenancy.js";
 
 export const offersRouter = Router();
 
@@ -260,7 +261,7 @@ offersRouter.post("/handoff", requireCapability("offers:handoff"), asyncRoute(as
     req.body?.payout_method || "cash",
     req.body?.promo_code || null,
     req.body?.notes || null,
-    req.body?.store_id || "tg-burlington",
+    resolveStoreId(db, req.tgAuth?.orgId || "org-tech-genius", req.body?.store_id),
     req.tgAuth?.userId || null,
     req.tgAuth?.orgId || "org-tech-genius",
   );
@@ -309,50 +310,110 @@ offersRouter.post("/handoff", requireCapability("offers:handoff"), asyncRoute(as
 }));
 
 offersRouter.post("/", requireCapability("offers:write"), (req, res) => {
-  const db = getDb();
-  const { customer_id, offer_type, items, payout_method, promo_code, notes, store_id } = req.body;
+  const { customer_id, offer_type, items, payout_method, promo_code, notes, store_id } = (req.body || {}) as {
+    customer_id?: string;
+    offer_type?: string;
+    payout_method?: string;
+    promo_code?: string;
+    notes?: string;
+    store_id?: string;
+    items?: Array<{
+      device_id?: string;
+      device_name?: string;
+      storage?: string;
+      memory?: string;
+      carrier?: string;
+      condition_grade?: string;
+      battery_health?: number | null;
+      imei?: string;
+    }>;
+  };
+  if (!Array.isArray(items) || !items.length) return res.status(400).json({ error: "items[] is required" });
+  if (items.length > 50) return res.status(400).json({ error: "Too many items in a single offer" });
 
-  const id = `TG-${Date.now().toString(36).toUpperCase()}-${nanoid(4).toUpperCase()}`;
-  const totalValue = (items || []).reduce(
-    (s: number, i: { quoted_price: number }) => s + (i.quoted_price || 0),
-    0,
-  );
-
-  db.prepare(
-    `INSERT INTO offers (id, customer_id, status, offer_type, total_value, payout_method, promo_code, notes, store_id, created_by, source, org_id)
-     VALUES (?, ?, 'active_lead', ?, ?, ?, ?, ?, ?, ?, 'api', ?)`,
-  ).run(
-    id,
-    customer_id || null,
-    offer_type || "mail-in",
-    totalValue,
-    payout_method || null,
-    promo_code || null,
-    notes || null,
-    store_id || "tg-burlington",
-    req.tgAuth?.userId || null,
-    req.tgAuth?.orgId || "org-tech-genius",
-  );
-
-  const insertItem = db.prepare(
-    `INSERT INTO offer_items (offer_id, device_id, device_name, storage, carrier, condition_grade, quoted_price, battery_health, imei)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-  );
-  for (const item of items || []) {
-    insertItem.run(
-      id,
-      item.device_id || null,
-      item.device_name,
-      item.storage || null,
-      item.carrier || null,
-      item.condition_grade || null,
-      item.quoted_price || 0,
-      item.battery_health || null,
-      item.imei || null,
-    );
+  // Every line is priced here. This route used to store whatever quoted_price
+  // the caller sent, so any key with offers:write could create a $99,999 offer.
+  const priced: Array<{
+    device_id: string;
+    device_name: string;
+    storage: string;
+    carrier: string | null;
+    condition_grade: string;
+    quoted_price: number;
+    battery_health: number | null;
+    imei: string | null;
+  }> = [];
+  for (const item of items) {
+    const deviceId = item?.device_id ? String(item.device_id).slice(0, 64) : "";
+    const storage = item?.storage ? String(item.storage).slice(0, 40) : "";
+    const grade = item?.condition_grade ? String(item.condition_grade).slice(0, 40) : "";
+    if (!deviceId || !storage || !grade) {
+      return res.status(400).json({ error: "Each item needs device_id, storage and condition_grade so the server can price it" });
+    }
+    const battery = item.battery_health == null ? null : Number(item.battery_health);
+    const q = computeServerQuote({
+      deviceId,
+      storage,
+      memory: item.memory ? String(item.memory) : null,
+      conditionGrade: grade,
+      carrier: item.carrier,
+      batteryHealth: Number.isFinite(battery) ? battery : null,
+      promoCode: promo_code,
+      payoutMethod: payout_method,
+    });
+    if (!q) return res.status(422).json({ error: `No server price for ${deviceId} ${storage} / ${grade}` });
+    priced.push({
+      device_id: deviceId,
+      device_name: String(item.device_name || deviceId).slice(0, 200),
+      storage,
+      carrier: item.carrier ? String(item.carrier).slice(0, 40) : null,
+      condition_grade: grade,
+      quoted_price: q.quotedPrice,
+      battery_health: Number.isFinite(battery) ? battery : null,
+      imei: item.imei ? String(item.imei).slice(0, 40) : null,
+    });
   }
-  db.close();
-  res.status(201).json({ id, total_value: totalValue, status: "active_lead" });
+
+  const db = getDb();
+  try {
+    const orgId = req.tgAuth?.orgId || "org-tech-genius";
+    if (customer_id) {
+      const cust = db.prepare("SELECT org_id FROM customers WHERE id = ?").get(String(customer_id)) as
+        | { org_id: string | null }
+        | undefined;
+      // Another shop's customer id would put their name and email on this offer.
+      if (!cust || !ownsRow(req, cust)) return res.status(404).json({ error: "Customer not found" });
+    }
+    const id = `TG-${Date.now().toString(36).toUpperCase()}-${nanoid(4).toUpperCase()}`;
+    const totalValue = priced.reduce((s, i) => s + i.quoted_price, 0);
+    db.transaction(() => {
+      db.prepare(
+        `INSERT INTO offers (id, customer_id, status, offer_type, total_value, payout_method, promo_code, notes, store_id, created_by, source, org_id)
+         VALUES (?, ?, 'active_lead', ?, ?, ?, ?, ?, ?, ?, 'api', ?)`,
+      ).run(
+        id,
+        customer_id ? String(customer_id) : null,
+        offer_type ? String(offer_type).slice(0, 40) : "mail-in",
+        totalValue,
+        payout_method ? String(payout_method).slice(0, 40) : null,
+        promo_code ? String(promo_code).slice(0, 40) : null,
+        notes ? String(notes).slice(0, 2000) : null,
+        resolveStoreId(db, orgId, store_id),
+        req.tgAuth?.userId || null,
+        orgId,
+      );
+      const insertItem = db.prepare(
+        `INSERT INTO offer_items (offer_id, device_id, device_name, storage, carrier, condition_grade, quoted_price, battery_health, imei)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      );
+      for (const item of priced) {
+        insertItem.run(id, item.device_id, item.device_name, item.storage, item.carrier, item.condition_grade, item.quoted_price, item.battery_health, item.imei);
+      }
+    })();
+    res.status(201).json({ id, total_value: totalValue, status: "active_lead", items: priced.map((i) => ({ device_id: i.device_id, quoted_price: i.quoted_price })) });
+  } finally {
+    db.close();
+  }
 });
 
 offersRouter.patch("/:id/status", requireCapability("offers:write"), (req, res) => {

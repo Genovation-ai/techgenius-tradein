@@ -289,6 +289,9 @@ function bootstrapDefaultOrg(db: Database): void {
     console.log(`[tenancy] removed ${ids.length} throwaway tenant(s)`);
   }
 
+  inheritTenantFromParents(db);
+  installTenantTriggers(db);
+
   // Attach legacy rows to the default org.
   //
   // This runs on every boot, and it is what lets the read queries filter on
@@ -547,4 +550,112 @@ export function allowedOfferTypes(db: Database, orgId: string): string[] {
   } catch {
     return BOTH;
   }
+}
+
+/**
+ * Child rows take their tenant from the record they hang off.
+ *
+ * Several writers (photo uploads, notifications, sales, the customer row of a
+ * staff hand-off or bulk import) never set org_id. The boot step below then
+ * adopted every such row into the default org, so another shop's customers and
+ * photos surfaced in Tech Genius's lists. The parent is authoritative, so this
+ * also corrects rows that were adopted into the wrong tenant before.
+ */
+export function inheritTenantFromParents(db: Database): void {
+  const fromOffer = (table: string) =>
+    `UPDATE ${table} SET org_id = (SELECT o.org_id FROM offers o WHERE o.id = ${table}.offer_id)
+      WHERE offer_id IS NOT NULL
+        AND EXISTS (SELECT 1 FROM offers o WHERE o.id = ${table}.offer_id
+                     AND o.org_id IS NOT NULL AND o.org_id IS NOT ${table}.org_id)`;
+  const steps: Array<[string, string]> = [
+    ["uploads", fromOffer("uploads")],
+    ["notifications", fromOffer("notifications")],
+    ["invoices", fromOffer("invoices")],
+    ["email_outbox", fromOffer("email_outbox")],
+    [
+      "inventory",
+      `UPDATE inventory SET org_id = (
+         SELECT o.org_id FROM offer_items oi JOIN offers o ON o.id = oi.offer_id WHERE oi.id = inventory.offer_item_id)
+        WHERE offer_item_id IS NOT NULL
+          AND EXISTS (SELECT 1 FROM offer_items oi JOIN offers o ON o.id = oi.offer_id
+                       WHERE oi.id = inventory.offer_item_id AND o.org_id IS NOT NULL AND o.org_id IS NOT inventory.org_id)`,
+    ],
+    [
+      "sales",
+      `UPDATE sales SET org_id = (SELECT i.org_id FROM inventory i WHERE i.id = sales.inventory_id)
+        WHERE EXISTS (SELECT 1 FROM inventory i WHERE i.id = sales.inventory_id
+                       AND i.org_id IS NOT NULL AND i.org_id IS NOT sales.org_id)`,
+    ],
+    [
+      // Only when every offer of the customer sits in one tenant.
+      "customers",
+      `UPDATE customers SET org_id = (SELECT o.org_id FROM offers o WHERE o.customer_id = customers.id LIMIT 1)
+        WHERE (SELECT COUNT(DISTINCT o.org_id) FROM offers o WHERE o.customer_id = customers.id AND o.org_id IS NOT NULL) = 1
+          AND (SELECT o.org_id FROM offers o WHERE o.customer_id = customers.id AND o.org_id IS NOT NULL LIMIT 1) IS NOT customers.org_id`,
+    ],
+  ];
+  for (const [table, sql] of steps) {
+    try {
+      const r = db.prepare(sql).run();
+      if (r.changes) console.log(`[tenancy] ${table}: took org from parent on ${r.changes} row(s)`);
+    } catch {
+      /* table or column not present in an older database */
+    }
+  }
+}
+
+/** Safety net: a child row inserted without org_id gets its parent's at once. */
+function installTenantTriggers(db: Database): void {
+  const viaOffer = (table: string) => `
+    CREATE TRIGGER IF NOT EXISTS trg_${table}_org AFTER INSERT ON ${table}
+    WHEN NEW.org_id IS NULL AND NEW.offer_id IS NOT NULL
+    BEGIN
+      UPDATE ${table} SET org_id = (SELECT org_id FROM offers WHERE id = NEW.offer_id) WHERE rowid = NEW.rowid;
+    END;`;
+  const ddl = [
+    viaOffer("uploads"),
+    viaOffer("notifications"),
+    viaOffer("invoices"),
+    viaOffer("email_outbox"),
+    `CREATE TRIGGER IF NOT EXISTS trg_sales_org AFTER INSERT ON sales
+     WHEN NEW.org_id IS NULL
+     BEGIN
+       UPDATE sales SET org_id = (SELECT org_id FROM inventory WHERE id = NEW.inventory_id) WHERE rowid = NEW.rowid;
+     END;`,
+    `CREATE TRIGGER IF NOT EXISTS trg_offers_customer_org AFTER INSERT ON offers
+     WHEN NEW.org_id IS NOT NULL AND NEW.customer_id IS NOT NULL
+     BEGIN
+       UPDATE customers SET org_id = NEW.org_id WHERE id = NEW.customer_id AND org_id IS NULL;
+     END;`,
+  ];
+  for (const sql of ddl) {
+    try {
+      db.exec(sql);
+    } catch {
+      /* table not present yet */
+    }
+  }
+}
+
+/**
+ * The store an offer is filed under. A store id from a request is only used
+ * when it belongs to the tenant; otherwise the tenant's first open store. A
+ * hard-coded "tg-burlington" here filed other shops' offers under Tech Genius.
+ */
+export function resolveStoreId(db: Database, orgId: string, requested?: unknown): string | null {
+  const valid = storeOfOrg(db, orgId, requested);
+  if (valid) return valid;
+  // First store the shop set up (rowid order), which for Tech Genius is Burlington.
+  const first = db
+    .prepare("SELECT id FROM org_stores WHERE org_id = ? ORDER BY enabled DESC, rowid LIMIT 1")
+    .get(orgId) as { id: string } | undefined;
+  return first?.id ?? null;
+}
+
+/** The requested store id when it belongs to the tenant, else null. */
+export function storeOfOrg(db: Database, orgId: string, requested?: unknown): string | null {
+  const want = requested == null ? "" : String(requested).trim();
+  if (!want) return null;
+  const row = db.prepare("SELECT id FROM org_stores WHERE org_id = ? AND id = ?").get(orgId, want) as { id: string } | undefined;
+  return row?.id ?? null;
 }

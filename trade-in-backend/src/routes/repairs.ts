@@ -6,7 +6,7 @@ import { checkFeature, checkWritable, meter, subscriptionOf } from "../services/
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
 import { orgFilter, orgIdOf } from "../middleware/orgScope.js";
-import { DEFAULT_ORG_ID, getOrgById, getOrgBySlug } from "../services/tenancy.js";
+import { DEFAULT_ORG_ID, getOrgById, getOrgBySlug, resolveStoreId } from "../services/tenancy.js";
 import {
   REPAIR_STAGES,
   getProblems,
@@ -179,7 +179,7 @@ repairPublicRouter.post("/book", (req, res) => {
                               quoted_price, price_source, fulfilment, status, notes)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'booked', ?)`,
       ).run(
-        id, orgId, body.store_id || null, customerId, device.id, device.name, problem,
+        id, orgId, resolveStoreId(db, orgId, body.store_id), customerId, device.id, device.name, problem,
         problemLabel(db, orgId, problem), q.price, q.source, fulfilment, body.notes ? String(body.notes).slice(0, 500) : null,
       );
     })();

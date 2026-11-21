@@ -337,6 +337,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // Public endpoints (widget uses these without API key)
+app.use("/api/catalog/devices/ensure", publicWriteLimiter);
 app.use("/api/catalog", catalogRouter);
 app.post("/api/quote", quoteLimiter, (req, res, next) => { req.url = "/quote"; pricingRouter(req, res, next); });
 app.use("/api/widget", publicWriteLimiter, widgetRouter);
@@ -436,7 +437,7 @@ app.delete("/mcp", mcpMethodNotAllowed);
 
 // Protected endpoints (admin panel / integrations)
 app.use("/api/offers", apiKeyAuth, offersRouter);
-app.use("/api/repair", repairPublicRouter);
+app.use("/api/repair", publicWriteLimiter, repairPublicRouter);
 app.use("/api/repairs", apiKeyAuth, repairsRouter);
 app.use("/api/customers", apiKeyAuth, customersRouter);
 app.use("/api/inventory", apiKeyAuth, inventoryRouter);

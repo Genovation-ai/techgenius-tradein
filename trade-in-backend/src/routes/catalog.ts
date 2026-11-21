@@ -217,9 +217,10 @@ catalogRouter.post("/devices/ensure", async (req, res) => {
     }
     const result = await ensureDeviceFromName({
       name,
-      categoryId: req.body?.category_id || null,
-      rebuildImage: Boolean(req.body?.rebuild_image),
+      categoryId: req.body?.category_id ? String(req.body.category_id).slice(0, 40) : null,
       seedPrices: true,
+      // No key on this route, so it gets the same limits as the widget's.
+      publicRequest: true,
     });
     res.status(result.created ? 201 : 200).json(result);
   } catch (e) {

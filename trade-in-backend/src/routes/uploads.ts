@@ -4,7 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
-import { orgFilter, ownsRow } from "../middleware/orgScope.js";
+import { orgFilter, ownsOffer, ownsRow } from "../middleware/orgScope.js";
+import { sniffImage } from "../services/fileType.js";
 
 export const uploadsRouter = Router();
 
@@ -37,6 +38,19 @@ uploadsRouter.post("/", requireCapability("uploads:write"), (req, res) => {
   if (!allowed.test(mime)) {
     return res.status(400).json({ error: "Only images and PDF are allowed" });
   }
+  // The stored type is served back as Content-Type, so the bytes must match it.
+  const actual = buf.subarray(0, 5).toString("latin1") === "%PDF-" ? "application/pdf" : sniffImage(buf);
+  if (actual !== mime) {
+    return res.status(400).json({ error: `The file content is not ${mime}` });
+  }
+
+  const preDb = getDb();
+  try {
+    // Attaching to another shop's offer would hand them this file.
+    if (offerId && !ownsOffer(preDb, req, offerId)) return res.status(404).json({ error: "Offer not found" });
+  } finally {
+    preDb.close();
+  }
 
   const id = nanoid(12);
   const stored = `${id}-${filename}`;
@@ -53,9 +67,9 @@ uploadsRouter.post("/", requireCapability("uploads:write"), (req, res) => {
     }
   }
   db.prepare(
-    `INSERT INTO uploads (id, offer_id, filename, mime_type, size_bytes, storage_path, uploaded_by)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-  ).run(id, offerId, filename, mime, buf.length, stored, req.tgAuth?.userId || null);
+    `INSERT INTO uploads (id, offer_id, filename, mime_type, size_bytes, storage_path, uploaded_by, org_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+  ).run(id, offerId, filename, mime, buf.length, stored, req.tgAuth?.userId || null, req.tgAuth?.orgId || "org-tech-genius");
   db.close();
 
   res.status(201).json({
@@ -109,10 +123,10 @@ uploadsRouter.get("/:id/file", requireCapability("uploads:write"), (req, res) =>
 
 uploadsRouter.delete("/:id", requireCapability("uploads:write"), (req, res) => {
   const db = getDb();
-  const row = db.prepare("SELECT storage_path FROM uploads WHERE id = ?").get(req.params.id) as
-    | { storage_path: string }
+  const row = db.prepare("SELECT storage_path, org_id FROM uploads WHERE id = ?").get(req.params.id) as
+    | { storage_path: string; org_id: string | null }
     | undefined;
-  if (!row) {
+  if (!row || !ownsRow(req, row)) {
     db.close();
     return res.status(404).json({ error: "Not found" });
   }

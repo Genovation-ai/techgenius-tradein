@@ -6,6 +6,7 @@ import { computeServerQuote } from "../services/quoteEngine.js";
 import { notifyOfferStatusChange, recordOfferNotification } from "../services/notifications.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 import { ensureDeviceFromName } from "../services/deviceBootstrap.js";
+import { resolveStoreId } from "../services/tenancy.js";
 
 export const bulkRouter = Router();
 
@@ -126,19 +127,20 @@ bulkRouter.post("/offer", requireCapability("bulk:quote"), async (req, res) => {
   const db = getDb();
   const customerId = nanoid(12);
   db.prepare(
-    "INSERT INTO customers (id, first_name, last_name, email, phone) VALUES (?, ?, ?, ?, ?)",
+    "INSERT INTO customers (id, first_name, last_name, email, phone, org_id) VALUES (?, ?, ?, ?, ?, ?)",
   ).run(
     customerId,
     String(contact.first_name).slice(0, 120),
     String(contact.last_name).slice(0, 120),
     contact.email ? String(contact.email).slice(0, 254) : null,
     contact.phone ? String(contact.phone).slice(0, 40) : null,
+    req.tgAuth?.orgId || "org-tech-genius",
   );
 
   const id = `TG-${Date.now().toString(36).toUpperCase()}-${nanoid(4).toUpperCase()}`;
   const total = priced.reduce((s, i) => s + i.quoted_price, 0);
-  const storeId = String(req.body?.store_id || "tg-burlington");
   const orgId = req.tgAuth?.orgId || "org-tech-genius";
+  const storeId = resolveStoreId(db, orgId, req.body?.store_id);
   db.prepare(
     `INSERT INTO offers (id, customer_id, status, offer_type, total_value, payout_method, promo_code, store_id, created_by, source, org_id)
      VALUES (?, ?, 'active_lead', ?, ?, ?, ?, ?, ?, 'bulk', ?)`,

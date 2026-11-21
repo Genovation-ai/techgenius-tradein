@@ -10,9 +10,10 @@ import { notifyOfferStatusChange, recordOfferNotification } from "../services/no
 import { CUSTOMER_JOURNEY, customerStatus, journeyIndex } from "../services/customerStatus.js";
 import { dispatchCrmWebhook } from "../services/crmWebhook.js";
 import { ensureDeviceFromName, looksLikeProductName } from "../services/deviceBootstrap.js";
-import { DEFAULT_ORG_ID, getOrgById, getOrgBySlug, listOrgStores } from "../services/tenancy.js";
+import { DEFAULT_ORG_ID, getOrgById, getOrgBySlug, listOrgStores, storeOfOrg } from "../services/tenancy.js";
 import { getWidgetTemplate, orgWidgetTemplate, WIDGET_TEMPLATES } from "../services/widgetTemplate.js";
 import type { Database } from "better-sqlite3";
+import { sniffImage } from "../services/fileType.js";
 
 export const widgetRouter = Router();
 
@@ -75,9 +76,9 @@ widgetRouter.post("/ensure-device", async (req, res) => {
     }
     const result = await ensureDeviceFromName({
       name,
-      categoryId: req.body?.category_id || "smartphone",
-      rebuildImage: Boolean(req.body?.rebuild_image),
+      categoryId: req.body?.category_id ? String(req.body.category_id).slice(0, 40) : "smartphone",
       seedPrices: true,
+      publicRequest: true,
     });
     res.status(result.created ? 201 : 200).json(result);
   } catch (e) {
@@ -134,8 +135,8 @@ widgetRouter.post("/lead", (req, res) => {
 
     const existing = email
       ? (db
-          .prepare("SELECT id FROM abandoned_leads WHERE email = ? AND status = 'open' LIMIT 1")
-          .get(email) as { id: string } | undefined)
+          .prepare("SELECT id FROM abandoned_leads WHERE email = ? AND org_id = ? AND status = 'open' LIMIT 1")
+          .get(email, orgId) as { id: string } | undefined)
       : undefined;
 
     const payload = {
@@ -148,7 +149,7 @@ widgetRouter.post("/lead", (req, res) => {
       items_json: JSON.stringify(items).slice(0, 20_000),
       quoted_total: Number(body.quoted_total) || 0,
       furthest_step: body.furthest_step ? String(body.furthest_step).slice(0, 40) : null,
-      store_id: body.store_id ? String(body.store_id).slice(0, 64) : defaultStoreId(db, orgId),
+      store_id: storeOfOrg(db, orgId, body.store_id) ?? defaultStoreId(db, orgId),
     };
 
     if (existing) {
@@ -330,7 +331,7 @@ widgetRouter.post("/submit", (req, res) => {
     const hit = orgHint.startsWith("org-") ? getOrgById(db, orgHint) : getOrgBySlug(db, orgHint);
     if (hit) orgId = hit.id;
   }
-  const storeId = (req.body as { store_id?: string })?.store_id || defaultStoreId(db, orgId);
+  const storeId = storeOfOrg(db, orgId, (req.body as { store_id?: string })?.store_id) ?? defaultStoreId(db, orgId);
 
   // One offer is one transaction. These six writes describe a single customer
   // action, and a partial application of them is worse than none: an offer with
@@ -361,12 +362,15 @@ widgetRouter.post("/submit", (req, res) => {
    * somebody a shipping label it never meant to offer. The widget now hides
    * what a shop has turned off; this is for everything that is not the widget.
    */
-  if (offer_type) {
-    const allowed = allowedOfferTypes(db, orgId);
-    if (!allowed.includes(String(offer_type))) {
+  const acceptedTypes = allowedOfferTypes(db, orgId);
+  // No type sent used to mean "mail-in" even at a shop that turned mail-in off.
+  const offerType = offer_type ? String(offer_type) : acceptedTypes.includes("mail-in") ? "mail-in" : acceptedTypes[0] || "mail-in";
+  {
+    const allowed = acceptedTypes;
+    if (!allowed.includes(offerType)) {
       db.close();
       return res.status(400).json({
-        error: `This shop does not take devices by ${offer_type}.`,
+        error: `This shop does not take devices by ${offerType}.`,
         accepted: allowed,
       });
     }
@@ -390,10 +394,10 @@ widgetRouter.post("/submit", (req, res) => {
     ).run(
       id,
       customerId,
-      offer_type || "mail-in",
+      offerType,
       totalValue,
-      payout_method || null,
-      promo_code || null,
+      payout_method ? String(payout_method).slice(0, 40) : null,
+      promo_code ? String(promo_code).slice(0, 40) : null,
       storeId,
       ai_scan ? JSON.stringify(ai_scan).slice(0, 50_000) : null,
       orgId,
@@ -404,8 +408,8 @@ widgetRouter.post("/submit", (req, res) => {
     if (contact.email) {
       db.prepare(
         `UPDATE abandoned_leads SET status = 'converted', converted_offer_id = ?, updated_at = datetime('now')
-          WHERE email = ? AND status = 'open'`,
-      ).run(id, contact.email);
+          WHERE email = ? AND org_id = ? AND status = 'open'`,
+      ).run(id, contact.email, orgId);
     }
 
     const insertItem = db.prepare(
@@ -488,10 +492,26 @@ widgetRouter.post("/offers/:id/media", (req, res) => {
 
   fs.mkdirSync(UPLOAD_ROOT, { recursive: true });
   const db = getDb();
-  const offer = db.prepare("SELECT id FROM offers WHERE id = ?").get(offerId);
+  const offer = db
+    .prepare(
+      `SELECT id, status, (julianday('now') - julianday(created_at)) * 24 AS age_h,
+              (SELECT COUNT(*) FROM uploads u WHERE u.offer_id = offers.id) AS photos
+         FROM offers WHERE id = ?`,
+    )
+    .get(offerId) as { id: string; status: string; age_h: number | null; photos: number } | undefined;
   if (!offer) {
     db.close();
     return res.status(404).json({ error: "Offer not found" });
+  }
+  // Anyone holding an offer id could keep adding photos to it forever. The
+  // widget only attaches them right after submitting, so that is the window.
+  if (offer.status !== "active_lead" || (offer.age_h ?? 0) > 48) {
+    db.close();
+    return res.status(409).json({ error: "Photos can only be added right after the offer is submitted" });
+  }
+  if (offer.photos + files.length > 16) {
+    db.close();
+    return res.status(409).json({ error: "This offer already has the maximum number of photos" });
   }
 
   const saved = [];
@@ -507,6 +527,8 @@ widgetRouter.post("/offers/:id/media", (req, res) => {
       continue;
     }
     if (!buf.length || buf.length > 6 * 1024 * 1024) continue;
+    // The declared type is the browser's word; the bytes have to agree.
+    if (sniffImage(buf) !== mime) continue;
 
     const id = nanoid(12);
     const filename = String(file.filename || `${file.angle || "photo"}.jpg`)

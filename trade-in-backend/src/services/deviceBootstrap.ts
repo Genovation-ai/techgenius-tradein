@@ -301,17 +301,50 @@ function seedPrices(
   return count;
 }
 
+const PUBLIC_DAILY_CAP = 30;
+let publicDay = "";
+let publicCount = 0;
+/** At most PUBLIC_DAILY_CAP new models a day from the public widget. */
+function takePublicCreationSlot(): boolean {
+  const today = new Date().toISOString().slice(0, 10);
+  if (today !== publicDay) {
+    publicDay = today;
+    publicCount = 0;
+  }
+  if (publicCount >= PUBLIC_DAILY_CAP) return false;
+  publicCount += 1;
+  return true;
+}
+
 export async function ensureDeviceFromName(input: {
   name: string;
   categoryId?: string | null;
   brandId?: string | null;
   rebuildImage?: boolean;
   seedPrices?: boolean;
+  /**
+   * Set by the public widget. An anonymous shopper may add a missing model,
+   * but may not switch back on a device staff disabled, invent categories,
+   * regenerate images, or flood the catalogue.
+   */
+  publicRequest?: boolean;
 }): Promise<BootstrapResult> {
   const parsed = parseDeviceName(input.name, input.categoryId);
   const db = getDb();
 
   try {
+    if (input.publicRequest) {
+      input = { ...input, rebuildImage: false };
+      if (!db.prepare("SELECT 1 FROM categories WHERE id = ?").get(parsed.categoryId)) {
+        throw new Error("Unknown category");
+      }
+      const found = findExistingDevice(db, parsed.slug, parsed.displayName);
+      if (found && found.enabled === 0) throw new Error("This device is not offered for trade-in.");
+      if (!found && !takePublicCreationSlot()) {
+        throw new Error("We can't add new models right now. Please contact the shop.");
+      }
+    }
+
     // Ensure category row exists (seed should have it; create soft fallback)
     const cat = db.prepare("SELECT id FROM categories WHERE id = ?").get(parsed.categoryId) as
       | { id: string }

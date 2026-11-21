@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { getDb } from "../db/migrate.js";
 import { requireCapability } from "../middleware/auth.js";
+import { orgFilter } from "../middleware/orgScope.js";
 import {
   getWidgetTemplate,
   isWidgetTemplate,
@@ -101,7 +102,9 @@ settingsRouter.get("/workflow", requireCapability("settings:read"), (_req, res) 
 // Promo codes
 settingsRouter.get("/promos", requireCapability("settings:read"), (_req, res) => {
   const db = getDb();
-  const rows = db.prepare("SELECT * FROM promo_codes ORDER BY code").all();
+  // Each shop sees its own codes, not every tenant's.
+  const f = orgFilter(_req);
+  const rows = db.prepare(`SELECT * FROM promo_codes WHERE 1=1${f.sql} ORDER BY code`).all(...f.params);
   db.close();
   res.json(rows);
 });
@@ -114,9 +117,22 @@ settingsRouter.post("/promos", requireCapability("settings:write"), (req, res) =
     db.close();
     return res.status(400).json({ error: "code required" });
   }
+  const pct = Number(discount_percent || 0);
+  const amt = Number(discount_amount || 0);
+  const uses = max_uses == null || max_uses === "" ? null : Number(max_uses);
+  // A promo adds to the payout. Unchecked, "500" percent or "abc" went
+  // straight into every quote that used the code.
+  if (!Number.isFinite(pct) || pct < 0 || pct > 50 || !Number.isFinite(amt) || amt < 0 || amt > 500) {
+    db.close();
+    return res.status(400).json({ error: "discount_percent must be 0-50 and discount_amount 0-500" });
+  }
+  if (uses != null && (!Number.isInteger(uses) || uses < 1)) {
+    db.close();
+    return res.status(400).json({ error: "max_uses must be a whole number of 1 or more" });
+  }
   db.prepare(
-    `INSERT INTO promo_codes (id, code, discount_percent, discount_amount, max_uses, expires_at, active)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO promo_codes (id, code, discount_percent, discount_amount, max_uses, expires_at, active, org_id)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        discount_percent = excluded.discount_percent,
        discount_amount = excluded.discount_amount,
@@ -126,11 +142,12 @@ settingsRouter.post("/promos", requireCapability("settings:write"), (req, res) =
   ).run(
     id,
     id,
-    discount_percent || 0,
-    discount_amount || 0,
-    max_uses || null,
+    pct,
+    amt,
+    uses,
     expires_at || null,
     active === 0 || active === false ? 0 : 1,
+    req.tgAuth?.orgId || "org-tech-genius",
   );
   db.close();
   res.status(201).json({ id });
