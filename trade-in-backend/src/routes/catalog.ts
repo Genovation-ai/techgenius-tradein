@@ -1,3 +1,4 @@
+import { trustedPriceSql } from "../services/priceTrust.js";
 import { Router } from "express";
 import { getDb } from "../db/migrate.js";
 import { nanoid } from "nanoid";
@@ -65,7 +66,8 @@ catalogRouter.get("/devices", (req, res) => {
   const showUnquotable = include_unquotable === "true" || include_unquotable === "1";
   let sql = "SELECT * FROM devices WHERE enabled = 1";
   if (!showUnquotable) {
-    sql += " AND EXISTS (SELECT 1 FROM prices p WHERE p.device_id = devices.id AND p.base_price > 0)";
+    sql += ` AND (EXISTS (SELECT 1 FROM prices p WHERE p.device_id = devices.id AND p.base_price > 0 AND ${trustedPriceSql("p")})
+              OR EXISTS (SELECT 1 FROM scraped_prices s WHERE s.product_id = devices.id))`;
   }
   const params: unknown[] = [];
   if (category_id) { sql += " AND category_id = ?"; params.push(category_id); }
@@ -121,7 +123,7 @@ catalogRouter.get("/devices", (req, res) => {
       .prepare(
         `SELECT device_id, MAX(base_price) AS max_price_flawless
          FROM prices
-         WHERE condition_grade = 'flawless' AND device_id IN (${placeholders})
+         WHERE condition_grade = 'flawless' AND ${trustedPriceSql()} AND device_id IN (${placeholders})
          GROUP BY device_id`,
       )
       .all(...deviceIds) as Array<{ device_id: string; max_price_flawless: number }>;

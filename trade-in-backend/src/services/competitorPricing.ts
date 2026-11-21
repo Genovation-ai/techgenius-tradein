@@ -1,3 +1,4 @@
+import { trustedPriceSql } from "./priceTrust.js";
 import type { Database } from "better-sqlite3";
 import { getDb } from "../db/migrate.js";
 import {
@@ -258,7 +259,7 @@ function lookupManualPrice(
   for (const variant of variantKeys) {
     const row = db
       .prepare(
-        `SELECT base_price FROM prices WHERE device_id = ? AND storage = ? AND condition_grade = ?`,
+        `SELECT base_price FROM prices WHERE device_id = ? AND storage = ? AND condition_grade = ? AND ${trustedPriceSql()}`,
       )
       .get(productId, variant, storeGrade) as { base_price: number } | undefined;
     if (row?.base_price && row.base_price > 0) return row.base_price;

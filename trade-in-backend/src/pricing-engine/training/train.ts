@@ -1,3 +1,4 @@
+import { trustedPriceSql } from "../../services/priceTrust.js";
 import { getDb } from "../../db/migrate.js";
 import {
   type CompetitorCondition,
@@ -132,7 +133,7 @@ function collectSamples(db: ReturnType<typeof getDb>): TrainingSample[] {
     .prepare(
       `SELECT device_id as productId, storage as variant, condition_grade as condition,
               base_price as price, updated_at as observedAt
-       FROM prices WHERE base_price > 0`,
+       FROM prices WHERE base_price > 0 AND ${trustedPriceSql()}`,
     )
     .all() as Array<{
     productId: string;

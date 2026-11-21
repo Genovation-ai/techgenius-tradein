@@ -672,7 +672,8 @@ export function TradeInFlow() {
             <h1>We couldn&rsquo;t price this one right now</h1>
             <p className="flow-lead">
               Your offer is calculated on our server, so we won&rsquo;t show you a number we
-              can&rsquo;t honour. This is usually a brief connection problem.
+              can&rsquo;t honour. Some older or less common models are priced by hand, or it may
+              be a brief connection problem.
             </p>
           </header>
           <button type="button" className="btn btn-primary flow-cta" onClick={() => void refreshQuote()}>

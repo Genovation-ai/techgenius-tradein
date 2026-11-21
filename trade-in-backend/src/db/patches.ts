@@ -284,6 +284,65 @@ export function applySchemaPatches(db: Database): void {
   repairInvoiceTenants(db);
   repairInventoryTenants(db);
   disableNonNumericAdjustments(db);
+  retireGenericDuplicates(db);
+}
+
+/**
+ * Generic catalogue rows that duplicate specific models.
+ *
+ * "MacBook Pro 16" sat next to six dated MacBook Pro 16" rows, and "iPad Air
+ * M2" next to the 11" and 13" ones. The generic row could not be matched to a
+ * GoRecell product (it is several products), so it was priced from seeded
+ * numbers while the specific rows carry live prices. Each generic row is
+ * switched off once every model it stands for exists, so shoppers pick the
+ * one that is priced. Runs once; staff can turn a row back on.
+ */
+const GENERIC_DUPLICATES: Record<string, string[]> = {
+  "ipad-air-m2": ["ipad-air-11-m2-2024", "ipad-air-13-m2-2024"],
+  "ipad-pro-11": ["ipad-pro-11-1st-gen-2018", "ipad-pro-11-2nd-gen-2020", "ipad-pro-11-3rd-gen", "ipad-pro-11-4th-gen-2022", "ipad-pro-11-m4-2024", "ipad-pro-11-m5-2025"],
+  "ipad-pro-13-m4": ["ipad-pro-13-m4-2024"],
+  "ipad-mini-6": ["ipad-mini-6th-gen"],
+  "macbook-air-m2": ["macbook-air-13-2022", "macbook-air-15-2023"],
+  "macbook-air-m3": ["macbook-air-13-2024", "macbook-air-15-2024"],
+  "macbook-pro-13": ["macbook-pro-13-2018", "macbook-pro-13-2019", "macbook-pro-13-2020", "macbook-pro-13-2022"],
+  "macbook-pro-14": ["macbook-pro-14-2021", "macbook-pro-14-2023", "macbook-pro-14-nov-2023", "macbook-pro-14-2024", "macbook-pro-14-m5-2025-2026"],
+  "macbook-pro-16": ["macbook-pro-16-2019", "macbook-pro-16-2021", "macbook-pro-16-2023", "macbook-pro-16-nov-2023", "macbook-pro-16-2024", "macbook-pro-16-m5"],
+  "samsung-a53": ["galaxy-a53-5g"],
+};
+
+/** Models a generic row stands for that the catalogue is missing: [id, name, copy-from]. */
+const MISSING_SPECIFICS: Array<[string, string, string]> = [
+  ["macbook-air-15-2024", 'MacBook Air 15" (2024)', "macbook-air-13-2024"],
+];
+
+function retireGenericDuplicates(db: Database): void {
+  const FLAG = "patch:retire_generic_duplicates_v1";
+  try {
+    if (db.prepare("SELECT 1 FROM settings WHERE key = ?").get(FLAG)) return;
+    const run = db.transaction(() => {
+      for (const [id, name, from] of MISSING_SPECIFICS) {
+        if (db.prepare("SELECT 1 FROM devices WHERE id = ?").get(id)) continue;
+        const src = db.prepare("SELECT * FROM devices WHERE id = ?").get(from) as Record<string, unknown> | undefined;
+        if (!src) continue;
+        db.prepare(
+          "INSERT INTO devices (id, category_id, brand_id, name, storages, image_url, enabled) VALUES (?, ?, ?, ?, ?, ?, 1)",
+        ).run(id, src.category_id, src.brand_id, name, src.storages, src.image_url);
+        console.log(`[patch] catalogue: added ${id}`);
+      }
+      const enabled = db.prepare("SELECT 1 FROM devices WHERE id = ? AND enabled = 1");
+      for (const [generic, specifics] of Object.entries(GENERIC_DUPLICATES)) {
+        if (!enabled.get(generic)) continue;
+        if (!specifics.every((s) => enabled.get(s))) continue;
+        db.prepare("UPDATE devices SET enabled = 0 WHERE id = ?").run(generic);
+        db.prepare("DELETE FROM settings WHERE key = ?").run(`gorecell_product_map:${generic}`);
+        console.log(`[patch] catalogue: retired ${generic} (duplicates ${specifics.join(", ")})`);
+      }
+      db.prepare("INSERT INTO settings (key, value, updated_at) VALUES (?, '1', datetime('now'))").run(FLAG);
+    });
+    run();
+  } catch (e) {
+    console.warn(`[patch] retireGenericDuplicates skipped: ${e instanceof Error ? e.message : e}`);
+  }
 }
 
 /** Inventory from completed offers was written without org_id; inherit it. */

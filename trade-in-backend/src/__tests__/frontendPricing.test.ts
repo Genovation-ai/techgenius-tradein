@@ -30,6 +30,7 @@ seedDb.exec(`
     condition_grade TEXT NOT NULL,
     carrier TEXT,
     base_price REAL NOT NULL,
+    source TEXT,
     UNIQUE(device_id, storage, condition_grade, carrier)
   );
   CREATE TABLE scraped_prices (

@@ -149,6 +149,19 @@ describe("the quote follows the higher cash buyer", () => {
     expect(q.quotedPrice).toBeLessThanOrEqual(451);
   });
 
+  it("never quotes a retail (techapi) or guessed (bootstrap) price", async () => {
+    const db = new Database(process.env.TG_DB_PATH!);
+    db.prepare(`INSERT OR REPLACE INTO devices (id, name, brand_id, category_id, storages) VALUES ('galaxy-s2', 'Galaxy S II', 'samsung', 'smartphone', '["16GB"]')`).run();
+    db.prepare(`INSERT INTO prices (device_id, storage, condition_grade, base_price, source) VALUES ('galaxy-s2', '16GB', 'good', 215, 'techapi-import')`).run();
+    db.close();
+    const mod = await import("../services/quoteEngine.js");
+    expect(mod.computeServerQuote({ deviceId: "galaxy-s2", storage: "16GB", conditionGrade: "good" })).toBeNull();
+    const db2 = new Database(process.env.TG_DB_PATH!);
+    db2.prepare(`UPDATE prices SET base_price = 8, source = 'manual' WHERE device_id = 'galaxy-s2'`).run();
+    db2.close();
+    expect(mod.computeServerQuote({ deviceId: "galaxy-s2", storage: "16GB", conditionGrade: "good" })?.quotedPrice).toBeGreaterThan(0);
+  });
+
   it("can be switched off", async () => {
     setUnivercell(436);
     setFollow("0");

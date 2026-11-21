@@ -1,3 +1,4 @@
+import { trustedPriceSql } from "../../services/priceTrust.js";
 import { getDb } from "../../db/migrate.js";
 import {
   COMPETITOR_TO_STORE,
@@ -36,7 +37,7 @@ function loadBaseline(productId: string, variant: string, condition: CompetitorC
   const store = COMPETITOR_TO_STORE[condition];
   const p = db
     .prepare(
-      `SELECT base_price FROM prices WHERE device_id = ? AND storage = ? AND condition_grade = ?`,
+      `SELECT base_price FROM prices WHERE device_id = ? AND storage = ? AND condition_grade = ? AND ${trustedPriceSql()}`,
     )
     .get(productId, variant, store) as { base_price: number } | undefined;
   db.close();
