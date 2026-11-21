@@ -82,6 +82,35 @@ function candidateSlugs(deviceId: string, brandName: string, name: string): stri
   return [...out].filter(Boolean);
 }
 
+/** "6" -> "6th". */
+function ordinal(n: string): string {
+  const v = Number(n);
+  const teen = v % 100 >= 11 && v % 100 <= 13;
+  const suffix = teen ? "th" : v % 10 === 1 ? "st" : v % 10 === 2 ? "nd" : v % 10 === 3 ? "rd" : "th";
+  return `${n}${suffix}`;
+}
+
+/**
+ * GoRecell often names a model with its year or generation where we do not:
+ * "ipad-pro-13-m4" is their "ipad-pro-13-m4-2024", "ipad-mini-6" their
+ * "ipad-mini-6th-gen". Accept those two spellings only, and only when exactly
+ * one GoRecell product fits, so an ambiguous model ("ipad-air-m2" is both an
+ * 11- and a 13-inch) stays unmapped rather than picking up the wrong price.
+ */
+export function looseMatch(candidates: string[], slugs: string[]): string | null {
+  const found = new Set<string>();
+  for (const c of candidates) {
+    const gen = c.match(/^(.*-)(\d{1,2})$/);
+    const genSlug = gen ? `${gen[1]}${ordinal(gen[2])}-gen` : null;
+    for (const s of slugs) {
+      const noYear = s.replace(/(-20\d\d){1,2}$/, "");
+      if (noYear !== s && noYear === c) found.add(s);
+      if (genSlug && (s === genSlug || s.replace(/(-20\d\d){1,2}$/, "") === genSlug)) found.add(s);
+    }
+  }
+  return found.size === 1 ? [...found][0] : null;
+}
+
 export interface MapResult {
   ok: boolean;
   totalDevices: number;
@@ -167,6 +196,10 @@ export async function resolveGorecellProductMap(opts?: {
             break;
           }
         }
+        if (!hit) {
+          const loose = looseMatch(slugs, [...bySlug.keys()]);
+          if (loose) hit = bySlug.get(loose);
+        }
         if (hit) {
           if (!opts?.dryRun) insert.run(`gorecell_product_map:${d.id}`, String(hit._id));
           newlyMapped++;
@@ -185,7 +218,7 @@ export async function resolveGorecellProductMap(opts?: {
       stillUnmapped: unmapped.length,
       // Cap the example list so a huge gap doesn't dump 300 ids into a cron
       // response that someone reads on their phone from the Railway logs.
-      unmappedExamples: unmapped.slice(0, 20),
+      unmappedExamples: unmapped.slice(0, 60),
       errors,
       catalogueSize: bySlug.size,
     };

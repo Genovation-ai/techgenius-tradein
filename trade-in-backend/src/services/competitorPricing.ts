@@ -335,6 +335,56 @@ export function resolveBestCompetitorPrice(input: {
   return best;
 }
 
+/** Buyers that pay cash per condition, as opposed to carrier bill-credit estimates. */
+const CASH_BUYERS = ["gorecell", "univercell"] as const;
+const FOLLOW_MAX_AGE_DAYS = 21;
+const FOLLOW_MAX_RATIO = 1.25;
+
+/**
+ * Another cash buyer pays more for this exact device, storage and condition.
+ *
+ * The quote follows one competitor, so when UniverCell paid 8-11% more than
+ * GoRecell on a "good" iPhone, a shopper who compared got the better offer
+ * there. The reference now rises to the higher cash buyer, under three
+ * guards so a bad scrape cannot inflate payouts: the price must be an exact
+ * scraped grade (not scaled from "excellent"), at most 21 days old, and no
+ * more than 25% above the primary source (beyond that it is almost always a
+ * mismatched model). Carrier estimates (Bell, TELUS) never count: those are
+ * promotional bill credits, not cash.
+ *
+ * Off with settings key frontend_follow_higher_buyers = "0".
+ */
+function higherCashBuyer(
+  input: { productId: string; variant: string; conditionGrade: string },
+  primary: string,
+  primaryPrice: number,
+): { price: number; competitor: string; conditionUsed: CompetitorCondition; scaled: boolean; scraped_at: string | null } | null {
+  if (!(CASH_BUYERS as readonly string[]).includes(primary) || !(primaryPrice > 0)) return null;
+  const db = getDb();
+  let enabled = true;
+  try {
+    const row = db.prepare("SELECT value FROM settings WHERE key = 'frontend_follow_higher_buyers'").get() as
+      | { value: string }
+      | undefined;
+    enabled = !row || !["0", "false", "off"].includes(String(row.value).trim().toLowerCase());
+  } finally {
+    db.close();
+  }
+  if (!enabled) return null;
+
+  let best: ReturnType<typeof higherCashBuyer> = null;
+  for (const other of CASH_BUYERS) {
+    if (other === primary) continue;
+    const hit = resolveCompetitorPrice({ competitor: other, ...input });
+    if (!hit || hit.scaled || !hit.scraped_at) continue;
+    const ageDays = (Date.now() - new Date(hit.scraped_at).getTime()) / 86_400_000;
+    if (!Number.isFinite(ageDays) || ageDays > FOLLOW_MAX_AGE_DAYS) continue;
+    if (hit.price <= primaryPrice || hit.price > primaryPrice * FOLLOW_MAX_RATIO) continue;
+    if (!best || hit.price > best.price) best = { ...hit, competitor: other };
+  }
+  return best;
+}
+
 export function resolveFrontendBasePrice(input: {
   productId: string;
   variant: string;
@@ -396,6 +446,10 @@ export function resolveFrontendBasePrice(input: {
       conditionGrade: input.conditionGrade,
     });
     if (hit) resolved = { ...hit, competitor: cfg.source };
+    if (resolved) {
+      const higher = higherCashBuyer(input, cfg.source, resolved.price);
+      if (higher) resolved = higher;
+    }
   }
 
   if (!resolved) {
