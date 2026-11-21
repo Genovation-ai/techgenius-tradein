@@ -36,13 +36,13 @@ const HTML = Buffer.from("<html><script>alert(1)</script></html>").toString("bas
 
 async function main() {
   console.log("== offers are priced on the server ==");
-  const quote = await call("POST", "/api/pricing-engine/quote", { device_id: "iphone-15", storage: "128GB", condition_grade: "good" }, false);
+  const quote = await call("POST", "/api/quote", { device_id: "iphone-15", storage: "128GB", condition_grade: "good" }, false);
   const serverPrice = Number(quote.json.quoted_price ?? quote.json.quotedPrice ?? quote.json.price);
   const made = await call("POST", "/api/offers", {
     items: [{ device_id: "iphone-15", storage: "128GB", condition_grade: "good", quoted_price: 99999, device_name: "iPhone 15" }],
   });
   ok("client quoted_price ignored", made.status === 201 && made.json.total_value !== 99999 && made.json.total_value > 0, `${made.status} total=${made.json.total_value} quote=${serverPrice}`);
-  ok("total equals the server quote", !Number.isFinite(serverPrice) || made.json.total_value === serverPrice);
+  ok("total equals the server quote", made.json.total_value === serverPrice);
   const noPrice = await call("POST", "/api/offers", { items: [{ device_name: "Mystery", quoted_price: 500 }] });
   ok("unpriceable item refused", noPrice.status === 400, String(noPrice.status));
   const badCust = await call("POST", "/api/offers", { customer_id: "nope", items: [{ device_id: "iphone-15", storage: "128GB", condition_grade: "good" }] });
