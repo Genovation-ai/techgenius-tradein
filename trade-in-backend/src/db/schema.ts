@@ -361,17 +361,18 @@ INSERT OR IGNORE INTO workflow_stages (id, name, label, sort_order, send_email) 
 INSERT OR IGNORE INTO price_sources (id, name, label, enabled) VALUES
   ('univercell', 'UniverCell', 'UniverCell Buyback', 1),
   ('bell', 'Bell', 'Bell Trade-In', 1),
-  ('telus', 'TELUS', 'TELUS Trade-In', 1),
   ('gorecell', 'GoRecell', 'GoRecell Buyback', 1);
 
 -- Placeholder sources from the original seed. Nothing populates them: the
 -- CSS-selector scraper that would have written 'local-market' never matched
 -- GoRecell's markup, so all three reported 0 rows on every recorded run.
 -- Seeded disabled so they stop showing as configured-but-empty in the scrape
--- report. Re-enable if a real feed is ever wired up.
+-- report. Re-enable if a real feed is ever wired up. TELUS was dropped in
+-- Nov 2026: its trade-in site changed and the scrape returned nothing.
 INSERT OR IGNORE INTO price_sources (id, name, label, enabled) VALUES
   ('tech-genius-local', 'Tech Genius Local', 'Tech Genius Pricing', 0),
   ('local-market', 'Local Market', 'Local Pricing', 0),
+  ('telus', 'TELUS', 'TELUS Trade-In', 0),
   ('international-market', 'International Market', 'International Pricing', 0);
 
 -- Seed default settings

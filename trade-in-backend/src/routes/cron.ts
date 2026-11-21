@@ -33,12 +33,12 @@ function loadKnownProductIds(): Set<string> {
 
 function loadProviders(): string[] {
   const cfgPath = path.resolve(import.meta.dirname, "../../config/pricing-engine.json");
-  if (!fs.existsSync(cfgPath)) return ["univercell", "bell", "telus"];
+  if (!fs.existsSync(cfgPath)) return ["univercell", "bell"];
   const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8")) as {
     providers?: string[];
     dualMode?: boolean;
   };
-  return cfg.providers || ["univercell", "bell", "telus"];
+  return cfg.providers || ["univercell", "bell"];
 }
 
 /** POST /api/cron/scrape — competitor scrape pipeline (timeout ~300s) */

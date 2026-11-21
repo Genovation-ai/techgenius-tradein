@@ -285,6 +285,7 @@ export function applySchemaPatches(db: Database): void {
   repairInventoryTenants(db);
   disableNonNumericAdjustments(db);
   retireGenericDuplicates(db);
+  dropTelusSource(db);
 }
 
 /**
@@ -724,4 +725,26 @@ export function seedRepairMarketPrices(db: Database): void {
   });
   run();
   console.log(`[repair-market] seeded ${seeded} part prices (${skipped} skipped) from repair-market-prices.json`);
+}
+
+/**
+ * TELUS stopped returning prices (its trade-in site changed) and was dropped
+ * as a source. Turn it off on existing databases once, and move a shop that
+ * priced from TELUS onto GoRecell so its quotes keep working.
+ */
+function dropTelusSource(db: Database): void {
+  const FLAG = "patch:drop_telus_v1";
+  try {
+    if (db.prepare("SELECT 1 FROM settings WHERE key = ?").get(FLAG)) return;
+    db.transaction(() => {
+      db.prepare("UPDATE price_sources SET enabled = 0 WHERE id = 'telus'").run();
+      const moved = db
+        .prepare("UPDATE settings SET value = 'gorecell', updated_at = datetime('now') WHERE key = 'frontend_price_source' AND value = 'telus'")
+        .run().changes;
+      if (moved) console.log("[patch] pricing source moved from telus to gorecell");
+      db.prepare("INSERT INTO settings (key, value, updated_at) VALUES (?, '1', datetime('now'))").run(FLAG);
+    })();
+  } catch (e) {
+    console.warn(`[patch] dropTelusSource skipped: ${e instanceof Error ? e.message : e}`);
+  }
 }

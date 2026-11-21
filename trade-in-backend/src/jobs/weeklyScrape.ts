@@ -20,9 +20,9 @@ function loadTargets(): ToScrape[] {
 
 function loadProviders(): string[] {
   const cfgPath = path.resolve(import.meta.dirname, "../../config/pricing-engine.json");
-  if (!fs.existsSync(cfgPath)) return ["univercell", "bell", "telus", "gorecell"];
+  if (!fs.existsSync(cfgPath)) return ["univercell", "bell", "gorecell"];
   const cfg = JSON.parse(fs.readFileSync(cfgPath, "utf-8")) as { providers?: string[] };
-  return cfg.providers || ["univercell", "bell", "telus", "gorecell"];
+  return cfg.providers || ["univercell", "bell", "gorecell"];
 }
 
 /** Next occurrence of weekday 0=Sun … 6=Sat at hour:minute local. */

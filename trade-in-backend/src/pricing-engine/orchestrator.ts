@@ -185,7 +185,7 @@ export function persistScrapedRows(rows: ScrapedPrice[], engineHint?: string): n
 
 export function auditHealth(staleHours = 168): HealthAudit {
   const db = getDb();
-  const sources = db.prepare("SELECT id, name, last_synced_at FROM price_sources").all() as Array<{
+  const sources = db.prepare("SELECT id, name, last_synced_at FROM price_sources WHERE COALESCE(enabled, 1) = 1").all() as Array<{
     id: string;
     name: string;
     last_synced_at: string | null;

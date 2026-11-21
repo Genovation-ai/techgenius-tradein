@@ -1,12 +1,11 @@
 {
   "dualMode": false,
   "preferredEngine": "scrapling",
-  "providers": ["univercell", "bell", "telus", "gorecell"],
+  "providers": ["univercell", "bell", "gorecell"],
   "competitors": [
     { "id": "gorecell", "label": "GoRecell", "notes": "Product-page query_data (wc-query-flow) — storage fixed $ + condition %" },
     { "id": "univercell", "label": "UniverCell", "notes": "Sell flow RSC JSON — condition-tiered prices" },
-    { "id": "bell", "label": "Bell", "notes": "Carrier trade-in max estimate via SBE API" },
-    { "id": "telus", "label": "Telus", "notes": "Carrier trade-in marketValueAmt via trade-in SPA backend" }
+    { "id": "bell", "label": "Bell", "notes": "Carrier trade-in max estimate via SBE API" }
   ],
   "productSchema": {
     "entity": "device",
